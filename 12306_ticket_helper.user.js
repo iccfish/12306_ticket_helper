@@ -1,17 +1,17 @@
 ﻿
 // ==UserScript==
 // @name 			12306.CN 订票助手 For Firefox&Chrome
-// @namespace		http://www.u-tide.com/fish/
+// @namespace		http://www.fishlee.net/
 // @description		帮你订票的小助手 :-)
 // @match			http://dynamic.12306.cn/otsweb/*
 // @match			https://dynamic.12306.cn/otsweb/*
-// @require			https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js
+// @require			https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js
 // @icon			http://www.12306.cn/mormhweb/images/favicon.ico
 // @run-at			document-idle
 // @version 		2.0.0
-// @updateURL		http://www.u-tide.com/fish/Service.asmx/Download/44/46/12306_ticket_helper_for_firefox.user.js
-// @supportURL		http://www.u-tide.com/fish/soft/44/
-// @homepage		http://www.u-tide.com/fish/soft/44/
+// @updateURL		http://www.fishlee.net/Service/Download.ashx/44/47/12306_ticket_helper.user.js
+// @supportURL		http://www.fishlee.net/soft/44/
+// @homepage		http://www.fishlee.net/soft/44/
 // ==/UserScript==
 
 /*
@@ -737,10 +737,21 @@ function initLogin() {
                     alert('请输入正确的验证码！');
                     return;
                 };
+                if (msg.indexOf('密码') > -1) {
+                 	stopLogin();
+                 	alert('请输入正确的用户名和密码！');
+                 	return;
+                };
+                if (msg.indexOf('锁定') > -1) {
+                 	stopLogin();
+                 	alert('很抱歉，您的帐户已经被暂时锁定！');
+                 	return;
+                };
                 if (msg.indexOf("欢迎您！") != -1) {
                     utility.closeNotify();
                     alert('登录成功，开始查询车票吧！');
                     window.location.href = "https://dynamic.12306.cn/otsweb/order/querySingleAction.do?method=init";
+                    return;
                 };
                 $("#tipMessage").html("["+utility.getTimeInfo()+"]"+utility.getErrorMsg(msg));
                 relogin();
