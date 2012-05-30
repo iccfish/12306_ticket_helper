@@ -1,0 +1,15 @@
+{
+   "content_scripts": [ {
+      "exclude_globs": [  ],
+      "exclude_matches": [  ],
+      "include_globs": [  ],
+      "js": [ "12306_ticket_helper.user.js" ],
+      "matches": [ "http://dynamic.12306.cn/otsweb/*", "https://dynamic.12306.cn/otsweb/*" ],
+      "run_at": "document_idle"
+   } ],
+   "converted_from_user_script": true,
+   "description": "\u5E2E\u4F60\u8BA2\u7968\u7684\u5C0F\u52A9\u624B :-)",
+   "key": "7k6gnXVACvUPU2DfslJgSrWJTHqIg5uwd+Kgl/5zSg==",
+   "name": "12306.CN \u8BA2\u7968\u52A9\u624B For Firefox&Chrome [Dev]",
+   "version": "2.0.1"
+}
