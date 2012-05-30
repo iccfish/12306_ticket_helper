@@ -178,9 +178,11 @@ var utility = {
 			e.html("正在执行").removeClass("fish_clock").addClass("fish_running");
 			callback();
 		} else {
-			e.html((Math.floor(timeout / 100) / 10) + " 秒后重试....").removeClass("fish_running").addClass("fish_clock");
+			var str = (Math.floor(timeout / 100) / 10) + '';
+			if (str.indexOf(".")==-1) str+=".0";
+			e.html(str + " 秒后重试....").removeClass("fish_running").addClass("fish_clock");
 			setTimeout(function () {
-				delayInvoke(callback, timeout - 1000);
+				utility.delayInvoke(target, callback, timeout - 500);
 			}, 500);
 		}
 	}
@@ -812,7 +814,7 @@ function initLogin() {
 					setTipMessage("错误：" + json.randError);
 					getLoginRandCode();
 				} else {
-					setTipMessage("登录随机码：" + json.loginRand);
+					setTipMessage("登录随机码 -&gt; " + json.loginRand);
 					$("#loginRand").val(json.loginRand);
 					submitForm();
 				}
@@ -820,7 +822,7 @@ function initLogin() {
 			error   :function () {
 				errorCount++;
 				setTipMessage("[" + errorCount + "] 网络请求错误，重试")
-				getLoginRandCode();
+				utility.delayInvoke("#countEle", getLoginRandCode, 500);
 			}});
 	}
 
@@ -873,14 +875,13 @@ function initLogin() {
 					return;
 				} else {
 					setTipMessage(msg);
-					//relogin();
+					relogin();
 				}
 			},
 			error   :function (msg) {
-				//utility.delayInvoke("#countEle", relogin, 1000);
+				utility.delayInvoke("#countEle", relogin, 1000);
 				errorCount++;
 				setTipMessage("[" + errorCount + "] 网络请求错误，重试")
-
 			}
 		});
 	}
