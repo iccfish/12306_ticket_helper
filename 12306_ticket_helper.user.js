@@ -1,4 +1,5 @@
-﻿// ==UserScript==
+﻿
+// ==UserScript==
 // @name 			12306.CN 订票助手 For Firefox&Chrome
 // @namespace		http://www.u-tide.com/fish/
 // @description		帮你订票的小助手 :-)
@@ -7,7 +8,7 @@
 // @require			https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js
 // @icon			http://www.12306.cn/mormhweb/images/favicon.ico
 // @run-at			document-idle
-// @version 		2.0.0
+// @version 		2.2.0
 // @updateURL		http://www.fishlee.net/Service/Download.ashx/44/47/12306_ticket_helper.user.js
 // @supportURL		http://www.fishlee.net/soft/44/
 // @homepage		http://www.fishlee.net/soft/44/
@@ -461,7 +462,7 @@ function initTicketQuery() {
 	var filterNonNeeded = false;
 	var autoBook = false;
 	//初始化表单
-	var form = $("form[name=querySingleForm] .cx_from");
+	var form = $("form[name=querySingleForm] .cx_from:first");
 	form.find("tr:last").after("<tr class='append_row'><td colspan='9'><label><input type='checkbox' id='keepinfo' checked='checked' />记住信息</label> <label><input checked='checked' type='checkbox' id='autoRequery' />自动重新查询</label>，查询周期(S)：<input type='text' value='6' size='4' id='refereshInterval' style='text-align:center;' />(不得小于6) " +
 		"<label><input type='checkbox' checked='checked' id='chkAudioOn'>声音提示</label> <label><input type='checkbox' id='chkSeatOnly'>仅座票</label> <label><input type='checkbox' id='chkSleepOnly'>仅卧铺</label>" +
 		"<input type='button' id='enableNotify' onclick='window.webkitNotifications.requestPermission();' value='请点击以启用通告' style='line-height:25px;padding:5px;' /> <span id='refreshinfo'>已刷新 0 次，最后查询：--</span> <span id='refreshtimer'></span></td></tr>" +
