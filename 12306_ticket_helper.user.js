@@ -54,9 +54,15 @@
  + 修复数个BUG
  + 现在系统已禁止验证码自动跳过，所以当出现验证码错误时，系统将会自动刷新验证码并自动定位到验证码输入框中并请求输入验证码，输入满四位的时候系统将会自动重新提交。
 
+Version 2.2.0
+ * 修正自动登录无法登录的问题；
+ * 修正了时间显示的只有个位数的问题（虽然不是BUG但比较难看。。。）
+ * 修正了遇到帐户锁定或密码输入错误时依然不断重试的问题；
+ * 修正了验证码输入错误时不会自动刷新验证码的问题；
+ * 其它细节更新
  */
 
-var version = "2.0.1";
+var version = "2.2.0";
 var loginUrl = "/otsweb/loginAction.do";
 var queryActionUrl = "/otsweb/order/querySingleAction.do";
 //预定
@@ -923,7 +929,7 @@ function checkUpdate() {
 		if (typeof (GM_xmlhttpRequest) == "undefined") return;
 
 		var request = GM_xmlhttpRequest({
-			url        :"http://em.tiande.com/fish/44.txt",
+			url        :"http://www.fishlee.net/file/44/version.txt",
 			method     :"GET",
 			ignoreCache:true,
 			onload     :function (r) {
@@ -945,7 +951,7 @@ function checkUpdate() {
 
 function updateScriptContentForChrome() {
 	var updateScipt = document.createElement('script');
-	updateScipt.src = 'http://em.tiande.com/fish/44.js?' + Math.random();
+	updateScipt.src = 'http://www.fishlee.net/file/44/version.js?' + Math.random();
 	updateScipt.type = 'text/javascript';
 	updateScipt.addEventListener('load', function () {
 		if (compareVersion(version, version_12306_helper) < 0) {
