@@ -1,5 +1,4 @@
-﻿
-// ==UserScript==
+﻿// ==UserScript==
 // @name 			12306.CN 订票助手 For Firefox&Chrome
 // @namespace		http://www.u-tide.com/fish/
 // @description		帮你订票的小助手 :-)
@@ -55,7 +54,7 @@
  + 修复数个BUG
  + 现在系统已禁止验证码自动跳过，所以当出现验证码错误时，系统将会自动刷新验证码并自动定位到验证码输入框中并请求输入验证码，输入满四位的时候系统将会自动重新提交。
 
-Version 2.2.0
+ Version 2.2.0
  * 修正自动登录无法登录的问题；
  * 修正了时间显示的只有个位数的问题（虽然不是BUG但比较难看。。。）
  * 修正了遇到帐户锁定或密码输入错误时依然不断重试的问题；
@@ -82,15 +81,17 @@ function injectStyle() {
 	var s = document.createElement("style");
 	s.id = "12306_ticket_helper";
 	s.type = "text/css";
-	s.textContent = ".fish_running, .fish_clock {\
+	s.textContent = ".fish_running, .fish_clock, .fish_error, .fish_ok {\
     line-height:20px;\
     text-indent:18px;\
     background-repeat:no-repeat;\
     background-position:2px 50%;\
     font-size:12px;\
     }\
-    .fish_running{background-image:url(http://res.tiande.com/images/16px_loading_3.gif); color: green;}\
-    .fish_clock{background-image:url(http://res.tiande.com/images/clock_16.png); color: blue;}\
+    .fish_running{background-image:url(data:image/gif;base64,R0lGODlhEAAQALMPAHp6evf394qKiry8vJOTk83NzYKCgubm5t7e3qysrMXFxe7u7pubm7S0tKOjo////yH/C05FVFNDQVBFMi4wAwEAAAAh+QQJCAAPACwAAAAAEAAQAAAETPDJSau9NRDAgWxDYGmdZADCkQnlU7CCOA3oNgXsQG2FRhUAAoWDIU6MGeSDR0m4ghRa7JjIUXCogqQzpRxYhi2HILsOGuJxGcNuTyIAIfkECQgADwAsAAAAABAAEAAABGLwSXmMmjhLAQjSWDAYQHmAz8GVQPIESxZwggIYS0AIATYAvAdh8OIQJwRAQbJkdjAlUCA6KfU0VEmyGWgWnpNfcEAoAo6SmWtBUtCuk9gjwQKeQAeWYQAHIZICKBoKBncTEQAh+QQJCAAPACwAAAAAEAAQAAAEWvDJORejGCtQsgwDAQAGGWSHMK7jgAWq0CGj0VEDIJxPnvAU0a13eAQKrsnI81gqAZ6AUzIonA7JRwFAyAQSgCQsjCmUAIhjDEhlrQTFV+lMGLApWwUzw1jsIwAh+QQJCAAPACwAAAAAEAAQAAAETvDJSau9L4QaBgEAMWgEQh0CqALCZ0pBKhRSkYLvM7Ab/OGThoE2+QExyAdiuexhVglKwdCgqKKTGGBgBc00Np7VcVsJDpVo5ydyJt/wCAAh+QQJCAAPACwAAAAAEAAQAAAEWvDJSau9OAwCABnBtQhdCQjHlQhFWJBCOKWPLAXk8KQIkCwWBcAgMDw4Q5CkgOwohCVCYTIwdAgPolVhWSQAiN1jcLLVQrQbrBV4EcySA8l0Alo0yA8cw+9TIgAh+QQFCAAPACwAAAAAEAAQAAAEWvDJSau9WA4AyAhWMChPwXHCQRUGYARgKQBCzJxAQgXzIC2KFkc1MREoHMTAhwQ0Y5oBgkMhAAqUw8mgWGho0EcCx5DwaAUQrGXATg6zE7bwCQ2sAGZmz7dEAAA7); color: green;}\
+    .fish_clock{background-image:url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABGdBTUEAAK/INwWK6QAAABl0RVh0U29mdHdhcmUAQWRvYmUgSW1hZ2VSZWFkeXHJZTwAAAG/SURBVHjapJM/S8NQFMVvpaVfoEKojWL9U3DLIqjoooJDu/sFmnQoiIujQz+Aix3a1FUQXIR2UFA6+WeRUhBprERroGTopg6lSeo7iY1pq4sNHPpy3+8c7n0v9XW7XRrl8SFAlmVvbYFpmynOJHzXKkwlphOmxx4oiiL5sbAsi1KpFOVyuWQwGMzEYjEuGo0Sx3E2qOu6oKqqoChKst1u7zO2wNifDrLZLNbJUCgkLy2vEM/zv7araRrd3lxTq9US2WshnU7TGDZM01zwBwKZxaVlCkd4MtmxQDXlyVbvHXtgwMIDrx3Q6XS2Z2bnufDEJJkWuWIt2/LWwICFxw0wDCM+PTPXB0K4IGiwDhYeeP3fHQjjXIQMq3/mev3J/l0fqIOFxxtAxi+fg/rsBOztSE7QVpwpQT2PN6Dy1mgIYX7KNZcvipQ5yA+Fosum1rA93jMo1R6q7oxX50Va20wMzd4TWHi8t3BSvb/T1bpz4qsbf5vBgIXHDWB3+vj58b5fPj9jc9fcex8U9sCAhcc7Au1mDgtN7VU8Oz7SL0un9PbyTBYzQVijhj0wYOFxP2VJkv71Z8rn807AKM+XAAMArp1CsEFrDIIAAAAASUVORK5CYII=); color: blue;}\
+    .fish_error{background-image:url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABGdBTUEAAK/INwWK6QAAABl0RVh0U29mdHdhcmUAQWRvYmUgSW1hZ2VSZWFkeXHJZTwAAAJFSURBVHjapJO/T1pRFMe/Dx7ypEXri4lUGUhsHF40hODSpQ61cTH+2HSoZaF1dHSxpU7+Ca04NE7dyuBiapcuLFokTdD4A01awNdBSkAf8ut5zhUoxq3e5OS+nPv5nnvuyfdJpmniPksSBd68aM1pFDMU4xS+ei5GsUHxmSLRJD9+hcx7rVqFZWwMtc3NIGy2Zam31yX19ABdXTdgNuszdd1nptNBlMtviQ0TC0ujg1LgGWNByelctQ4M4G8qhfN4HLmDA6HvpJzq9eJRXx+qlDPz+deUDrd9+i6KoFouazVg2erx4M/uLn5FItGLk5NX/qUliYO+I2o2C4vLBWaYZQ1rRYFyqTQDVXXl02mcb29HbXb7S+/CwjqKRSAaDXlHRqYwOoqdxUUww6zQNApUSqVxuaMDF8kk2hTlgxYIHMMwaHSxEB2/a4g7u7sjzDDLmn8dXF35ZJsNVWrzycTEOtxuYH//lpjWezqbZoZZ1rQ+AXyj3eEQO7a27oj9s7OhVkZoWjqIFXUdD1QVub29L3fEk5MhXF7y2RwzzLKmdQYb+UwGiqLwO6duiVdWxM2GrvfTfOaZYZY1TScmvE7NKsvf3B6PyzE8jB9ra6DJR2TTnBYXSNIcbfN021Mjl8Pv09OzaqXyXIvnE6LAT00RRlLa21cfk1kesgNpULBab5xITiUHokADzJDJioYhjDSUKNafUKlgaHAwXCCHJQ8Pz1JHRyhQm2RhEfzNOT5jhlnWNJ+w0y/918/kPzbrf+M91rUAAwCuQDz94e2kLwAAAABJRU5ErkJggg==); color: blue;}\
+    .fish_ok{background-image:url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABGdBTUEAAK/INwWK6QAAABl0RVh0U29mdHdhcmUAQWRvYmUgSW1hZ2VSZWFkeXHJZTwAAAHsSURBVHjapFNBSBtBFH2xgoqmKipEC6XkYqhUWXOxUAQhpyJ4Wgi0l0rNsdBbL/WgF2/eV8hNSBF68uhFkOrFhCAGS8mWgmYjG9lCKVGTuP1vsrvuIac68HZm/n/vz5/9fyKu6+IhI8IA5k4kbHsuSAsWBZpnKwh2BTlBySfGdTmcAX7kOJc5r5hfhyw7/86t21/EVVbgmjb6yPG4SqsyONtWGaz0Dk8aYzMf0R+b65ju3+oR7OImrp3vGdluJd646KKj1ZK0H0XXRqfeo390Emg6HUEfOeQqjQwVoNFAOvpkPjYw8kw2NRgfFtQchm8jh1xqggDNJhYHY3Jy41IhmXodrDvZyKWG2m4vA23gcR9wa6m7Jue1YO2PsI1casIB5GPBWM8ilZLyvFzu+BPNwyz29oDM5+W2JhSg8NsqaRSTMHycxfg4MDHRJlUqgCWHO/IvyRGu0gQB5D671Z+mlpiZFXEejjSInrw/OS4wjiWwNFx8ehZnRVNpwlXI/SrXqvbFOfS3TxWRAtNpwxfTRw651AQZSE1Lrfrd6mmhZky96IGejuJgX5rL9HpbrvBKbHbFxunJDa6F67e0X0YsLWHr6uouc/StXi3m/yCRkNTjbXBNG33kkEtN8Jh2Pv3fY9I3vLfwkPFPgAEApRUigcIVl3AAAAAASUVORK5CYII=); color: purple;}\
     ";
 
 	document.head.appendChild(s);
@@ -179,7 +180,7 @@ var utility = {
 			callback();
 		} else {
 			var str = (Math.floor(timeout / 100) / 10) + '';
-			if (str.indexOf(".")==-1) str+=".0";
+			if (str.indexOf(".") == -1) str += ".0";
 			e.html(str + " 秒后重试....").removeClass("fish_running").addClass("fish_clock");
 			setTimeout(function () {
 				utility.delayInvoke(target, callback, timeout - 500);
@@ -399,7 +400,7 @@ function initAutoCommitOrder() {
 					window.location.replace("/otsweb/order/myOrderAction.do?method=queryMyOrderNotComplete&leftmenu=Y");
 					return;
 				}
-				var retryMessage = ['用户过多', '确认客票的状态后再尝试后续操作', '请不要重复提交'];
+				var retryMessage = ['确认客票的状态后再尝试后续操作', '请不要重复提交'];
 				for (var i = retryMessage.length - 1; i >= 0; i--) {
 					if (msg.indexOf(retryMessage[i]) > -1) {
 						$("#tipresult").html(retryMessage[i]);
@@ -408,7 +409,7 @@ function initAutoCommitOrder() {
 					}
 				}
 				msg = msg.match(/var\s+message\s*=\s*"([^"]*)/);
-				if (msg && msg[1].indexOf("验证码") != -1) {
+				if (msg && (msg[1].indexOf("验证码") != -1 || msg[1].indexOf("用户过多") != -1)) {
 					$("#img_rrand_code").click();
 					$("#rand")[0].select();
 				}
@@ -760,8 +761,6 @@ function initLogin() {
 	});
 
 	//Hack当前UI显示
-	$("#loginForm tr:gt(3)").remove();
-	$("#loginForm table tbody").append("<tr style='font-size:12px; color: gray;'><td colspan='3' style='padding-top: 10px; line-height:normal;'>请输入用户名和密码，<strong style='color: red;'>最后输入验证码</strong>，输入完成后系统将自动帮你提交。登录过程中，请勿离开当前页面。如果系统繁忙，系统会自动重新刷新验证码并自动定位到验证码输入框中，请直接输入验证码，输入完成后助手将自动帮你提交。<br />【<a href='https://dynamic.12306.cn/otsweb/registAction.do?method=regitNote'>注册</a> | <a href='https://dynamic.12306.cn/otsweb/registAction.do?method=findPwdInit'>找回密码</a>】</td></tr>");
 	$(".enter_right").empty().append("<div class='enter_enw'>" +
 		"<div class='enter_rtitle' style='padding: 40px 0px 10px 0px; font-size: 20px;'>脚本提示信息</div>" +
 		"<div class='enter_rfont'>" +
@@ -770,8 +769,8 @@ function initLogin() {
 		"<li style='color:green;'><strong>操作信息</strong>：<span>休息中</span></li>" +
 		"<li style='color:green;'><strong>最后操作时间</strong>：<span>--</span></li>" +
 		"<li><a href='http://www.fishlee.net/soft/44/' target='_blank'>助手主页</a> | <a href='http://www.fishlee.net/Discussion/Index/44' target='_blank'>反馈助手BUG</a></li>" +
-		"<li id='updateFound' style='display:none;'><a style='font-weight:bold; color:red;' href='http://www.fishlee.net/Service/Download.ashx/44/47/12306_ticket_helper.user.js'>发现新版本！点此更新</li>" +
-		'<li id="enableNotification"><input type="button" id="enableNotify" onclick="$(this).parent().hide();window.webkitNotifications.requestPermission();" value="请点击以启用通告" style="line-height:25px;padding:5px;" /></li>' +
+		"<li id='updateFound' style='display:none;'><a style='font-weight:bold; color:red;' href='http://www.fishlee.net/Service/Download.ashx/44/47/12306_ticket_helper.user.js'>发现新版本！点此更新</a></li>" +
+		'<li id="enableNotification"><input type="button" id="enableNotify" onclick="$(this).parent().hide();window.webkitNotifications.requestPermission();" value="请点击以启用通告" style="line-height:25px;padding:5px;" /></li><li style="padding-top:10px;line-height:normal;color:gray;">请输入用户名和密码，<strong style="color: red;">最后输入验证码</strong>，输入完成后系统将自动帮你提交。登录过程中，请勿离开当前页面。如果系统繁忙，系统会自动重新刷新验证码并自动定位到验证码输入框中，请直接输入验证码，输入完成后助手将自动帮你提交。</li>' +
 		"</ul>" +
 		"</div>" +
 		"</div>");
@@ -838,6 +837,7 @@ function initLogin() {
 			utility.setPref("__un", data["loginUser.user_name"]);
 			utility.setPref("__up", data["user.password"])
 		}
+		setCurOperationInfo(true,"正在登录中……");
 		$.ajax({
 			type    :"POST",
 			url     :"/otsweb/loginAction.do?method=login",
@@ -851,28 +851,18 @@ function initLogin() {
 					setTipMessage("验证码不正确");
 					setCurOperationInfo(false, "请重新输入验证码。");
 					stopLogin();
-
-
-					return;
 				} else if (msg.indexOf('密码') > -1) {
 					setTipMessage(msg);
 					setCurOperationInfo(false, "请重新输入。");
 					stopLogin();
-
-					return;
 				} else if (msg.indexOf('锁定') > -1) {
 					setTipMessage(msg);
 					setCurOperationInfo(false, "请重新输入。");
 					stopLogin();
-
-					return;
 				} else if (html.indexOf("欢迎您！") != -1) {
 					utility.closeNotify();
 					alert('登录成功，开始查询车票吧！');
-
 					window.location.href = "https://dynamic.12306.cn/otsweb/order/querySingleAction.do?method=init";
-
-					return;
 				} else {
 					setTipMessage(msg);
 					relogin();
