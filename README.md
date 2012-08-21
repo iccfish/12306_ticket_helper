@@ -129,6 +129,9 @@
 * 增加自定义提示音乐地址功能
 * 修复进入订票页面时，没有点击自动提交时输入验证码也会提交的BUG
 
+**版本3.0.1，更新日期：2012.08.21**
+* 修复勾选“仅座票”、“仅卧铺”过滤无效的BUG
+
 官方网站
 ---------------------
 
@@ -139,12 +142,12 @@
 相关资料
 ---------------------
 
-* 感谢 [zzdhidden] 所开发的脚本，以及他的贡献者们
+* 感谢所有开发过相关脚本，以及作出贡献的前人们。
 
 
 
-
-[zzdhidden]: https://github.com/zzdhidden "zzdhidden @ GitHub"
+[软件主页]: http://www.fishlee.net/soft/44/
+[腾讯微博]: http://t.qq.com/ccfish/
 [木鱼]: http://www.fishlee.net/ "木鱼的软件主页"
 [12306.CN]: http://dynamic.12306.cn/otsweb/ "12306.CN 购票网站"
 [Chrome]: https://www.google.com/chrome/ "Google Chrome"

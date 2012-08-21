@@ -8,7 +8,7 @@
 // @require			https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js
 // @icon			http://www.12306.cn/mormhweb/images/favicon.ico
 // @run-at			document-idle
-// @version 		3.0.0
+// @version 		3.0.1
 // @updateURL		http://www.fishlee.net/Service/Download.ashx/44/47/12306_ticket_helper.user.js
 // @supportURL		http://www.fishlee.net/soft/44/
 // @homepage		http://www.fishlee.net/soft/44/
@@ -27,7 +27,7 @@ if (typeof(WScript)!='undefined') {
 }
 
 
-var version = "3.0.0";
+var version = "3.0.1";
 var loginUrl = "/otsweb/loginAction.do";
 var queryActionUrl = "/otsweb/order/querySingleAction.do";
 //预定
@@ -68,7 +68,7 @@ function injectStyle() {
     .box table td{padding:5px;}\
     .box input[type=button],.fish_button {padding:5px;}\
 	.box .name ,.box .caption,.box .caption td { background-color:#EAE3F7; font-weight:bold;}\
-	.fish_sep td {border-top:1px solid gray;}\
+	.fish_sep td {border-top:1px solid #A688DD;}\
     ";
 
 	document.head.appendChild(s);
@@ -139,6 +139,7 @@ var utility = {
 
 			if (type == "text") e.val(value);
 			else if (type == "checkbox") this.checked = value == "1";
+			e.change();
 		});
 		utility.savePrefs(obj, prefix);
 	},
@@ -523,7 +524,6 @@ function initTicketQuery() {
 		"<input type='hidden' id='queryid' /></td></tr>" +
 		"<tr><td colspan='9'><input style='line-height:25px;padding:5px;' disabled='disabled' type='button' value='停止声音' id='btnStopSound' /><input style='line-height:25px;padding:5px;' disabled='disabled'  type='button' value='停止刷新' id='btnStopRefresh' /></td> </tr>"
 	);
-	utility.reloadPrefs($("tr.append_row"), "ticket_query");
 	$("#chkFilterNonBookable").change(function () {
 		filterNonBookable = this.checked;
 	});
@@ -578,14 +578,18 @@ function initTicketQuery() {
 	$("#chkSeatOnly").click(function () {
 		if (!this.checked) return;
 		$(".hdr tr:eq(2) td").each(function (i, e) {
-			$(this).find("input").attr("checked", $(this).attr("otext").indexOf("座") != -1).change();
+		 	var obj=$(this);
+		 	var txt = obj.attr("otext");
+			obj.find("input").attr("checked", typeof(txt)!='undefined' && txt && txt.indexOf("座") != -1).change();
 		});
 		$("#chkSleepOnly")[0].checked = false;
 	});
 	$("#chkSleepOnly").click(function () {
 		if (!this.checked) return;
 		$(".hdr tr:eq(2) td").each(function (i, e) {
-			$(this).find("input").attr("checked", $(this).attr("otext").indexOf("卧") != -1).change();
+		 	var obj=$(this);
+		 	var txt = obj.attr("otext");
+			obj.find("input").attr("checked", typeof(txt)!='undefined' && txt && txt.indexOf("卧") != -1).change();
 		});
 		$("#chkSeatOnly")[0].checked = false;
 	});
@@ -918,6 +922,7 @@ function initTicketQuery() {
 	if (!window.Audio) {
 		$(".musicFunc").hide();
 	}
+	utility.reloadPrefs($("tr.append_row"), "ticket_query");
 }
 
 //#endregion
