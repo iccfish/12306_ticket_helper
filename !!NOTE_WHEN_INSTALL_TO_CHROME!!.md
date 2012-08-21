@@ -1,17 +1,17 @@
-ChromeÏÂ°²×°ÌáÊ¾
+ï»¿Chromeä¸‹å®‰è£…æç¤º
 ================
 
-ÔÚChrome£¨¹È¸èä¯ÀÀÆ÷£©ÏÂ°²×°Äã¿ÉÄÜ»á²»³É¹¦£¬²¢¿´µ½ÕâÑùµÄÌáÊ¾£º
-¡º**Ö»¿ÉÌí¼ÓÀ´×ÔChromeÍøÉÏÓ¦ÓÃµêµÄÀ©Õ¹³ÌĞò¡¢Ó¦ÓÃºÍÓÃ»§½Å±¾**¡»
-»ò
-¡º**Apps, extensions, and user scripts cannot be added from this website.**¡»
+åœ¨Chromeï¼ˆè°·æ­Œæµè§ˆå™¨ï¼‰ä¸‹å®‰è£…ä½ å¯èƒ½ä¼šä¸æˆåŠŸï¼Œå¹¶çœ‹åˆ°è¿™æ ·çš„æç¤ºï¼š
+ã€**åªå¯æ·»åŠ æ¥è‡ªChromeç½‘ä¸Šåº”ç”¨åº—çš„æ‰©å±•ç¨‹åºã€åº”ç”¨å’Œç”¨æˆ·è„šæœ¬**ã€
+æˆ–
+ã€**Apps, extensions, and user scripts cannot be added from this website.**ã€
 
-![Chrome°²×°ÌáÊ¾](https://github.com/iccfish/12306_ticket_helper/raw/master/images/installation/chrome_3.png)
+![Chromeå®‰è£…æç¤º](https://github.com/iccfish/12306_ticket_helper/raw/master/images/installation/chrome_3.png)
 
-³öÏÖÕâÖÖ´íÎóµÄÔ­ÒòÊÇÒòÎª×îĞÂ°æµÄ¹È¸èä¯ÀÀÆ÷¸ü¸ÄÁË°²È«ÉèÖÃ£¬À©Õ¹¡¢Ó¦ÓÃºÍÓÃ»§½Å±¾Ö»ÄÜ´ÓGoogle StoreÀïÃæ°²×°¡£Òª½â¾öÕâ¸öÎÊÌâ£¬Çë´ò¿ªä¯ÀÀÆ÷µÄÀ©Õ¹¹ÜÀí½çÃæ£º
+å‡ºç°è¿™ç§é”™è¯¯çš„åŸå› æ˜¯å› ä¸ºæœ€æ–°ç‰ˆçš„è°·æ­Œæµè§ˆå™¨æ›´æ”¹äº†å®‰å…¨è®¾ç½®ï¼Œæ‰©å±•ã€åº”ç”¨å’Œç”¨æˆ·è„šæœ¬åªèƒ½ä»Google Storeé‡Œé¢å®‰è£…ã€‚è¦è§£å†³è¿™ä¸ªé—®é¢˜ï¼Œè¯·æ‰“å¼€æµè§ˆå™¨çš„æ‰©å±•ç®¡ç†ç•Œé¢ï¼š
 
-![Chrome°²×°ÌáÊ¾](https://github.com/iccfish/12306_ticket_helper/raw/master/images/installation/chrome_4.png)
+![Chromeå®‰è£…æç¤º](https://github.com/iccfish/12306_ticket_helper/raw/master/images/installation/chrome_4.png)
 
-½«½Å±¾´ÓÏÂÔØÀ¸Ö±½ÓÍÏ·Åµ½½çÃæÖĞ¼´¿É£º
+å°†è„šæœ¬ä»ä¸‹è½½æ ç›´æ¥æ‹–æ”¾åˆ°ç•Œé¢ä¸­å³å¯ï¼š
 
-![Chrome°²×°ÌáÊ¾](https://github.com/iccfish/12306_ticket_helper/raw/master/images/installation/chrome_5.png)
+![Chromeå®‰è£…æç¤º](https://github.com/iccfish/12306_ticket_helper/raw/master/images/installation/chrome_5.png)
