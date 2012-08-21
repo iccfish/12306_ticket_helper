@@ -6,12 +6,12 @@
 或
 『**Apps, extensions, and user scripts cannot be added from this website.**』
 
-![Chrome安装提示](https://github.com/iccfish/12306_ticket_helper/raw/master/images/installation/chrome_3.png)
+![Chrome安装提示](https://github.com/iccfish/12306_ticket_helper/raw/master/images/installation/chrome3.png)
 
 出现这种错误的原因是因为最新版的谷歌浏览器更改了安全设置，扩展、应用和用户脚本只能从Google Store里面安装。要解决这个问题，请打开浏览器的扩展管理界面：
 
-![Chrome安装提示](https://github.com/iccfish/12306_ticket_helper/raw/master/images/installation/chrome_4.png)
+![Chrome安装提示](https://github.com/iccfish/12306_ticket_helper/raw/master/images/installation/chrome4.png)
 
 将脚本从下载栏直接拖放到界面中即可：
 
-![Chrome安装提示](https://github.com/iccfish/12306_ticket_helper/raw/master/images/installation/chrome_5.png)
+![Chrome安装提示](https://github.com/iccfish/12306_ticket_helper/raw/master/images/installation/chrome5.png)
