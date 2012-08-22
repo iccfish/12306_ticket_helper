@@ -8,7 +8,7 @@
 // @require			https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js
 // @icon			http://www.12306.cn/mormhweb/images/favicon.ico
 // @run-at			document-idle
-// @version 		3.0.1
+// @version 		3.0.2
 // @updateURL		http://www.fishlee.net/Service/Download.ashx/44/47/12306_ticket_helper.user.js
 // @supportURL		http://www.fishlee.net/soft/44/
 // @homepage		http://www.fishlee.net/soft/44/
@@ -20,14 +20,14 @@
 
 
 
-if (typeof(WScript)!='undefined') {
+if (typeof (WScript) != 'undefined') {
 	var obj = WScript.CreateObject("WScript.Shell");
 	obj.Popup("请将脚本文件拖放至谷歌浏览器的扩展管理或Firefox中安装，请勿双击。\r\n拖放到谷歌浏览器中无法安装时，请尝试在chrome中打开扩展管理界面后，再拖放至扩展管理界面中。", 0, "警告", 64);
 	throw new Error();
 }
 
 
-var version = "3.0.1";
+var version = "3.0.2";
 var loginUrl = "/otsweb/loginAction.do";
 var queryActionUrl = "/otsweb/order/querySingleAction.do";
 //预定
@@ -93,6 +93,8 @@ var utility = {
 		} else {
 			if (typeof (GM_notification) != 'undefined') {
 				GM_notification(msg);
+			} else {
+				window.localStorage.setItem("notify", msg);
 			}
 		}
 	},
@@ -321,6 +323,17 @@ function entryPoint() {
 	} else if (path == "/otsweb/main.jsp" || path == "/otsweb/") {
 		//主框架
 		safeInvoke(injectMainPageFunction);
+	}
+
+	//桌面提示for Firefox
+	if (isFirefox) {
+		setInterval(function () {
+			var msg = window.localStorage["notify"];
+			if (typeof (msg != 'undefined') && msg) {
+				window.localStorage.removeItem("notify");
+				GM_notification(msg);
+			}
+		}, 100);
 	}
 }
 
@@ -790,10 +803,8 @@ function initTicketQuery() {
 				audio.loop = $("#chkAudioLoop")[0].checked;
 				$("#btnStopSound")[0].disabled = false;
 				audio.play();
-				utility.notify("可以订票了！", null);
-			} else {
-				utility.notify("可以订票了！", null);
 			}
+			utility.notify("可以订票了！", null);
 		}, 100);
 	}
 	//检查是否可以订票
