@@ -8,7 +8,7 @@
 // @require			https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js
 // @icon			http://www.12306.cn/mormhweb/images/favicon.ico
 // @run-at			document-idle
-// @version 		3.0.2
+// @version 		3.0.4
 // @updateURL		http://www.fishlee.net/Service/Download.ashx/44/47/12306_ticket_helper.user.js
 // @supportURL		http://www.fishlee.net/soft/44/
 // @homepage		http://www.fishlee.net/soft/44/
@@ -27,7 +27,7 @@ if (typeof (WScript) != 'undefined') {
 }
 
 
-var version = "3.0.2";
+var version = "3.0.4";
 var loginUrl = "/otsweb/loginAction.do";
 var queryActionUrl = "/otsweb/order/querySingleAction.do";
 //预定
@@ -292,7 +292,7 @@ var isChrome = navigator.userAgent.indexOf("AppleWebKit") != -1;
 var isFirefox = navigator.userAgent.indexOf("Firefox") != -1;
 
 if (!isChrome && !isFirefox) {
-	alert("很抱歉，未能识别您的浏览器，或您的浏览器尚不支持脚本运行，请使用Firefox或Chrome浏览器！");
+	alert("很抱歉，未能识别您的浏览器，或您的浏览器尚不支持脚本运行，请使用Firefox或Chrome浏览器！\n如果您运行的是Maxthon3，请确认当前页面运行在高速模式而不是兼容模式下 :-)");
 } else if (isFirefox && typeof (GM_notification) == 'undefined') {
 	alert("很抱歉，本脚本需要最新的Scriptish扩展，请安装它！");
 	window.open("https://addons.mozilla.org/zh-CN/firefox/addon/scriptish/");
@@ -324,7 +324,7 @@ function entryPoint() {
 		//主框架
 		safeInvoke(injectMainPageFunction);
 	}
-
+	
 	//桌面提示for Firefox
 	if (isFirefox) {
 		setInterval(function () {
@@ -342,17 +342,6 @@ function entryPoint() {
 //#region -----------------主框架----------------------
 
 function injectMainPageFunction() {
-	//检测主框架是否是顶级窗口
-	var isTop = false;
-	try {
-		isTop = self == top;
-	} catch (e) {
-
-	}
-	if (!isTop && confirm("您当前正在12306.cn中以框架方式访问订票网站。为更加便捷，建议使用新窗口单独打开订票网站。是否要助手为您打开新窗口？")) {
-		window.open("https://dynamic.12306.cn/otsweb/");
-	}
-
 	if (utility.getPref("warning_noAutomaticSkipVerifyCode") != "1") {
 		alert("提醒：现在系统已禁止验证码自动跳过，所以当出现验证码错误时，系统将会自动刷新验证码并自动定位到验证码输入框中，请输入验证码，输入满" +
 			"四位的时候系统将会自动重新提交。\n\n脚本当前无法实现OCR识别，非常抱歉。\n\n您将无法使用多浏览器同步提交。\n\n这个提示仅会出现一次。");
@@ -511,6 +500,10 @@ function autoCommitOrderInSandbox() {
 
 //#region -----------------自动刷新----------------------
 function initTicketQuery() {
+	//兼容性检测 for Maxthon3.
+	//在Maxthon3下该入口函数会神奇地在日期选择界面出现，原因未查
+	if(typeof(seatTypeRelation)=='undefined'||!seatTypeRelation)return;
+
 	var buttonid = "";
 	var autoRefresh = false;
 	var queryCount = 0;
@@ -951,6 +944,19 @@ function initLogin() {
 			return;
 		}
 	});
+	
+	//检测主框架是否是顶级窗口
+	var isTop = false;
+	try {
+		isTop = (top.location+'').indexOf("dynamic.12306.cn")!=-1;
+	} catch (e) {
+
+	}
+	if (!isTop) {
+		$("#loginForm table tr:first td:last").append("<a href='https://dynamic.12306.cn/otsweb/' target='_blank' style='font-weight:bold;color:red;'>强烈建议全屏订票！</a>");
+	}
+
+
 
 	//Hack当前UI显示
 	$(".enter_right").empty().append("<div class='enter_enw'>" +
