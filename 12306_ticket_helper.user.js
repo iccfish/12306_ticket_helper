@@ -8,7 +8,7 @@
 // @require			https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js
 // @icon			http://www.12306.cn/mormhweb/images/favicon.ico
 // @run-at			document-idle
-// @version 		3.0.5
+// @version 		3.0.6
 // @updateURL		http://www.fishlee.net/Service/Download.ashx/44/47/12306_ticket_helper.user.js
 // @supportURL		http://www.fishlee.net/soft/44/
 // @homepage		http://www.fishlee.net/soft/44/
@@ -27,7 +27,7 @@ if (typeof (WScript) != 'undefined') {
 }
 
 
-var version = "3.0.5";
+var version = "3.0.6";
 var loginUrl = "/otsweb/loginAction.do";
 var queryActionUrl = "/otsweb/order/querySingleAction.do";
 //预定
@@ -471,7 +471,7 @@ function initAutoCommitOrder() {
 		submitFlag = false;
 	});
 	$("#rand").keyup(function (e) {
-		if (!submitFlag) return;
+		if (!submitFlag&&!document.getElementById("autoStartCommit").checked) return;
 
 		if (e.charCode == 13 || $("#rand").val().length == 4) submitForm();
 	});
@@ -482,7 +482,12 @@ function initAutoCommitOrder() {
 	}
 
 	//提交频率差别
-	$(".table_qr tr:last").before("<tr><td colspan='9'>自动提交失败时休息时间：<input type='text' size='4' class='input_20txt' style='text-align:center;' value='3' id='pauseTime' />秒 （不得低于1）</td></tr>");
+	$(".table_qr tr:last").before("<tr><td colspan='9'>自动提交失败时休息时间：<input type='text' size='4' class='input_20txt' style='text-align:center;' value='3' id='pauseTime' />秒 (不得低于1)  <label><input type='checkbox' id='autoStartCommit' /> 输入验证码后立刻开始自动提交</label></td></tr>");
+	document.getElementById("autoStartCommit").checked=typeof(window.localStorage["disableAutoStartCommit"])=='undefined';
+	$("#autoStartCommit").change(function(){
+	 	if(this.checked)window.localStorage.removeItem("disableAutoStartCommit");
+	 	else window.localStorage.setItem("disableAutoStartCommit", "1");
+	});
 }
 
 function autoCommitOrderInSandbox() {
@@ -1115,33 +1120,16 @@ function initLogin() {
 //#region 检查更新
 
 function checkUpdate() {
-	if (isFirefox) {
-		if (typeof (GM_xmlhttpRequest) == "undefined") return;
-
-		var request = GM_xmlhttpRequest({
-			url: "http://www.fishlee.net/file/44/version.txt",
-			method: "GET",
-			ignoreCache: true,
-			onload: function (r) {
-				var v2 = r.responseText;
-				if (compareVersion(version, v2) < 0) {
-					$("#updateFound").show();
-					alert("助手脚本已经发布了最新版 " + v2 + "，请在登录页面上点击更新链接更新 :-)");
-				}
-			}
-		});
-	} else {
-		//谷歌的依然有跨站问题。所以用传统的方法
-		var updateScriptVersion = document.createElement("script");
-		updateScriptVersion.type = "text/javascript";
-		updateScriptVersion.textContent = "var version='" + version + "'; " + compareVersion + "; (" + updateScriptContentForChrome + ")();";
-		document.head.appendChild(updateScriptVersion);
-	}
+	//谷歌的依然有跨站问题。所以用传统的方法，委屈Firefox下Scriptish的新特性了。。
+	var updateScriptVersion = document.createElement("script");
+	updateScriptVersion.type = "text/javascript";
+	updateScriptVersion.textContent = "var version='" + version + "'; " + compareVersion + "; (" + updateScriptContentForChrome + ")();";
+	document.head.appendChild(updateScriptVersion);
 }
 
 function updateScriptContentForChrome() {
 	var updateScipt = document.createElement('script');
-	updateScipt.src = 'http://www.fishlee.net/file/44/version.js?' + Math.random();
+	updateScipt.src = 'https://github.com/iccfish/12306_ticket_helper/raw/master/version.js?' + Math.random();
 	updateScipt.type = 'text/javascript';
 	updateScipt.addEventListener('load', function () {
 		if (compareVersion(version, version_12306_helper) < 0) {
