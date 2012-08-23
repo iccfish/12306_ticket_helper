@@ -1134,7 +1134,7 @@ function updateScriptContentForChrome() {
 	updateScipt.addEventListener('load', function () {
 		if (compareVersion(version, version_12306_helper) < 0) {
 			if(typeof(external.mxCall)!='undefined'){
-				$("#updateFound").attr("href", "http://www.fishlee.net/soft/44/#C-192");
+				$("#updateFound a").attr("href", "http://www.fishlee.net/soft/44/#C-192").attr("target", "_blank");
 			}
 			$("#updateFound").show();
 			alert('助手脚本已经发布了最新版 ' + version_12306_helper + '，请在登录页面上点击更新链接更新 :-)');
