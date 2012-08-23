@@ -8,7 +8,7 @@
 // @require			https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js
 // @icon			http://www.12306.cn/mormhweb/images/favicon.ico
 // @run-at			document-idle
-// @version 		3.0.4
+// @version 		3.0.5
 // @updateURL		http://www.fishlee.net/Service/Download.ashx/44/47/12306_ticket_helper.user.js
 // @supportURL		http://www.fishlee.net/soft/44/
 // @homepage		http://www.fishlee.net/soft/44/
@@ -27,13 +27,11 @@ if (typeof (WScript) != 'undefined') {
 }
 
 
-var version = "3.0.4";
+var version = "3.0.5";
 var loginUrl = "/otsweb/loginAction.do";
 var queryActionUrl = "/otsweb/order/querySingleAction.do";
 //预定
 var confirmOrderUrl = "/otsweb/order/confirmPassengerAction.do";
-
-//    $("body").append("<div class='outerbox'><div class='box'><div class='title'></div><div class='content'></div></div></div>");
 
 
 //#region -----------------UI界面--------------------------
@@ -291,14 +289,16 @@ function buildObjectJavascriptCode(object) {
 var isChrome = navigator.userAgent.indexOf("AppleWebKit") != -1;
 var isFirefox = navigator.userAgent.indexOf("Firefox") != -1;
 
-if (!isChrome && !isFirefox) {
-	alert("很抱歉，未能识别您的浏览器，或您的浏览器尚不支持脚本运行，请使用Firefox或Chrome浏览器！\n如果您运行的是Maxthon3，请确认当前页面运行在高速模式而不是兼容模式下 :-)");
-} else if (isFirefox && typeof (GM_notification) == 'undefined') {
-	alert("很抱歉，本脚本需要最新的Scriptish扩展，请安装它！");
-	window.open("https://addons.mozilla.org/zh-CN/firefox/addon/scriptish/");
-} else {
-	initUIDisplay();
-	beginExecute();
+if(location.host=="dynamic.12306.cn"){
+	if (!isChrome && !isFirefox) {
+		alert("很抱歉，未能识别您的浏览器，或您的浏览器尚不支持脚本运行，请使用Firefox或Chrome浏览器！\n如果您运行的是Maxthon3，请确认当前页面运行在高速模式而不是兼容模式下 :-)");
+	} else if (isFirefox && typeof (GM_notification) == 'undefined') {
+		alert("很抱歉，本脚本需要最新的Scriptish扩展，请安装它！");
+		window.open("https://addons.mozilla.org/zh-CN/firefox/addon/scriptish/");
+	} else {
+		initUIDisplay();
+		beginExecute();
+	}
 }
 
 //#endregion
@@ -626,7 +626,7 @@ function initTicketQuery() {
 			alert("起始时间不正确 >_<"); return;
 		}
 		var e = parseInt(prompt("请输入自定义时间段的结束时间（请填入小时，1-24）", "24"));
-		if (isNaN(e) || e <= 0 || e > 23) {
+		if (isNaN(e) || e <= 0 || e > 24) {
 			alert("结束时间不正确 >_<"); return;
 		}
 		var range = (s > 9 ? "" : "0") + s + ":00--" + (e > 9 ? "" : "0") + e + ":00";
@@ -1059,8 +1059,7 @@ function initLogin() {
 					setCurOperationInfo(false, "请重新输入。");
 					stopLogin();
 				} else if (html.indexOf("欢迎您！") != -1) {
-					utility.closeNotify();
-					alert('登录成功，开始查询车票吧！');
+					utility.notify('登录成功，开始查询车票吧！');
 					window.location.href = "https://dynamic.12306.cn/otsweb/order/querySingleAction.do?method=init";
 				} else {
 					setTipMessage(msg);
@@ -1146,6 +1145,9 @@ function updateScriptContentForChrome() {
 	updateScipt.type = 'text/javascript';
 	updateScipt.addEventListener('load', function () {
 		if (compareVersion(version, version_12306_helper) < 0) {
+			if(typeof(external.mxCall)!='undefined'){
+				$("#updateFound").attr("href", "http://www.fishlee.net/soft/44/#C-192");
+			}
 			$("#updateFound").show();
 			alert('助手脚本已经发布了最新版 ' + version_12306_helper + '，请在登录页面上点击更新链接更新 :-)');
 		}
