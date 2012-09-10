@@ -11,7 +11,7 @@
 // @require			https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js
 // @icon			http://www.12306.cn/mormhweb/images/favicon.ico
 // @run-at			document-idle
-// @version 		3.2.0
+// @version 		3.2.1
 // @updateURL		http://www.fishlee.net/Service/Download.ashx/44/47/12306_ticket_helper.user.js
 // @supportURL		http://www.fishlee.net/soft/44/
 // @homepage		http://www.fishlee.net/soft/44/
@@ -23,7 +23,7 @@
 // @id				12306_ticket_helper_by_ifish@fishlee.net
 // @namespace		ifish@fishlee.net
 
-var version = "3.2.0";
+var version = "3.2.1";
 var loginUrl = "/otsweb/loginAction.do";
 var queryActionUrl = "/otsweb/order/querySingleAction.do";
 //预定
@@ -83,6 +83,7 @@ var utility = {
 	notifyObj: null,
 	timerObj: null,
 	notify: function (msg, timeout) {
+		console.log("信息提示: " + msg);
 		if (window.webkitNotifications) {
 			if (window.webkitNotifications.checkPermission() == 0) {
 				utility.closeNotify();
@@ -98,8 +99,8 @@ var utility = {
 			if (typeof (GM_notification) != 'undefined') {
 				GM_notification(msg);
 			} else {
-				//啊嘞？？怎么会到这里来
-				alert("【以下提示信息，但请报告作者操作导致看到此提示的原因 o(︶︿︶)o】\n\n" + msg);
+				console.log("主页面中脚本信息, 无法提示, 写入通知区域.");
+				utility.notifyOnTop(msg);
 			}
 		}
 	},
@@ -392,6 +393,18 @@ function entryPoint() {
 	} else if (path == "/otsweb/main.jsp" || path == "/otsweb/") {
 		//主框架
 		console.log("正在注入主框架脚本。");
+
+		//跨页面弹窗提示，防止因为页面跳转导致对话框不关闭
+		console.log("启动跨页面信息调用检查函数");
+		console.log(window.setInterval(function () {
+			var msg = window.localStorage["notify"];
+			if (typeof (msg != 'undefined') && msg) {
+				console.log("主窗口拦截提示请求: " + msg);
+				window.localStorage.removeItem("notify");
+				utility.notify(msg);
+			}
+		}, 100));
+
 		safeInvoke(injectMainPageFunction);
 	}
 }
@@ -431,15 +444,6 @@ function injectMainPageFunction() {
 		utility.notify("页面出错了！正在重新预定！");
 		form.submit();
 	}
-
-	//跨页面弹窗提示，防止因为页面跳转导致对话框不关闭
-	setInterval(function () {
-		var msg = window.localStorage["notify"];
-		if (typeof (msg != 'undefined') && msg) {
-			window.localStorage.removeItem("notify");
-			utility.notify(msg);
-		}
-	}, 100);
 }
 
 //#endregion
@@ -547,8 +551,8 @@ function initAutoCommitOrder() {
 					setCurOperationInfo(false, msg);
 					stop(msg);
 					reloadCode();
-				} else if (json.waitTime <= 0) {
-					var msg = "很抱歉, 未知的错误信息 : " + json.msg + ', 赶紧看看!';
+				} else if (json.waitTime < 0) {
+					var msg = "很抱歉, 未知的错误信息 : " + json.msg + ' (waitTime=' + json.waitTime + '), 可能已成功, 请重试提交试试.';
 					utility.notify(msg);
 					setCurOperationInfo(false, msg);
 					stop(msg);
@@ -674,7 +678,7 @@ function initTicketQuery() {
 		"<span style='font-weight:bold;margin-left:10px;color:red;'><label><input type='checkbox' id='chkFilterNonNeeded' />过滤不需要的席别</label></span>" +
 		"<span style='font-weight:bold;margin-left:10px;color:blue;display:none;'><label><input disabled='disabled' type='checkbox' id='chkAutoPreOrder' />自动预定</label></span>" +
 		"<span style='font-weight:bold;margin-left:10px;color:blue;display: none;'><label><input disabled='disabled' type='checkbox' id='chkFilterByTrain' />开启按车次过滤</label></span>" +
-		"<a href='#helperbox' style='font-weight:bold;color:purple;padding-left:30px;'>【工具箱】</a></td></tr>" +
+		"</td></tr>" +
 		"<tr><td colspan='9'><input style='line-height:25px;padding:5px;' disabled='disabled' type='button' value='停止声音' id='btnStopSound' /><input style='line-height:25px;padding:5px;' disabled='disabled'  type='button' value='停止刷新' id='btnStopRefresh' /></td> </tr>"
 	);
 
@@ -927,17 +931,15 @@ function initTicketQuery() {
 		resetTimer();
 		$("#refreshinfo").html("已经有票鸟！");
 
-		setTimeout(function () {
-			if (window.Audio && $("#chkAudioOn")[0].checked) {
-				if (!audio) {
-					audio = new Audio($("#txtMusicUrl").val());
-				}
-				audio.loop = $("#chkAudioLoop")[0].checked;
-				$("#btnStopSound")[0].disabled = false;
-				audio.play();
+		utility.notify("可以订票了！", null);
+		if (window.Audio && $("#chkAudioOn")[0].checked) {
+			if (!audio) {
+				audio = new Audio($("#txtMusicUrl").val());
 			}
-			utility.notify("可以订票了！", null);
-		}, 100);
+			audio.loop = $("#chkAudioLoop")[0].checked;
+			$("#btnStopSound")[0].disabled = false;
+			audio.play();
+		}
 	}
 	//检查是否可以订票
 	function getTrainNo(row) {
