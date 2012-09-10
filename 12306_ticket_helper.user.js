@@ -2,36 +2,35 @@
 // ==UserScript==
 // @name 			12306.CN 订票助手 For Firefox&Chrome
 // @namespace		http://www.u-tide.com/fish/
+// @author			iFish@FishLee.net <ifish@fishlee.net> http://www.fishlle.net/
+// @developer		iFish
+// @contributor		
 // @description		帮你订票的小助手 :-)
 // @match			http://dynamic.12306.cn/otsweb/*
 // @match			https://dynamic.12306.cn/otsweb/*
 // @require			https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js
 // @icon			http://www.12306.cn/mormhweb/images/favicon.ico
 // @run-at			document-idle
-// @version 		3.0.6
+// @version 		3.2.0
 // @updateURL		http://www.fishlee.net/Service/Download.ashx/44/47/12306_ticket_helper.user.js
 // @supportURL		http://www.fishlee.net/soft/44/
 // @homepage		http://www.fishlee.net/soft/44/
+// @contributionURL	https://me.alipay.com/imfish
+// @contributionAmount	￥5.00
 // ==/UserScript==
 
 
+// @id				12306_ticket_helper_by_ifish@fishlee.net
+// @namespace		ifish@fishlee.net
 
-
-
-
-
-if (typeof (WScript) != 'undefined') {
-	var obj = WScript.CreateObject("WScript.Shell");
-	obj.Popup("请将脚本文件拖放至谷歌浏览器的扩展管理或Firefox中安装，请勿双击。\r\n拖放到谷歌浏览器中无法安装时，请尝试在chrome中打开扩展管理界面后，再拖放至扩展管理界面中。", 0, "警告", 64);
-	throw new Error();
-}
-
-
-var version = "3.0.6";
+var version = "3.2.0";
 var loginUrl = "/otsweb/loginAction.do";
 var queryActionUrl = "/otsweb/order/querySingleAction.do";
 //预定
 var confirmOrderUrl = "/otsweb/order/confirmPassengerAction.do";
+var faqUrl = "http://www.fishlee.net/soft/44/faq.html";
+//标记
+var utility_emabed = false;
 
 
 //#region -----------------UI界面--------------------------
@@ -61,12 +60,15 @@ function injectStyle() {
      .outerbox{border:5px solid #EAE3F7;}\
     .box{border:1px solid #6E41C2;color:#444;}\
     .box .title{padding:5px;line-height:20px;background-color:#B59DE2;color:#fff;}\
+	.box .title a {color:white;}\
     .box .content{padding:5px;}\
     .box table{border-collapse:collapse; width:100%;}\
     .box table td{padding:5px;}\
     .box input[type=button],.fish_button {padding:5px;}\
 	.box .name ,.box .caption,.box .caption td { background-color:#EAE3F7; font-weight:bold;}\
 	.fish_sep td {border-top:1px solid #A688DD;}\
+	.lineButton { cursor:pointer; border: 1px solid green; border-radius:3px; line-height: 16px; padding:3px; backround-color: lightgreen; color: green;}\
+	.lineButton:hover { color: white; background-color: green; }\
     ";
 
 	document.head.appendChild(s);
@@ -81,20 +83,28 @@ var utility = {
 	notifyObj: null,
 	timerObj: null,
 	notify: function (msg, timeout) {
-		if (window.webkitNotifications && window.webkitNotifications.checkPermission() == 0) {
-			utility.closeNotify();
+		if (window.webkitNotifications) {
+			if (window.webkitNotifications.checkPermission() == 0) {
+				utility.closeNotify();
 
-			if (utility.notifyObj == null)
-				utility.notifyObj = webkitNotifications.createNotification(utility.icon, '订票', msg);
-			utility.notifyObj.show();
-			if (!timeout || timeout != 0) utility.timerObj = setTimeout(utility.closeNotify, timeout || 5000);
+				if (utility.notifyObj == null)
+					utility.notifyObj = webkitNotifications.createNotification(utility.icon, '订票', msg);
+				utility.notifyObj.show();
+				if (!timeout || timeout != 0) utility.timerObj = setTimeout(utility.closeNotify, timeout || 5000);
+			} else {
+				alert("【警告：您尚未允许脚本的Notify权限！请开启以避免使用这种对话框来进行提示！】\n\n" + msg);
+			}
 		} else {
 			if (typeof (GM_notification) != 'undefined') {
 				GM_notification(msg);
 			} else {
-				window.localStorage.setItem("notify", msg);
+				//啊嘞？？怎么会到这里来
+				alert("【以下提示信息，但请报告作者操作导致看到此提示的原因 o(︶︿︶)o】\n\n" + msg);
 			}
 		}
+	},
+	notifyOnTop: function (msg) {
+		window.localStorage.setItem("notify", msg);
 	},
 	closeNotify: function () {
 		if (!utility.notifyObj) return;
@@ -143,11 +153,8 @@ var utility = {
 		});
 		utility.savePrefs(obj, prefix);
 	},
-	/**
-	 * 获得给定信息中的错误信息
-	 * @param msg 返回的信息内容
-	 */
 	getErrorMsg: function (msg) {
+		/// <summary>获得给定信息中的错误信息</summary>
 		var m = msg.match(/var\s+message\s*=\s*"([^"]*)/);
 		return m && m[1] ? m[1] : "&lt;未知信息&gt;";
 	},
@@ -203,13 +210,63 @@ var utility = {
 	resetAudioUrl: function () {
 		/// <summary>恢复音乐地址为默认</summary>
 		window.localStorage.removeItem("audioUrl");
+	},
+	parseDate: function (s) { /(\d{4})[-/](\d{1,2})[-/](\d{1,2})/.exec(s); return new Date(RegExp.$1, RegExp.$2 - 1, RegExp.$3); },
+	getDate: function (s) {
+		/// <summary>获得指定日期的天单位</summary>
+		return new Date(s.getFullYear(), s.getMonth(), s.getDate());
+	},
+	formatDate: function (d) {
+		/// <summary>格式化日期</summary>
+		var y = d.getFullYear();
+
+		return y + "-" + utility.formatDateShort(d);
+	},
+	formatDateShort: function (d) {
+		/// <summary>格式化日期</summary>
+		var mm = d.getMonth() + 1;
+		var d = d.getDate();
+
+		return (mm > 9 ? mm : "0" + mm) + "-" + (d > 9 ? d : "0" + d);
+	},
+	addTimeSpan: function (date, y, mm, d, h, m, s) {
+		/// <summary>对指定的日期进行偏移</summary>
+		return new Date(date.getFullYear() + y, date.getMonth() + mm, date.getDate() + d, date.getHours() + h, date.getMinutes() + m, date.getSeconds() + s);
+	},
+	serializeForm: function (form) {
+		/// <summary>序列化表单为对象</summary>
+		var v = {};
+		var o = form.serializeArray();
+		for (var i in o) {
+			if (typeof (v[o[i].name]) == 'undefined') v[o[i].name] = o[i].value;
+			else v[o[i].name] += "," + o[i].value;
+		}
+		return v;
+	},
+	getSecondInfo: function (second) {
+		var show_time = "";
+		var hour = parseInt(second / 3600);  //时
+		if (hour > 0) {
+			show_time = hour + "小时";
+			second = second % 3600;
+		}
+		var minute = parseInt(second / 60);  //分
+		if (minute >= 1) {
+			show_time = show_time + minute + "分";
+			second = second % 60;
+		} else if (hour >= 1 && second > 0) {
+			show_time = show_time + "0分";
+		}
+		if (second > 0) {
+			show_time = show_time + second + "秒";
+		}
+
+		return show_time;
 	}
 }
 
-/**
- * 开始执行脚本
- */
 function beginExecute() {
+	/// <summary>开始执行脚本</summary>
 	entryPoint();
 }
 
@@ -222,11 +279,6 @@ function safeInvoke(callback) {
 }
 
 
-/**
- * 非沙箱模式的回调数据
- * @param callback 回调数据
- *
- * */
 function unsafeInvoke(callback) {
 	/// <summary>非沙箱模式下的回调</summary>
 	var cb = document.createElement("script");
@@ -236,8 +288,12 @@ function unsafeInvoke(callback) {
 }
 
 function buildCallback(callback) {
-	var content = "if(typeof(window.utility)=='undefined') {window.utility=" + buildObjectJavascriptCode(utility) + ";}\r\n\
-	window.__cb=" + buildObjectJavascriptCode(callback) + ";\r\n\
+	var content = "";
+	if (!utility_emabed) {
+		content += "if(typeof(window.utility)!='undefined'){ alert('警告! 检测到您似乎同时运行了两个12306购票脚本! 请转到『附加组件管理『（Firefox）或『扩展管理』（Chrome）中卸载老版本的助手！');}; \r\nwindow.utility=" + buildObjectJavascriptCode(utility) + ";\r\n";
+		utility_emabed = true;
+	}
+	content += "window.__cb=" + buildObjectJavascriptCode(callback) + ";\r\n\
 	if(typeof(jQuery)!='undefined')window.__cb();\r\n\
 	else{\
 		var script=document.createElement('script');\r\nscript.src='https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js';\r\n\
@@ -249,11 +305,8 @@ function buildCallback(callback) {
 	return content;
 }
 
-/**
- * 将指定的Javascript对象编译为脚本，包含
- * @param object
- */
 function buildObjectJavascriptCode(object) {
+	/// <summary>将指定的Javascript对象编译为脚本</summary>
 	if (!object) return null;
 
 	var t = typeof (object);
@@ -289,7 +342,7 @@ function buildObjectJavascriptCode(object) {
 var isChrome = navigator.userAgent.indexOf("AppleWebKit") != -1;
 var isFirefox = navigator.userAgent.indexOf("Firefox") != -1;
 
-if(location.host=="dynamic.12306.cn"){
+if (location.host == "dynamic.12306.cn") {
 	if (!isChrome && !isFirefox) {
 		alert("很抱歉，未能识别您的浏览器，或您的浏览器尚不支持脚本运行，请使用Firefox或Chrome浏览器！\n如果您运行的是Maxthon3，请确认当前页面运行在高速模式而不是兼容模式下 :-)");
 	} else if (isFirefox && typeof (GM_notification) == 'undefined') {
@@ -306,6 +359,22 @@ if(location.host=="dynamic.12306.cn"){
 //#region -----------------入口----------------------
 
 function entryPoint() {
+	//版本兼容检测
+	var currentVersion = window.localStorage["helperVersion"] || "";
+	if (!currentVersion || currentVersion < version) {
+		window.localStorage.setItem("helperVersion", version);
+
+		if (confirm("欢迎使用12306购票助手, 您正在使用的版本是 " + version + ".\n\n为了避免助手运行出现问题, 请务必卸载所有老版本的助手组件.\n\
+如果您的助手运行出现不正常, 请查看并卸载老版本的助手组件.\n\n\
+如果您不会查看或卸载, 请点击 '确定' 打开官方帮助页面; 否则请点击'取消'继续. 如果弹窗被拦截, 请手动打开这个地址: "+ faqUrl + "\n\n\
+这个提示只会出现一次.\n\n由于铁道部修改了订单提交逻辑, 因此可怜的我不得不重写整个提交逻辑， 如果出现任何提交的问题，请务必记录界面上的提示信息，必要时保留截图，并联系作者，感谢您的支持。")) {
+			window.open(faqUrl);
+		}
+
+	}
+
+
+
 	var location = window.location;
 	var path = location.pathname;
 
@@ -322,18 +391,8 @@ function entryPoint() {
 		safeInvoke(autoCommitOrderInSandbox);
 	} else if (path == "/otsweb/main.jsp" || path == "/otsweb/") {
 		//主框架
+		console.log("正在注入主框架脚本。");
 		safeInvoke(injectMainPageFunction);
-	}
-	
-	//桌面提示for Firefox
-	if (isFirefox) {
-		setInterval(function () {
-			var msg = window.localStorage["notify"];
-			if (typeof (msg != 'undefined') && msg) {
-				window.localStorage.removeItem("notify");
-				GM_notification(msg);
-			}
-		}, 100);
 	}
 }
 
@@ -372,6 +431,15 @@ function injectMainPageFunction() {
 		utility.notify("页面出错了！正在重新预定！");
 		form.submit();
 	}
+
+	//跨页面弹窗提示，防止因为页面跳转导致对话框不关闭
+	setInterval(function () {
+		var msg = window.localStorage["notify"];
+		if (typeof (msg != 'undefined') && msg) {
+			window.localStorage.removeItem("notify");
+			utility.notify(msg);
+		}
+	}, 100);
 }
 
 //#endregion
@@ -382,9 +450,17 @@ function initAutoCommitOrder() {
 	var breakFlag = 0;
 	var randCode = "";
 	var submitFlag = false;
+	var tourFlag;
+
+	//获得tourflag
+	(function () {
+		/'(dc|fc|wc|gc)'/.exec($("div.tj_btn :button:eq(2)")[0].onclick + '');
+		tourFlag = RegExp.$1;
+	})();
 
 	function stop(msg) {
-		$("#tipresult").html("错误 - " + msg);
+		setCurOperationInfo(false, "错误 - " + msg);
+		setTipMessage(msg);
 		$("div.tj_btn button, div.tj_btn input").each(function () {
 			this.disabled = false;
 			$(this).removeClass().addClass("long_button_u");
@@ -392,15 +468,24 @@ function initAutoCommitOrder() {
 		$("#btnCancelAuto").hide();
 	}
 
+	var reloadCode = function () {
+		$("#img_rrand_code").click();
+		$("#rand")[0].select();
+	};
+
+	var getSleepTime = function () {
+		return 1000 * Math.max(parseInt($("#pauseTime").val()), 1);
+	};
 
 	function submitForm() {
 		if (!window.submit_form_check || !submit_form_check("confirmPassenger")) {
-			utility.notify("信息没有填写完整，或当前表单出现异常！");
+			setCurOperationInfo(false, "您的表单没有填写完整!");
+			stop("请填写完整表单");
 			return;
 		}
 
 		count++;
-		$("#tipinfo").html("第 " + count + " 次提交");
+		setCurOperationInfo(true, "第 " + count + " 次提交");
 		if (breakFlag) {
 			stop("已取消自动提交");
 			breakFlag = 0;
@@ -410,55 +495,80 @@ function initAutoCommitOrder() {
 		breakFlag = 0;
 
 		jQuery.ajax({
-			url: $("#confirmPassenger").attr('action'),
+			url: '/otsweb/order/confirmPassengerAction.do?method=confirmSingleForQueueOrder',
 			data: $('#confirmPassenger').serialize(),
 			type: "POST",
 			timeout: 30000,
+			dataType: 'json',
 			success: function (msg) {
-				var match = msg && msg.match(/org\.apache\.struts\.taglib\.html\.TOKEN['"]?\s*value=['"]?([^'">]+)/i);
-				var newToken = match && match[1];
-				if (newToken) {
-					$("input[name='org.apache.struts.taglib.html.TOKEN']").val(newToken);
-				}
-				if (msg.indexOf('席位已成功锁定') > -1) {
-					$("#tipresult").html("订票已成功！");
-					alert("车票预订成功，恭喜!");
-					window.location.replace("/otsweb/order/myOrderAction.do?method=queryMyOrderNotComplete&leftmenu=Y");
-					return;
-				}
-				if (msg.indexOf('还有未处理的订单') > -1) {
-					$("#tipresult").html("系统发现未处理的订单，可能上次已成功，请验证！");
-					alert("系统发现未处理的订单，可能上次已成功，请验证!");
-					window.location.replace("/otsweb/order/myOrderAction.do?method=queryMyOrderNotComplete&leftmenu=Y");
-					return;
-				}
-				var retryMessage = ['确认客票的状态后再尝试后续操作', '请不要重复提交'];
-				for (var i = retryMessage.length - 1; i >= 0; i--) {
-					if (msg.indexOf(retryMessage[i]) > -1) {
-						$("#tipresult").html(retryMessage[i]);
-						setTimeout(submitForm, 1000 * Math.max(parseInt($("#pauseTime").val()), 1));
+				var errmsg = msg.errMsg;
+				if (errmsg != 'Y') {
+					if (errmsg.indexOf("包含未付款订单") != -1) {
+						alert("您有未支付订单! 等啥呢, 赶紧点确定支付去.");
+						window.location.replace("/otsweb/order/myOrderAction.do?method=queryMyOrderNotComplete&leftmenu=Y");
 						return;
 					}
+
+					setCurOperationInfo(false, errmsg);
+					stop(errmsg);
+					reloadCode();
+				} else {
+					waitingForQueueComplete();
 				}
-				msg = msg.match(/var\s+message\s*=\s*"([^"]*)/);
-				if (msg && (msg[1].indexOf("验证码") != -1 || msg[1].indexOf("用户过多") != -1)) {
-					$("#img_rrand_code").click();
-					$("#rand")[0].select();
-				}
-				stop(msg && msg[1] || '出错了。。。。 啥错？ 我也不知道。。。。。');
 			},
 			error: function (msg) {
-				$("#tipresult").html("当前请求发生错误");
+				setCurOperationInfo(false, "当前请求发生错误");
 				submitForm();
 			}
 		});
 	}
 
+	function waitingForQueueComplete() {
+		setCurOperationInfo(true, "订单提交成功, 正在等待队列完成操作....");
+		$.ajax({
+			url: '/otsweb/order/myOrderAction.do?method=getOrderWaitTime&tourFlag=' + tourFlag + '&' + Math.random(),
+			data: {},
+			type: 'GET',
+			timeout: 30000,
+			dataType: 'json',
+			success: function (json) {
+				if (json.waitTime == -1 && json.orderId) {
+					utility.notify("订票成功!");
+					location.href = "/otsweb/order/confirmPassengerAction.do?method=payOrder&orderSequence_no=" + json.orderId;
+				} else if (json.waitTime == -3) {
+					var msg = "很抱歉, 铁道部无齿地撤销了您的订单, 赶紧重新下!";
+					utility.notify(msg);
+					setCurOperationInfo(false, msg);
+					stop(msg);
+					reloadCode();
+				} else if (json.waitTime == -2) {
+					var msg = "很抱歉, 铁道部说您占座失败 : " + json.msg + ', 赶紧重新来过!';
+					utility.notify(msg);
+					setCurOperationInfo(false, msg);
+					stop(msg);
+					reloadCode();
+				} else if (json.waitTime <= 0) {
+					var msg = "很抱歉, 未知的错误信息 : " + json.msg + ', 赶紧看看!';
+					utility.notify(msg);
+					setCurOperationInfo(false, msg);
+					stop(msg);
+					reloadCode();
+				} else {
+					var msg = "订单提交成功, 但是大约需要 " + utility.getSecondInfo(json.waitTime) + " 处理完成, 请稍等.";
+					setTipMessage(msg);
+					utility.notify(msg);
+					utility.delayInvoke("#countEle", waitingForQueueComplete, 1000);
+				}
+			},
+			error: function (json) {
+				setTipMessage("当前请求出现错误, 正在等待重试...");
+				utility.delayInvoke("#countEle", waitingForQueueComplete, getSleepTime());
+			}
+		});
+	}
 
-	$("div.tj_btn")
-		.before("<div style='text-align:center;'><span id='tipinfo'></span>：<span id='tipresult'></span></div>")
-		.append("<button class='long_button_u_down' type='button' id='btnAutoSubmit'>自动提交</button>" +
-		" <button class='long_button_u_down' type='button' id='btnCancelAuto' style='display:none;'>取消自动</button>");
+
+	$("div.tj_btn").append("<button class='long_button_u_down' type='button' id='btnAutoSubmit'>自动提交</button> <button class='long_button_u_down' type='button' id='btnCancelAuto' style='display:none;'>取消自动</button>");
 	$("#btnAutoSubmit").click(function () {
 		count = 0;
 		breakFlag = 0;
@@ -471,7 +581,7 @@ function initAutoCommitOrder() {
 		submitFlag = false;
 	});
 	$("#rand").keyup(function (e) {
-		if (!submitFlag&&!document.getElementById("autoStartCommit").checked) return;
+		if (!submitFlag && !document.getElementById("autoStartCommit").checked) return;
 
 		if (e.charCode == 13 || $("#rand").val().length == 4) submitForm();
 	});
@@ -482,12 +592,44 @@ function initAutoCommitOrder() {
 	}
 
 	//提交频率差别
-	$(".table_qr tr:last").before("<tr><td colspan='9'>自动提交失败时休息时间：<input type='text' size='4' class='input_20txt' style='text-align:center;' value='3' id='pauseTime' />秒 (不得低于1)  <label><input type='checkbox' id='autoStartCommit' /> 输入验证码后立刻开始自动提交</label></td></tr>");
-	document.getElementById("autoStartCommit").checked=typeof(window.localStorage["disableAutoStartCommit"])=='undefined';
-	$("#autoStartCommit").change(function(){
-	 	if(this.checked)window.localStorage.removeItem("disableAutoStartCommit");
-	 	else window.localStorage.setItem("disableAutoStartCommit", "1");
+	$(".table_qr tr:last").before("<tr><td colspan='9'>自动提交失败时休息时间：<input type='text' size='4' class='input_20txt' style='text-align:center;' value='3' id='pauseTime' />秒 (不得低于1)  <label><input type='checkbox' id='autoStartCommit' /> 输入验证码后立刻开始自动提交</label> <label><input type='checkbox' id='showHelp' /> 显示帮助</label></td></tr>");
+	document.getElementById("autoStartCommit").checked = typeof (window.localStorage["disableAutoStartCommit"]) == 'undefined';
+	document.getElementById("showHelp").checked = typeof (window.localStorage["disableAutoStartCommit"]) != 'undefined';
+	$("#autoStartCommit").change(function () {
+		if (this.checked) window.localStorage.removeItem("disableAutoStartCommit");
+		else window.localStorage.setItem("disableAutoStartCommit", "1");
 	});
+	$("#showHelp").change(function () {
+		if (this.checked) {
+			window.localStorage.setItem("showHelp", "1");
+			$("#_station_train_code").next().find("tr:last").show();
+		}
+		else {
+			window.localStorage.removeItem("showHelp");
+			$("#_station_train_code").next().find("tr:last").hide();
+		}
+	}).change();
+
+	//进度提示框
+	$("#_station_train_code").next().find("tr:last").before("<tr><td style='border-top:1px dotted #ccc;' colspan='9'><ul id='tipScript'>" +
+	"<li class='fish_clock' id='countEle' style='font-weight:bold;'>等待操作</li>" +
+	"<li style='color:green;'><strong>操作信息</strong>：<span>休息中</span></li>" +
+	"<li style='color:green;'><strong>最后操作时间</strong>：<span>--</span></li></ul></td></tr>");
+
+	var tip = $("#tipScript li");
+	var count = 1;
+	var errorCount = 0;
+
+	//以下是函数
+	function setCurOperationInfo(running, msg) {
+		var ele = $("#countEle");
+		ele.removeClass().addClass(running ? "fish_running" : "fish_clock").html(msg || (running ? "正在操作中……" : "等待中……"));
+	}
+
+	function setTipMessage(msg) {
+		tip.eq(2).find("span").html(utility.getTimeInfo());
+		tip.eq(1).find("span").html(msg);
+	}
 }
 
 function autoCommitOrderInSandbox() {
@@ -505,11 +647,13 @@ function autoCommitOrderInSandbox() {
 
 //#region -----------------自动刷新----------------------
 function initTicketQuery() {
-	//兼容性检测 for Maxthon3.
+	//#region 兼容性检测 for Maxthon3.
 	//在Maxthon3下该入口函数会神奇地在日期选择界面出现，原因未查
-	if(typeof(seatTypeRelation)=='undefined'||!seatTypeRelation)return;
+	if (typeof (seatTypeRelation) == 'undefined' || !seatTypeRelation) return;
+	//#endregion
 
-	var buttonid = "";
+	//#region 参数配置和常规工具界面
+
 	var autoRefresh = false;
 	var queryCount = 0;
 	var timer = null;
@@ -517,8 +661,6 @@ function initTicketQuery() {
 	var audio = null; //通知声音
 	var timerCountDown = 0;
 	var timeCount = 0;
-	var filterNonBookable = false;
-	var filterNonNeeded = false;
 	var autoBook = false;
 	//初始化表单
 	var form = $("form[name=querySingleForm] .cx_from:first");
@@ -532,15 +674,9 @@ function initTicketQuery() {
 		"<span style='font-weight:bold;margin-left:10px;color:red;'><label><input type='checkbox' id='chkFilterNonNeeded' />过滤不需要的席别</label></span>" +
 		"<span style='font-weight:bold;margin-left:10px;color:blue;display:none;'><label><input disabled='disabled' type='checkbox' id='chkAutoPreOrder' />自动预定</label></span>" +
 		"<span style='font-weight:bold;margin-left:10px;color:blue;display: none;'><label><input disabled='disabled' type='checkbox' id='chkFilterByTrain' />开启按车次过滤</label></span>" +
-		"<input type='hidden' id='queryid' /></td></tr>" +
+		"<a href='#helperbox' style='font-weight:bold;color:purple;padding-left:30px;'>【工具箱】</a></td></tr>" +
 		"<tr><td colspan='9'><input style='line-height:25px;padding:5px;' disabled='disabled' type='button' value='停止声音' id='btnStopSound' /><input style='line-height:25px;padding:5px;' disabled='disabled'  type='button' value='停止刷新' id='btnStopRefresh' /></td> </tr>"
 	);
-	$("#chkFilterNonBookable").change(function () {
-		filterNonBookable = this.checked;
-	});
-	$("#chkFilterNonNeeded").change(function () {
-		filterNonNeeded = this.checked;
-	});
 
 	if (!window.Audio) {
 		$("#chkAudioOn, #chkAudioLoop, #btnStopSound").remove();
@@ -554,11 +690,11 @@ function initTicketQuery() {
 	}
 
 	//操作控制
-	$("#btnStopRefresh").click(function () {
-		resetTimer();
-	});
+	$("#btnStopRefresh").click(function () { resetTimer(); });
 
-	//显示座级选择UI
+	//#endregion
+
+	//#region 显示座级选择UI
 	var ticketType = new Array();
 	$(".hdr tr:eq(2) td").each(function (i, e) {
 		ticketType.push(false);
@@ -589,24 +725,26 @@ function initTicketQuery() {
 	$("#chkSeatOnly").click(function () {
 		if (!this.checked) return;
 		$(".hdr tr:eq(2) td").each(function (i, e) {
-		 	var obj=$(this);
-		 	var txt = obj.attr("otext");
-			obj.find("input").attr("checked", typeof(txt)!='undefined' && txt && txt.indexOf("座") != -1).change();
+			var obj = $(this);
+			var txt = obj.attr("otext");
+			obj.find("input").attr("checked", typeof (txt) != 'undefined' && txt && txt.indexOf("座") != -1).change();
 		});
 		$("#chkSleepOnly")[0].checked = false;
 	});
 	$("#chkSleepOnly").click(function () {
 		if (!this.checked) return;
 		$(".hdr tr:eq(2) td").each(function (i, e) {
-		 	var obj=$(this);
-		 	var txt = obj.attr("otext");
-			obj.find("input").attr("checked", typeof(txt)!='undefined' && txt && txt.indexOf("卧") != -1).change();
+			var obj = $(this);
+			var txt = obj.attr("otext");
+			obj.find("input").attr("checked", typeof (txt) != 'undefined' && txt && txt.indexOf("卧") != -1).change();
 		});
 		$("#chkSeatOnly")[0].checked = false;
 	});
-	//显示额外的功能区
-	$("body").append("<div class='outerbox'><div class='box'><div class='title'>辅助工具</div><div class='content'>\
-<table><tr><td colspan='4'><input type='button' value='添加自定义车票时间段' id='btnDefineTimeRange' />\
+	//#endregion
+
+	//#region 显示额外的功能区
+	$("body").append("<div class='outerbox' id='helperbox'><div class='box'><div class='title'>辅助工具 [<a href='#querySingleForm'>返回订票列表</a>]</div><div class='content'>\
+<table id='helpertooltable'><tr><td colspan='4'><input type='button' value='添加自定义车票时间段' id='btnDefineTimeRange' />\
 <input type='button' value='清除自定义车票时间段' id='btnClearDefineTimeRange' /></td></tr>\
 <tr class='fish_sep caption'><td colspan='4'>以下是车次过滤以及自动预定列表。要将车次加入下列的列表，请在上面查询的结果中，将鼠标移动到车次链接上，并点击出现的提示框中的过滤或自动预定按钮。</td></tr>\
         <tr class='fish_sep'><td><strong>车次黑名单</strong><br /><span style='color:gray;'>指定车次将会<br />被从列表中过<br />滤，不再出现</span></td><td><select id='blackList' style='width:200px;height:100px;' size='10' multiple='multiple'></select><input type='button' value='删除' class='btn_list_delete' /><input type='button' class='btn_list_clear' value='清空' /></td>\
@@ -619,12 +757,14 @@ function initTicketQuery() {
 <tr class='fish_sep caption'><td colspan='4'>相关设置</td></tr>\
 <tr class='fish_sep musicFunc'><td class='name'>自定义音乐地址</td><td colspan='3'><input type='text' id='txtMusicUrl' value='" + utility.getAudioUrl() + "' onfocus='this.select();' style='width:70%;' /> <input type='button' onclick='new Audio(document.getElementById(\"txtMusicUrl\").value).play();' value='测试'/><input type='button' onclick='utility.resetAudioUrl(); document.getElementById(\"txtMusicUrl\").value=utility.getAudioUrl();' value='恢复默认'/></td></tr>\
 <tr class='fish_sep musicFunc'><td class='name'>可用音乐地址</td><td colspan='3'><span style='color:gray;'>* 暂时木有，如果您有好的地址，请告知作者</span></td></tr>\
-<tr class='fish_sep'><td style='text-align:center;' colspan='4'><a href='http://t.qq.com/ccfish/' target='_blank' style='color:blue;'>腾讯微博</a> | <a href='http://www.fishlee.net/soft/44/' style='color:blue;' target='_blank'>助手主页</a> | <a href='http://www.fishlee.net/Discussion/Index/44' target='_blank'>反馈助手BUG</a></td></tr>\
+<tr class='fish_sep'><td style='text-align:center;' colspan='4'>12306.CN 订票助手 by iFish(木鱼) | <a href='http://t.qq.com/ccfish/' target='_blank' style='color:blue;'>腾讯微博</a> | <a href='http://www.fishlee.net/soft/44/' style='color:blue;' target='_blank'>助手主页</a> | <a href='http://www.fishlee.net/Discussion/Index/44' target='_blank'>反馈助手BUG</a> | <a href='http://www.fishlee.net/About' target='_blank'>联系作者</a></td></tr>\
 		</table></div></div></div>");
 	$("#stopBut").before("<div class='jmp_cd' style='text-align:center;'><input type='button' class='fish_button' id='btnFilter' value='加入黑名单' /><input type='button' class='fish_button' id='btnAutoBook' value='自动预定本车次' /></div>");
 	$("#txtMusicUrl").change(function () { window.localStorage["audioUrl"] = this.value; });
+	$("form[name=querySingleForm]").attr("id", "querySingleForm");
+	//#endregion
 
-	//添加自定义时间段
+	//#region 添加自定义时间段
 	function addCustomTimeRange() {
 		var s = parseInt(prompt("请输入自定义时间段的起始时间（请填入小时，0-23）", "0"));
 		if (isNaN(s) || s <= 0 || s > 23) {
@@ -654,8 +794,9 @@ function initTicketQuery() {
 		window.localStorage.removeItem("customTimeRange");
 	});
 	$("#btnDefineTimeRange").click(addCustomTimeRange);
+	//#endregion
 
-	//过滤车次
+	//#region 过滤车次
 	var stopHover = window.onStopHover;
 	window.onStopHover = function (info) {
 		$("#stopDiv").attr("info", $.trim($("#id_" + info.split('#')[0]).text()));
@@ -714,44 +855,29 @@ function initTicketQuery() {
 	});
 	//清除进入指定页面后提示的标记位
 	if (window.localStorage["bookTip"]) window.localStorage.removeItem("bookTip");
+	//#endregion
 
+	//#region 自动重新查询
 
-
-	//通知权限
-	if (!window.webkitNotifications || window.webkitNotifications.checkPermission() == 0) {
-		$("#enableNotify").remove();
-	}
-
-	//保存信息
-	function saveStateInfo() {
-		if (!$("#keepinfo")[0].checked || $("#fromStationText")[0].disabled) return;
-		utility.setPref("_from_station_text", $("#fromStationText").val());
-		utility.setPref("_from_station_telecode", $("#fromStation").val());
-		utility.setPref("_to_station_text", $("#toStationText").val());
-		utility.setPref("_to_station_telecode", $("#toStation").val());
-		utility.setPref("_depart_date", $("#startdatepicker").val());
-		utility.setPref("_depart_time", $("#startTime").val());
-	}
-
-	$("#submitQuery, #stu_submitQuery").click(saveStateInfo);
+	var clickButton = null;//点击的查询按钮
+	var filterNonBookable = $("#chkFilterNonBookable")[0];	//过滤不可定车次
+	var filterNonNeeded = $("#chkFilterNonNeeded")[0];	//过滤不需要车次
+	var onRequery = function () { };	//当重新查询时触发
+	var onNoTicket = function () { };	//当没有查到票时触发
 
 	//是否是学生票？
-	var queryevent = function () {
-		buttonid = this.getAttribute("id");
-		$("#queryid").val(buttonid);
+	$("#submitQuery, #stu_submitQuery").click(function () {
+		clickButton = $(this);
 		autoRefresh = ($("#autoRequery")[0].checked);
-	};
-	$("#submitQuery, #stu_submitQuery").click(queryevent);
+	});
 	$("#autoRequery").change(function () {
 		autoRefresh = this.checked;
 		if (!this.checked) return;
 
 		resetTimer();
 	});
-	$("#refereshInterval").change(
-		function () {
-			timeCount = Math.max(6, parseInt($("#refereshInterval").val()));
-		}).change();
+	//刷新时间间隔
+	$("#refereshInterval").change(function () { timeCount = Math.max(6, parseInt($("#refereshInterval").val())); }).change();
 
 	//定时查询
 	function resetTimer() {
@@ -771,8 +897,16 @@ function initTicketQuery() {
 		if (timerCountDown > 0) {
 			timer = setTimeout(countDownTimer, 1000);
 		} else {
+			onRequery();
 			doQuery();
 		}
+	}
+
+	function startTimer() {
+		timerCountDown = timeCount + 1;
+		//没有定时器的时候，开启定时器准备刷新
+		$("#btnStopRefresh")[0].disabled = false;
+		countDownTimer();
 	}
 
 	function displayQueryInfo() {
@@ -785,7 +919,7 @@ function initTicketQuery() {
 		timer = null;
 		if (audio) audio.pause();
 		displayQueryInfo();
-		$("#" + buttonid).click();
+		clickButton.click();
 	}
 
 	//验证车票有开始
@@ -860,8 +994,8 @@ function initTicketQuery() {
 				}
 			}
 			else {
-				if (valid == 1 && filterNonNeeded) row.hide();
-				if (valid == 0 && filterNonBookable) row.hide();
+				if (valid == 1 && filterNonNeeded.checked) row.hide();
+				if (valid == 0 && filterNonBookable.checked) row.hide();
 			}
 			ticketValid = ticketValid || valid == 2;
 		}
@@ -869,12 +1003,61 @@ function initTicketQuery() {
 		if (ticketValid) {
 			onticketAvailable();
 		} else if (autoRefresh) {
-			timerCountDown = timeCount + 1;
-			//没有定时器的时候，开启定时器准备刷新
-			$("#btnStopRefresh")[0].disabled = false;
-			countDownTimer();
+			onNoTicket();
+			startTimer();
 		}
 	});
+
+	//系统繁忙时自动重复查询 chkAutoResumitOrder
+	$("#orderForm").submit(function () {
+		if ($("#chkAutoResumitOrder")[0].checked) {
+			parent.$("#orderForm").remove();
+			parent.$("body").append($("#orderForm").clone(false).attr("target", "main"));
+		}
+	});
+	$("body").ajaxComplete(function (e, r, s) {
+		if (!$("#chkAutoRequery")[0].checked) return;
+		if (s.url.indexOf("/otsweb/order/querySingleAction.do") != -1 && r.responseText == "-1") {
+			startTimer();
+		}
+	});
+	$("body").ajaxError(function (e, r, s) {
+		if (!$("#chkAutoRequery")[0].checked) return;
+		if (s.url.indexOf("/otsweb/order/querySingleAction.do") != -1) {
+			startTimer();
+		}
+	});
+
+	//Hack掉原来的系统函数。丫居然把所有的click事件全部处理了，鄙视
+	window.invalidQueryButton = function () {
+		var queryButton = $("#submitQuery");
+		queryButton.unbind("click", sendQueryFunc);
+		if (queryButton.attr("class") == "research_u") {
+			renameButton("research_x");
+		} else if (queryButton.attr("class") == "search_u") {
+			renameButton("search_x");
+		}
+	}
+	//#endregion
+
+	//#region 配置加载、保存、权限检测
+	//通知权限
+	if (!window.webkitNotifications || window.webkitNotifications.checkPermission() == 0) {
+		$("#enableNotify").remove();
+	}
+
+	//保存信息
+	function saveStateInfo() {
+		if (!$("#keepinfo")[0].checked || $("#fromStationText")[0].disabled) return;
+		utility.setPref("_from_station_text", $("#fromStationText").val());
+		utility.setPref("_from_station_telecode", $("#fromStation").val());
+		utility.setPref("_to_station_text", $("#toStationText").val());
+		utility.setPref("_to_station_telecode", $("#toStation").val());
+		utility.setPref("_depart_date", $("#startdatepicker").val());
+		utility.setPref("_depart_time", $("#startTime").val());
+	}
+
+	$("#submitQuery, #stu_submitQuery").click(saveStateInfo);
 	//回填信息
 	if (!$("#fromStationText")[0].disabled) {
 		var FROM_STATION_TEXT = utility.getPref('_from_station_text');  // 出发站名称
@@ -894,44 +1077,103 @@ function initTicketQuery() {
 		}
 	}
 
-	//系统繁忙时自动重复查询 chkAutoResumitOrder
-	$("#orderForm").submit(function () {
-		if ($("#chkAutoResumitOrder")[0].checked) {
-			parent.$("#orderForm").remove();
-			parent.$("body").append($("#orderForm").clone(false).attr("target", "main"));
-		}
-	});
-	$("body").ajaxComplete(function (e, r, s) {
-		if (!$("#chkAutoRequery")[0].checked) return;
-		if (s.url.indexOf("/otsweb/order/querySingleAction.do") != -1 && r.responseText == "-1") {
-			delayButton();
-			$("#" + $("#queryid").val()).click();
-		}
-	});
-	$("body").ajaxError(function (e, r, s) {
-		if (!$("#chkAutoRequery")[0].checked) return;
-		if (s.url.indexOf("/otsweb/order/querySingleAction.do") != -1) {
-			delayButton();
-			$("#" + $("#queryid").val()).click();
-		}
-	});
-
-	//Hack掉原来的系统函数。丫居然把所有的click事件全部处理了，鄙视
-	window.invalidQueryButton = function () {
-		var queryButton = $("#submitQuery");
-		queryButton.unbind("click", sendQueryFunc);
-		if (queryButton.attr("class") == "research_u") {
-			renameButton("research_x");
-		} else if (queryButton.attr("class") == "search_u") {
-			renameButton("search_x");
-		}
-	}
-
 	//音乐
 	if (!window.Audio) {
 		$(".musicFunc").hide();
 	}
 	utility.reloadPrefs($("tr.append_row"), "ticket_query");
+	//#endregion
+
+	//---3.2中新增的功能---
+
+	//#region 时间快捷修改
+	(function () {
+		var datebox = $("table.cx_from tr:eq(0) td:eq(5), table.cx_from tr:eq(1) td:eq(3)");
+		datebox.width("170px");
+		datebox.find("input").width("70px").before('<input type="button" class="date_prev lineButton" value="&lt;">').after('<input type="button" class="date_next lineButton" value="&gt;">');
+
+		datebox.find(".date_prev").click(function () { var dobj = $(this).next(); dobj.val(utility.formatDate(utility.addTimeSpan(utility.parseDate(dobj.val()), 0, 0, -1, 0, 0, 0))).change(); });
+		datebox.find(".date_next").click(function () { var dobj = $(this).prev(); dobj.val(utility.formatDate(utility.addTimeSpan(utility.parseDate(dobj.val()), 0, 0, 1, 0, 0, 0))).change(); });
+	})();
+	//#endregion
+
+	//自动轮询，自动更改时间
+	(function () {	//初始化UI
+		var html = "<tr class='fish_sep' id='autoChangeDateRow'><td class='name'>查询日期</td><td>\
+<label><input type='checkbox' id='autoCorrentDate' checked='checked' /> 查询日期早于或等于今天时，自动修改为明天</label>\
+</td><td class='name'>自动轮查</td><td><label><input type='checkbox' id='autoChangeDate' /> 无票时自动更改日期轮查</label>\
+</td></tr><tr class='fish_sep' style='display:none;'><td class='name'>轮查日期设置</td><td colspan='3' id='autoChangeDateList'></td></tr>\
+	";
+		$("#helpertooltable tr:last").before(html);
+		var autoChangeDateList = $("#autoChangeDateList");
+		var html = [];
+		var now = new Date();
+		for (var i = 0; i < 20; i++) {
+			now = utility.addTimeSpan(now, 0, 0, 1, 0, 0, 0);
+			html.push("<label style='margin-right:16px;'><input type='checkbox' value='" + utility.formatDate(now) + "' cindex='" + i + "' />" + utility.formatDateShort(now) + "</label>");
+			if ((i + 1) % 10 == 0) html.push("<br />");
+		}
+		autoChangeDateList.html(html.join(""));
+		$("#autoChangeDate").change(function () {
+			var tr = $(this).closest("tr").next();
+			if (this.checked) tr.show();
+			else tr.hide();
+		});
+		//配置
+		utility.reloadPrefs($("#autoChangeDateRow"), "autoChangeDateRow");
+		//日期点选
+		var stKey = "autoChangeDateRow_dates";
+		var stValue = window.localStorage.getItem(stKey);
+		if (typeof (stValue) != 'undefined' && stValue) {
+			var array = stValue.split('|');
+			autoChangeDateList.find(":checkbox").each(function () {
+				this.checked = $.inArray(this.value, array) != -1;
+			});
+		}
+		autoChangeDateList.find(":checkbox").change(function () {
+			var value = $.map(autoChangeDateList.find(":checkbox:checked"), function (e, i) { return e.value; }).join("|")
+			window.localStorage.setItem(stKey, value);
+		});
+	})();
+	(function () {
+		//如果当前查询日期在当前日期或之前，那么自动修改日期
+		$("#startdatepicker, #roundTrainDate").change(function () {
+			if (!document.getElementById("autoCorrentDate").checked) return;
+			var obj = $(this);
+			var val = utility.parseDate(obj.val());
+			var tomorrow = utility.addTimeSpan(utility.getDate(new Date()), 0, 0, 1, 0, 0, 0);
+
+			if (!val || isNaN(val.getFullYear()) || tomorrow > val) {
+				console.log("自动修改日期为 " + utility.formatDate(tomorrow));
+				obj.val(utility.formatDate(tomorrow));
+			}
+		}).change();
+	})();
+	onNoTicket = (function (callback) {
+		return function () {
+			//Hook onNoTicket
+			callback();
+
+			if (!document.getElementById("autoChangeDate").checked) return;
+			console.log("自动轮询日期中。");
+
+			var index = parseInt($("#autoChangeDate").attr("cindex")) || -1;
+			var current = index == -1 ? [] : $("#autoChangeDateList :checkbox:eq(" + index + ")").parent().nextAll(":has(:checked):eq(0)").find("input");
+			if (current.length == 0) {
+				index = -1;
+				current = $("#autoChangeDateList :checkbox:checked:first");
+				if (current.length == 0) return;	//没有选择任何
+			}
+			index = current.attr("cindex");
+			if (current.length > 0) {
+				$("#autoChangeDate").attr("cindex", index);
+				$("#startdatepicker").val(current.val());
+				//高亮
+				$("#cx_titleleft span").css({ color: 'red', 'font-weight': 'bold' });
+			}
+		};
+	}
+		)(onNoTicket);
 }
 
 //#endregion
@@ -949,11 +1191,11 @@ function initLogin() {
 			return;
 		}
 	});
-	
+
 	//检测主框架是否是顶级窗口
 	var isTop = false;
 	try {
-		isTop = (top.location+'').indexOf("dynamic.12306.cn")!=-1;
+		isTop = (top.location + '').indexOf("dynamic.12306.cn") != -1;
 	} catch (e) {
 
 	}
@@ -1032,6 +1274,7 @@ function initLogin() {
 	function submitForm() {
 		var data = {};
 		$.each($("#loginForm").serializeArray(), function () {
+			if (this.name == "refundFlag" && !document.getElementById("refundFlag").checked) return;
 			data[this.name] = this.value;
 		});
 		if (!data["loginUser.user_name"] || !data["user.password"] || !data.randCode || data.randCode.length != 4)
@@ -1064,7 +1307,7 @@ function initLogin() {
 					setCurOperationInfo(false, "请重新输入。");
 					stopLogin();
 				} else if (html.indexOf("欢迎您！") != -1) {
-					utility.notify('登录成功，开始查询车票吧！');
+					utility.notifyOnTop('登录成功，开始查询车票吧！');
 					window.location.href = "https://dynamic.12306.cn/otsweb/order/querySingleAction.do?method=init";
 				} else {
 					setTipMessage(msg);
@@ -1082,7 +1325,6 @@ function initLogin() {
 
 	function relogin() {
 		count++;
-		utility.notify("自动登录中：(" + count + ") 次登录中...");
 		getLoginRandCode();
 	}
 
@@ -1133,7 +1375,7 @@ function updateScriptContentForChrome() {
 	updateScipt.type = 'text/javascript';
 	updateScipt.addEventListener('load', function () {
 		if (compareVersion(version, version_12306_helper) < 0) {
-			if(typeof(external.mxCall)!='undefined'){
+			if (typeof (external.mxCall) != 'undefined') {
 				$("#updateFound a").attr("href", "http://www.fishlee.net/soft/44/#C-192").attr("target", "_blank");
 			}
 			$("#updateFound").show();
