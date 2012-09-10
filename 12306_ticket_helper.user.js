@@ -11,7 +11,7 @@
 // @require			https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js
 // @icon			http://www.12306.cn/mormhweb/images/favicon.ico
 // @run-at			document-idle
-// @version 		3.2.1
+// @version 		3.2.3
 // @updateURL		http://www.fishlee.net/Service/Download.ashx/44/47/12306_ticket_helper.user.js
 // @supportURL		http://www.fishlee.net/soft/44/
 // @homepage		http://www.fishlee.net/soft/44/
@@ -23,7 +23,7 @@
 // @id				12306_ticket_helper_by_ifish@fishlee.net
 // @namespace		ifish@fishlee.net
 
-var version = "3.2.1";
+var version = "3.2.3";
 var loginUrl = "/otsweb/loginAction.do";
 var queryActionUrl = "/otsweb/order/querySingleAction.do";
 //预定
@@ -931,7 +931,7 @@ function initTicketQuery() {
 		resetTimer();
 		$("#refreshinfo").html("已经有票鸟！");
 
-		utility.notify("可以订票了！", null);
+		utility.notifyOnTop("可以订票了！");
 		if (window.Audio && $("#chkAudioOn")[0].checked) {
 			if (!audio) {
 				audio = new Audio($("#txtMusicUrl").val());
@@ -980,28 +980,36 @@ function initTicketQuery() {
 		//验证有票
 		var rows = $("table.obj tr:gt(0)");
 		var ticketValid = false;
+		var validRows = {};
 		rows.each(function () {
 			var row = $(this);
 			var valid = checkTickets(row);
 
 			if (valid == 2) {
+				var code = getTrainNo(row);
 				row.css("background-color", "#FD855C");
-
-				//自动预定
-				if (utility.inOptionList(autoBookDom, getTrainNo(row))) {
-					if (document.getElementById("autoBookTip").checked) {
-						window.localStorage["bookTip"] = 1;
-					}
-					row.find(".yuding_u, .yuding_u_over").click();
-				}
+				validRows[code] = row;
 			}
 			else {
 				if (valid == 1 && filterNonNeeded.checked) row.hide();
 				if (valid == 0 && filterNonBookable.checked) row.hide();
 			}
 			ticketValid = ticketValid || valid == 2;
+		});
+
+		//自动预定
+		if (document.getElementById("autoBookTip").checked) {
+			$("#autoBookList option").each(function () {
+				if (typeof (validRows[this.value]) != 'undefined') {
+					window.localStorage["bookTip"] = 1;
+					validRows[this.value].find(".yuding_u, .yuding_u_over").click();
+					return false;
+				}
+				return true;
+			});
 		}
-		);
+
+
 		if (ticketValid) {
 			onticketAvailable();
 		} else if (autoRefresh) {
