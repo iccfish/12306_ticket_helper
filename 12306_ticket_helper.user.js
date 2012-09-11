@@ -518,6 +518,8 @@ function initAutoCommitOrder() {
 			timeout: 30000,
 			dataType: 'json',
 			success: function (msg) {
+				console.log(msg);
+
 				var errmsg = msg.errMsg;
 				if (errmsg != 'Y') {
 					if (errmsg.indexOf("包含未付款订单") != -1) {
@@ -549,6 +551,8 @@ function initAutoCommitOrder() {
 			timeout: 30000,
 			dataType: 'json',
 			success: function (json) {
+				console.log(json);
+
 				if (json.waitTime == -1 || json.waitTime == 0) {
 					utility.notify("订票成功!");
 					if(json.orderId)
