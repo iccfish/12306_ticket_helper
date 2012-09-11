@@ -1,1 +1,1 @@
-var version_12306_helper="3.2.3";
+var version_12306_helper="3.2.4";

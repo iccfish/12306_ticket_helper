@@ -11,7 +11,7 @@
 // @require			https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js
 // @icon			http://www.12306.cn/mormhweb/images/favicon.ico
 // @run-at			document-idle
-// @version 		3.2.3
+// @version 		3.2.4
 // @updateURL		http://www.fishlee.net/Service/Download.ashx/44/47/12306_ticket_helper.user.js
 // @supportURL		http://www.fishlee.net/soft/44/
 // @homepage		http://www.fishlee.net/soft/44/
@@ -23,7 +23,7 @@
 // @id				12306_ticket_helper_by_ifish@fishlee.net
 // @namespace		ifish@fishlee.net
 
-var version = "3.2.3";
+var version = "3.2.4";
 var loginUrl = "/otsweb/loginAction.do";
 var queryActionUrl = "/otsweb/order/querySingleAction.do";
 //预定
@@ -455,6 +455,19 @@ function initAutoCommitOrder() {
 	var randCode = "";
 	var submitFlag = false;
 	var tourFlag;
+	
+	//#region 如果系统出错，那么重新提交
+	
+	if($(".error_text").length>0&&parent.$("#orderForm").length>0){
+		utility.notifyOnTop("页面出错了！正在重新预定！");
+		setTimeout(function(){
+			parent.$("#orderForm").submit();
+		}, 1000);
+		
+		return;
+	}
+	
+	//#endregion
 
 	//获得tourflag
 	(function () {
@@ -536,9 +549,11 @@ function initAutoCommitOrder() {
 			timeout: 30000,
 			dataType: 'json',
 			success: function (json) {
-				if (json.waitTime == -1 && json.orderId) {
+				if (json.waitTime == -1 || json.waitTime == 0) {
 					utility.notify("订票成功!");
-					location.href = "/otsweb/order/confirmPassengerAction.do?method=payOrder&orderSequence_no=" + json.orderId;
+					if(json.orderId)
+						window.location.replace("/otsweb/order/confirmPassengerAction.do?method=payOrder&orderSequence_no=" + json.orderId);
+					else window.location.replace('/otsweb/order/myOrderAction.do?method=queryMyOrderNotComplete&leftmenu=Y');
 				} else if (json.waitTime == -3) {
 					var msg = "很抱歉, 铁道部无齿地撤销了您的订单, 赶紧重新下!";
 					utility.notify(msg);
@@ -551,12 +566,17 @@ function initAutoCommitOrder() {
 					setCurOperationInfo(false, msg);
 					stop(msg);
 					reloadCode();
-				} else if (json.waitTime < 0) {
-					var msg = "很抱歉, 未知的错误信息 : " + json.msg + ' (waitTime=' + json.waitTime + '), 可能已成功, 请重试提交试试.';
+				} else if (json.waitTime == -4) {
+					var msg = "正在处理中，请稍等";
+					setTipMessage(msg);
 					utility.notify(msg);
-					setCurOperationInfo(false, msg);
-					stop(msg);
-					reloadCode();
+					utility.delayInvoke("#countEle", waitingForQueueComplete, 1000);
+				} else if (json.waitTime < 0) {
+					var msg = '很抱歉, 未知的状态信息 : waitTime=' + json.waitTime + ', 可能已成功，请验证未支付订单.';
+					setTipMessage(msg);
+					utility.notify(msg);
+					//utility.delayInvoke("#countEle", waitingForQueueComplete, 1000);
+					window.location.replace('/otsweb/order/myOrderAction.do?method=queryMyOrderNotComplete&leftmenu=Y');
 				} else {
 					var msg = "订单提交成功, 但是大约需要 " + utility.getSecondInfo(json.waitTime) + " 处理完成, 请稍等.";
 					setTipMessage(msg);
@@ -1028,12 +1048,14 @@ function initTicketQuery() {
 	$("body").ajaxComplete(function (e, r, s) {
 		if (!$("#chkAutoRequery")[0].checked) return;
 		if (s.url.indexOf("/otsweb/order/querySingleAction.do") != -1 && r.responseText == "-1") {
+			delayButton();
 			startTimer();
 		}
 	});
 	$("body").ajaxError(function (e, r, s) {
 		if (!$("#chkAutoRequery")[0].checked) return;
 		if (s.url.indexOf("/otsweb/order/querySingleAction.do") != -1) {
+			delayButton();
 			startTimer();
 		}
 	});
