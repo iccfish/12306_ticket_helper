@@ -11,7 +11,7 @@
 // @require			https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js
 // @icon			http://www.12306.cn/mormhweb/images/favicon.ico
 // @run-at			document-idle
-// @version 		3.2.4
+// @version 		3.2.6
 // @updateURL		http://www.fishlee.net/Service/Download.ashx/44/47/12306_ticket_helper.user.js
 // @supportURL		http://www.fishlee.net/soft/44/
 // @homepage		http://www.fishlee.net/soft/44/
@@ -23,7 +23,7 @@
 // @id				12306_ticket_helper_by_ifish@fishlee.net
 // @namespace		ifish@fishlee.net
 
-var version = "3.2.4";
+var version = "3.2.6";
 var loginUrl = "/otsweb/loginAction.do";
 var queryActionUrl = "/otsweb/order/querySingleAction.do";
 //预定
@@ -455,18 +455,18 @@ function initAutoCommitOrder() {
 	var randCode = "";
 	var submitFlag = false;
 	var tourFlag;
-	
+
 	//#region 如果系统出错，那么重新提交
-	
-	if($(".error_text").length>0&&parent.$("#orderForm").length>0){
+
+	if ($(".error_text").length > 0 && parent.$("#orderForm").length > 0) {
 		utility.notifyOnTop("页面出错了！正在重新预定！");
-		setTimeout(function(){
+		setTimeout(function () {
 			parent.$("#orderForm").submit();
 		}, 1000);
-		
+
 		return;
 	}
-	
+
 	//#endregion
 
 	//获得tourflag
@@ -555,7 +555,7 @@ function initAutoCommitOrder() {
 
 				if (json.waitTime == -1 || json.waitTime == 0) {
 					utility.notify("订票成功!");
-					if(json.orderId)
+					if (json.orderId)
 						window.location.replace("/otsweb/order/confirmPassengerAction.do?method=payOrder&orderSequence_no=" + json.orderId);
 					else window.location.replace('/otsweb/order/myOrderAction.do?method=queryMyOrderNotComplete&leftmenu=Y');
 				} else if (json.waitTime == -3) {
@@ -578,7 +578,7 @@ function initAutoCommitOrder() {
 				} else if (json.waitTime < 0) {
 					var msg = '很抱歉, 未知的状态信息 : waitTime=' + json.waitTime + ', 可能已成功，请验证未支付订单.';
 					setTipMessage(msg);
-					utility.notify(msg);
+					utility.notifyOnTop(msg);
 					//utility.delayInvoke("#countEle", waitingForQueueComplete, 1000);
 					window.location.replace('/otsweb/order/myOrderAction.do?method=queryMyOrderNotComplete&leftmenu=Y');
 				} else {
@@ -703,7 +703,7 @@ function initTicketQuery() {
 		"<span style='font-weight:bold;margin-left:10px;color:blue;display:none;'><label><input disabled='disabled' type='checkbox' id='chkAutoPreOrder' />自动预定</label></span>" +
 		"<span style='font-weight:bold;margin-left:10px;color:blue;display: none;'><label><input disabled='disabled' type='checkbox' id='chkFilterByTrain' />开启按车次过滤</label></span>" +
 		"</td></tr>" +
-		"<tr><td colspan='9'><input style='line-height:25px;padding:5px;' disabled='disabled' type='button' value='停止声音' id='btnStopSound' /><input style='line-height:25px;padding:5px;' disabled='disabled'  type='button' value='停止刷新' id='btnStopRefresh' /></td> </tr>"
+		"<tr><td colspan='9'><input style='line-height:25px;padding:5px;' disabled='disabled' type='button' value='停止声音' id='btnStopSound' /><input style='line-height:25px;padding:5px;' disabled='disabled'  type='button' value='停止刷新' id='btnStopRefresh' /><span style='margin-left:20px;color:purple;font-weight:bold;' id='serverMsg'></span></td> </tr>"
 	);
 
 	if (!window.Audio) {
@@ -1052,8 +1052,11 @@ function initTicketQuery() {
 	$("body").ajaxComplete(function (e, r, s) {
 		if (!$("#chkAutoRequery")[0].checked) return;
 		if (s.url.indexOf("/otsweb/order/querySingleAction.do") != -1 && r.responseText == "-1") {
-			delayButton();
-			startTimer();
+			//invalidQueryButton();
+			//delayButton();
+			//startTimer();
+		} else {
+			$("#serverMsg").html("");
 		}
 	});
 	$("body").ajaxError(function (e, r, s) {
@@ -1193,10 +1196,11 @@ function initTicketQuery() {
 			if (!document.getElementById("autoChangeDate").checked) return;
 			console.log("自动轮询日期中。");
 
-			var index = parseInt($("#autoChangeDate").attr("cindex")) || -1;
+			var index = parseInt($("#autoChangeDate").attr("cindex"));
+			if (isNaN(index)) index = -1;
 			var current = index == -1 ? [] : $("#autoChangeDateList :checkbox:eq(" + index + ")").parent().nextAll(":has(:checked):eq(0)").find("input");
 			if (current.length == 0) {
-				index = -1;
+				index = 0;
 				current = $("#autoChangeDateList :checkbox:checked:first");
 				if (current.length == 0) return;	//没有选择任何
 			}
@@ -1210,6 +1214,21 @@ function initTicketQuery() {
 		};
 	}
 		)(onNoTicket);
+
+	//拦截弹出的提示框，比如服务器忙
+	(function () {
+		var _bakAlert = window.alert;
+		window.alert = function (msg) {
+			if (msg.indexOf("服务器忙") != -1) {
+				$("#serverMsg").text(msg);
+			} else _bakAlert(msg);
+		}
+	})();
+	//默认加入拦截Ajax缓存
+	(function () { $.ajaxSetup({ cache: false }); })();
+
+
+
 }
 
 //#endregion
@@ -1292,7 +1311,7 @@ function initLogin() {
 				//{"loginRand":"211","randError":"Y"}
 				if (json.randError != 'Y') {
 					setTipMessage("错误：" + json.randError);
-					getLoginRandCode();
+					utility.delayInvoke("#countEle", getLoginRandCode, 500);
 				} else {
 					setTipMessage("登录随机码 -&gt; " + json.loginRand);
 					$("#loginRand").val(json.loginRand);
