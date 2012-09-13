@@ -11,7 +11,7 @@
 // @require			https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js
 // @icon			http://www.12306.cn/mormhweb/images/favicon.ico
 // @run-at			document-idle
-// @version 		3.2.6
+// @version 		3.2.7
 // @updateURL		http://www.fishlee.net/Service/Download.ashx/44/47/12306_ticket_helper.user.js
 // @supportURL		http://www.fishlee.net/soft/44/
 // @homepage		http://www.fishlee.net/soft/44/
@@ -23,7 +23,9 @@
 // @id				12306_ticket_helper_by_ifish@fishlee.net
 // @namespace		ifish@fishlee.net
 
-var version = "3.2.6";
+var version = "3.2.7";
+var updates = "* 修正改签页面中验证码被帮助隐藏功能隐藏的BUG\n* 出现重复提交错误时，自动刷新页面验证TOKEN并重新提交\n* 修改对-4状态码的处理动作";
+
 var loginUrl = "/otsweb/loginAction.do";
 var queryActionUrl = "/otsweb/order/querySingleAction.do";
 //预定
@@ -263,6 +265,17 @@ var utility = {
 		}
 
 		return show_time;
+	},
+	post: function (url, data, dataType, succCallback, errorCallback) {
+		$.ajax({
+			url: url,
+			data: data,
+			timeout: 30000,
+			type: "POST",
+			success: succCallback,
+			error: errorCallback,
+			dataType: dataType
+		});
 	}
 }
 
@@ -365,12 +378,8 @@ function entryPoint() {
 	if (!currentVersion || currentVersion < version) {
 		window.localStorage.setItem("helperVersion", version);
 
-		if (confirm("欢迎使用12306购票助手, 您正在使用的版本是 " + version + ".\n\n为了避免助手运行出现问题, 请务必卸载所有老版本的助手组件.\n\
-如果您的助手运行出现不正常, 请查看并卸载老版本的助手组件.\n\n\
-如果您不会查看或卸载, 请点击 '确定' 打开官方帮助页面; 否则请点击'取消'继续. 如果弹窗被拦截, 请手动打开这个地址: "+ faqUrl + "\n\n\
-这个提示只会出现一次.\n\n由于铁道部修改了订单提交逻辑, 因此可怜的我不得不重写整个提交逻辑， 如果出现任何提交的问题，请务必记录界面上的提示信息，必要时保留截图，并联系作者，感谢您的支持。")) {
-			window.open(faqUrl);
-		}
+		alert("！！！！【警告】！！！！\n\n12306订票助手是【免费】软件并且只接受【捐助】，尚没有授权任何人在淘宝或任何渠道出售！\n请点击页面最底部的【捐助作者】来支持作者，而不要通过任何第三方渠道购买！\n\n如果您已经购买此软件，请立刻对申请退款并向作者以及淘宝投诉！！\n\n12036订票助手感谢您的支持，唯一的官方网站是 http://www.fishlee.net/ ，请不要相信官网上没有注明的任何第三方的交易！\n\n"
+			+ "您正在使用的版本是 " + version + "，更新如下：\n=================================\n" + updates);
 
 	}
 
@@ -527,6 +536,11 @@ function initAutoCommitOrder() {
 						window.location.replace("/otsweb/order/myOrderAction.do?method=queryMyOrderNotComplete&leftmenu=Y");
 						return;
 					}
+					if (errmsg.indexOf("重复提交") != -1) {
+						console.log("TOKEN失效，刷新Token中....");
+						reloadToken();
+						return;
+					}
 
 					setCurOperationInfo(false, errmsg);
 					stop(errmsg);
@@ -540,6 +554,22 @@ function initAutoCommitOrder() {
 				submitForm();
 			}
 		});
+	}
+
+	function reloadToken() {
+		setCurOperationInfo(true, "正在刷新TOKEN....");
+		utility.post("/otsweb/order/confirmPassengerAction.do?method=init", null, "text", function (text) {
+			if (!/TOKEN"\s*value="([a-f\d]+)"/i.test(text)) {
+				setCurOperationInfo(false, "无法获得TOKEN，正在重试");
+				utility.delayInvoke("#countEle", reloadToken, 1000);
+			} else {
+				var token = RegExp.$1;
+				setCurOperationInfo(false, "已获得TOKEN - " + token);
+				console.log("已刷新TOKEN=" + token);
+				$("input[name=org.apache.struts.taglib.html.TOKEN]").val(token);
+				submitForm();
+			}
+		}, function () { utility.delayInvoke("#countEle", reloadToken, 1000); });
 	}
 
 	function waitingForQueueComplete() {
@@ -570,12 +600,14 @@ function initAutoCommitOrder() {
 					setCurOperationInfo(false, msg);
 					stop(msg);
 					reloadCode();
-				} else if (json.waitTime == -4) {
-					var msg = "正在处理中，请稍等";
-					setTipMessage(msg);
-					utility.notify(msg);
-					utility.delayInvoke("#countEle", waitingForQueueComplete, 1000);
-				} else if (json.waitTime < 0) {
+				}
+					//else if (json.waitTime == -4) {
+					//	var msg = "正在处理中，请稍等";
+					//	setTipMessage(msg);
+					//	utility.notify(msg);
+					//	utility.delayInvoke("#countEle", waitingForQueueComplete, 1000);
+					//}
+				else if (json.waitTime < 0) {
 					var msg = '很抱歉, 未知的状态信息 : waitTime=' + json.waitTime + ', 可能已成功，请验证未支付订单.';
 					setTipMessage(msg);
 					utility.notifyOnTop(msg);
@@ -619,27 +651,8 @@ function initAutoCommitOrder() {
 		parent.$("#orderForm").remove();
 	}
 
-	//提交频率差别
-	$(".table_qr tr:last").before("<tr><td colspan='9'>自动提交失败时休息时间：<input type='text' size='4' class='input_20txt' style='text-align:center;' value='3' id='pauseTime' />秒 (不得低于1)  <label><input type='checkbox' id='autoStartCommit' /> 输入验证码后立刻开始自动提交</label> <label><input type='checkbox' id='showHelp' /> 显示帮助</label></td></tr>");
-	document.getElementById("autoStartCommit").checked = typeof (window.localStorage["disableAutoStartCommit"]) == 'undefined';
-	document.getElementById("showHelp").checked = typeof (window.localStorage["disableAutoStartCommit"]) != 'undefined';
-	$("#autoStartCommit").change(function () {
-		if (this.checked) window.localStorage.removeItem("disableAutoStartCommit");
-		else window.localStorage.setItem("disableAutoStartCommit", "1");
-	});
-	$("#showHelp").change(function () {
-		if (this.checked) {
-			window.localStorage.setItem("showHelp", "1");
-			$("#_station_train_code").next().find("tr:last").show();
-		}
-		else {
-			window.localStorage.removeItem("showHelp");
-			$("#_station_train_code").next().find("tr:last").hide();
-		}
-	}).change();
-
 	//进度提示框
-	$("#_station_train_code").next().find("tr:last").before("<tr><td style='border-top:1px dotted #ccc;' colspan='9'><ul id='tipScript'>" +
+	$("table.table_qr tr:last").before("<tr><td style='border-top:1px dotted #ccc;' colspan='9'><ul id='tipScript'>" +
 	"<li class='fish_clock' id='countEle' style='font-weight:bold;'>等待操作</li>" +
 	"<li style='color:green;'><strong>操作信息</strong>：<span>休息中</span></li>" +
 	"<li style='color:green;'><strong>最后操作时间</strong>：<span>--</span></li></ul></td></tr>");
@@ -658,6 +671,25 @@ function initAutoCommitOrder() {
 		tip.eq(2).find("span").html(utility.getTimeInfo());
 		tip.eq(1).find("span").html(msg);
 	}
+
+	//提交频率差别
+	$(".table_qr tr:last").before("<tr><td colspan='9'>自动提交失败时休息时间：<input type='text' size='4' class='input_20txt' style='text-align:center;' value='3' id='pauseTime' />秒 (不得低于1)  <label><input type='checkbox' id='autoStartCommit' /> 输入验证码后立刻开始自动提交</label> <label><input type='checkbox' id='showHelp' /> 显示帮助</label></td></tr>");
+	document.getElementById("autoStartCommit").checked = typeof (window.localStorage["disableAutoStartCommit"]) == 'undefined';
+	document.getElementById("showHelp").checked = typeof (window.localStorage["disableAutoStartCommit"]) != 'undefined';
+	$("#autoStartCommit").change(function () {
+		if (this.checked) window.localStorage.removeItem("disableAutoStartCommit");
+		else window.localStorage.setItem("disableAutoStartCommit", "1");
+	});
+	$("#showHelp").change(function () {
+		if (this.checked) {
+			window.localStorage.setItem("showHelp", "1");
+			$("table.table_qr tr:eq(10)").show();
+		}
+		else {
+			window.localStorage.removeItem("showHelp");
+			$("table.table_qr tr:eq(10)").hide();
+		}
+	}).change();
 }
 
 function autoCommitOrderInSandbox() {
@@ -785,7 +817,7 @@ function initTicketQuery() {
 <tr class='fish_sep caption'><td colspan='4'>相关设置</td></tr>\
 <tr class='fish_sep musicFunc'><td class='name'>自定义音乐地址</td><td colspan='3'><input type='text' id='txtMusicUrl' value='" + utility.getAudioUrl() + "' onfocus='this.select();' style='width:70%;' /> <input type='button' onclick='new Audio(document.getElementById(\"txtMusicUrl\").value).play();' value='测试'/><input type='button' onclick='utility.resetAudioUrl(); document.getElementById(\"txtMusicUrl\").value=utility.getAudioUrl();' value='恢复默认'/></td></tr>\
 <tr class='fish_sep musicFunc'><td class='name'>可用音乐地址</td><td colspan='3'><span style='color:gray;'>* 暂时木有，如果您有好的地址，请告知作者</span></td></tr>\
-<tr class='fish_sep'><td style='text-align:center;' colspan='4'>12306.CN 订票助手 by iFish(木鱼) | <a href='http://t.qq.com/ccfish/' target='_blank' style='color:blue;'>腾讯微博</a> | <a href='http://www.fishlee.net/soft/44/' style='color:blue;' target='_blank'>助手主页</a> | <a href='http://www.fishlee.net/Discussion/Index/44' target='_blank'>反馈助手BUG</a> | <a href='http://www.fishlee.net/About' target='_blank'>联系作者</a></td></tr>\
+<tr class='fish_sep'><td style='text-align:center;' colspan='4'>12306.CN 订票助手 by iFish(木鱼) | <a href='http://t.qq.com/ccfish/' target='_blank' style='color:blue;'>腾讯微博</a> | <a href='http://www.fishlee.net/soft/44/' style='color:blue;' target='_blank'>助手主页</a> | <a href='http://www.fishlee.net/Discussion/Index/44' target='_blank'>反馈BUG</a> | <a style='font-weight:bold;color:red;' href='http://www.fishlee.net/honor/index.html' target='_blank'>捐助作者</a></td></tr>\
 		</table></div></div></div>");
 	$("#stopBut").before("<div class='jmp_cd' style='text-align:center;'><input type='button' class='fish_button' id='btnFilter' value='加入黑名单' /><input type='button' class='fish_button' id='btnAutoBook' value='自动预定本车次' /></div>");
 	$("#txtMusicUrl").change(function () { window.localStorage["audioUrl"] = this.value; });
@@ -1268,7 +1300,7 @@ function initLogin() {
 		"<li class='fish_clock' id='countEle' style='font-weight:bold;'>等待操作</li>" +
 		"<li style='color:green;'><strong>操作信息</strong>：<span>休息中</span></li>" +
 		"<li style='color:green;'><strong>最后操作时间</strong>：<span>--</span></li>" +
-		"<li><a href='http://t.qq.com/ccfish/' target='_blank' style='color:blue;'>腾讯微博</a> | <a href='http://www.fishlee.net/soft/44/' style='color:blue;' target='_blank'>助手主页</a> | <a href='http://www.fishlee.net/Discussion/Index/44' target='_blank'>反馈助手BUG</a></li>" +
+		"<li><a href='http://t.qq.com/ccfish/' target='_blank' style='color:blue;'>腾讯微博</a> | <a href='http://www.fishlee.net/soft/44/' style='color:blue;' target='_blank'>助手主页</a> | <a href='http://www.fishlee.net/Discussion/Index/44' target='_blank'>反馈BUG</a> | <a style='font-weight:bold;color:red;' href='http://www.fishlee.net/honor/index.html' target='_blank'>捐助作者</a></li>" +
 		"<li id='updateFound' style='display:none;'><a style='font-weight:bold; color:red;' href='http://www.fishlee.net/Service/Download.ashx/44/47/12306_ticket_helper.user.js'>发现新版本！点此更新</a></li>" +
 		'<li id="enableNotification"><input type="button" id="enableNotify" onclick="$(this).parent().hide();window.webkitNotifications.requestPermission();" value="请点击以启用通告" style="line-height:25px;padding:5px;" /></li><li style="padding-top:10px;line-height:normal;color:gray;">请输入用户名和密码，<strong style="color: red;">最后输入验证码</strong>，输入完成后系统将自动帮你提交。登录过程中，请勿离开当前页面。如果系统繁忙，系统会自动重新刷新验证码并自动定位到验证码输入框中，请直接输入验证码，输入完成后助手将自动帮你提交。</li>' +
 		"</ul>" +
