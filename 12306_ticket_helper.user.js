@@ -11,7 +11,7 @@
 // @require			https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js
 // @icon			http://www.12306.cn/mormhweb/images/favicon.ico
 // @run-at			document-idle
-// @version 		3.2.7
+// @version 		3.2.8
 // @updateURL		http://www.fishlee.net/Service/Download.ashx/44/47/12306_ticket_helper.user.js
 // @supportURL		http://www.fishlee.net/soft/44/
 // @homepage		http://www.fishlee.net/soft/44/
@@ -23,8 +23,8 @@
 // @id				12306_ticket_helper_by_ifish@fishlee.net
 // @namespace		ifish@fishlee.net
 
-var version = "3.2.7";
-var updates = "* 修正改签页面中验证码被帮助隐藏功能隐藏的BUG\n* 出现重复提交错误时，自动刷新页面验证TOKEN并重新提交\n* 修改对-4状态码的处理动作";
+var version = "3.2.8";
+var updates = "* 修改登录页面重试时间为2秒以免速度过快被封\n* 添加403错误页自动重试顺便卖卖萌 o(︶︿︶)o， 买不着票只能自娱自乐了";
 
 var loginUrl = "/otsweb/loginAction.do";
 var queryActionUrl = "/otsweb/order/querySingleAction.do";
@@ -378,7 +378,7 @@ function entryPoint() {
 	if (!currentVersion || currentVersion < version) {
 		window.localStorage.setItem("helperVersion", version);
 
-		alert("！！！！【警告】！！！！\n\n12306订票助手是【免费】软件并且只接受【捐助】，尚没有授权任何人在淘宝或任何渠道出售！\n请点击页面最底部的【捐助作者】来支持作者，而不要通过任何第三方渠道购买！\n\n如果您已经购买此软件，请立刻对申请退款并向作者以及淘宝投诉！！\n\n12036订票助手感谢您的支持，唯一的官方网站是 http://www.fishlee.net/ ，请不要相信官网上没有注明的任何第三方的交易！\n\n"
+		alert("！！！！【警告】！！！！\n\n12306订票助手是【免费】软件并且只接受【捐助】，未授权任何人在淘宝或任何渠道出售本软件！\n请点击页面最底部的【捐助作者】来支持作者，而不要通过任何第三方渠道购买！\n\n如果您已经购买此软件，请立刻对申请退款并向作者以及淘宝投诉！！\n\n12036订票助手感谢您的支持，唯一的官方网站是 http://www.fishlee.net/ ，请不要相信官网上没有注明的任何第三方的交易！\n\n"
 			+ "您正在使用的版本是 " + version + "，更新如下：\n=================================\n" + updates);
 
 	}
@@ -388,6 +388,7 @@ function entryPoint() {
 	var location = window.location;
 	var path = location.pathname;
 
+	unsafeInvoke(autoReloadIfError);
 	if ((path == loginUrl && location.search == "?method=init") || path == "/otsweb/login.jsp") {
 		//登录页
 		safeInvoke(initLogin);
@@ -415,6 +416,19 @@ function entryPoint() {
 		}, 100));
 
 		safeInvoke(injectMainPageFunction);
+	}
+}
+
+//#endregion
+
+//#region -----------------出错自动刷新----------------------
+
+function autoReloadIfError() {
+	if ($.trim($("h1:first").text()) == "错误") {
+		$("h1:first").css({ color: 'red', 'font-size': "18px" }).html("&gt;_&lt;! 你大爷的铁道部，敢踹我出门啦。。。2秒后我会重新回来的 ╮(╯▽╰)╭");
+		setTimeout(function () {
+			self.location.reload();
+		}, 2000);
 	}
 }
 
@@ -1343,7 +1357,7 @@ function initLogin() {
 				//{"loginRand":"211","randError":"Y"}
 				if (json.randError != 'Y') {
 					setTipMessage("错误：" + json.randError);
-					utility.delayInvoke("#countEle", getLoginRandCode, 500);
+					utility.delayInvoke("#countEle", getLoginRandCode, 2000);
 				} else {
 					setTipMessage("登录随机码 -&gt; " + json.loginRand);
 					$("#loginRand").val(json.loginRand);
@@ -1353,7 +1367,7 @@ function initLogin() {
 			error: function () {
 				errorCount++;
 				setTipMessage("[" + errorCount + "] 网络请求错误，重试")
-				utility.delayInvoke("#countEle", getLoginRandCode, 500);
+				utility.delayInvoke("#countEle", getLoginRandCode, 2000);
 			}
 		});
 	}
