@@ -11,7 +11,7 @@
 // @require			https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js
 // @icon			http://www.12306.cn/mormhweb/images/favicon.ico
 // @run-at			document-idle
-// @version 		3.2.8
+// @version 		3.2.9
 // @updateURL		http://www.fishlee.net/Service/Download.ashx/44/47/12306_ticket_helper.user.js
 // @supportURL		http://www.fishlee.net/soft/44/
 // @homepage		http://www.fishlee.net/soft/44/
@@ -23,8 +23,8 @@
 // @id				12306_ticket_helper_by_ifish@fishlee.net
 // @namespace		ifish@fishlee.net
 
-var version = "3.2.8";
-var updates = "* 修改登录页面重试时间为2秒以免速度过快被封\n* 添加403错误页自动重试顺便卖卖萌 o(︶︿︶)o， 买不着票只能自娱自乐了";
+var version = "3.2.9";
+var updates = "* 彻底修正登录人多时自动重试过快的问题\n* 修改默认音乐地址，避免浏览器安全设置导致没有音乐;\n* 添加对订单提交的排队状态的判断\n* 修改登录页面重试时间为2秒以免速度过快被封\n* 添加403错误页自动重试顺便卖卖萌 o(︶︿︶)o， 买不着票只能自娱自乐了\n\n【友情提醒】近期铁道部变更很大，而且限制层出不穷，强烈建议同时使用电话订票进行抢票！号码是 95105105 :-)";
 
 var loginUrl = "/otsweb/loginAction.do";
 var queryActionUrl = "/otsweb/order/querySingleAction.do";
@@ -208,7 +208,7 @@ var utility = {
 	},
 	getAudioUrl: function () {
 		/// <summary>获得音乐地址</summary>
-		return window.localStorage["audioUrl"] || "http://www.w3school.com.cn/i/song.ogg";
+		return window.localStorage["audioUrl"] || "https://github.com/iccfish/12306_ticket_helper/raw/master/res/song.ogg";
 	},
 	resetAudioUrl: function () {
 		/// <summary>恢复音乐地址为默认</summary>
@@ -553,6 +553,11 @@ function initAutoCommitOrder() {
 					if (errmsg.indexOf("重复提交") != -1) {
 						console.log("TOKEN失效，刷新Token中....");
 						reloadToken();
+						return;
+					}
+					if (errmsg.indexOf("包含排队中") != -1) {
+						console.log("惊现排队中的订单， 进入轮询状态");
+						waitingForQueueComplete();
 						return;
 					}
 
@@ -1412,11 +1417,11 @@ function initLogin() {
 					window.location.href = "https://dynamic.12306.cn/otsweb/order/querySingleAction.do?method=init";
 				} else {
 					setTipMessage(msg);
-					relogin();
+					utility.delayInvoke("#countEle", relogin, 2000);
 				}
 			},
 			error: function (msg) {
-				utility.delayInvoke("#countEle", relogin, 1000);
+				utility.delayInvoke("#countEle", relogin, 2000);
 				errorCount++;
 				setTipMessage("[" + errorCount + "] 网络请求错误，重试")
 			}
@@ -1480,7 +1485,7 @@ function updateScriptContentForChrome() {
 				$("#updateFound a").attr("href", "http://www.fishlee.net/soft/44/#C-192").attr("target", "_blank");
 			}
 			$("#updateFound").show();
-			alert('助手脚本已经发布了最新版 ' + version_12306_helper + '，请在登录页面上点击更新链接更新 :-)');
+			alert('助手脚本已经发布了最新版 ' + version_12306_helper + '，请在登录页面上点击更新链接更新 :-)\n\n更新后请刷新当前页面！');
 		}
 	});
 	document.head.appendChild(updateScipt);
