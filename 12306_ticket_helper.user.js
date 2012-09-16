@@ -11,7 +11,7 @@
 // @require			https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js
 // @icon			http://www.12306.cn/mormhweb/images/favicon.ico
 // @run-at			document-idle
-// @version 		3.3.0
+// @version 		3.3.1
 // @updateURL		http://www.fishlee.net/Service/Download.ashx/44/47/12306_ticket_helper.user.js
 // @supportURL		http://www.fishlee.net/soft/44/
 // @homepage		http://www.fishlee.net/soft/44/
@@ -23,11 +23,11 @@
 // @id				12306_ticket_helper_by_ifish@fishlee.net
 // @namespace		ifish@fishlee.net
 
-var version = "3.3.0";
+var version = "3.3.1";
 var updates = [
-	"增加Firefox中的Storage设置检测",
-	"增加基础设置对话框，允许设置登录重试时间间隔",
-	"为防未经作者授权的出售, 加入注册系统"
+	"修正点击我的12306却跳转到查询的BUG",
+	"注册系统升级，新的序列号注册更简单，新增绑定12306帐户而没有注册时间限制的序列号",
+	"<span style='color:red'>由于作者改到凌晨3点半扛不住了。。序列号升级功能会在星期一再加入。。。</span>"
 ];
 
 var queryActionUrl = "/otsweb/order/querySingleAction.do";
@@ -118,22 +118,13 @@ function injectDom() {
 	html.push('<p style="color: red;"> <strong style="font-size:16px;">特别提醒！本助手免费发布且不作为独立的软件出售！</strong>如果您在淘宝上购买本软件，请务必确认您购买的不是本助手且已经经过作者授权！如果相关宝贝页上没有说明本助手本身免费，请向作者举报，联系方式请<a href="http://www.fishlee.net/about/" target="_blank">参见这里</a>。 </p>');
 	html.push('<p>任何版本之间，功能上没有任何区别，请各位谅解作者为防有卖家未经授权进行销售而加入的措施。</p>');
 	html.push('<p class="registered" style="display:none;">您好，<strong>fishcn@foxmail.com</strong>，感谢您的使用。已注册版本：<strong>正式版</strong>【<a href="javascript:;" id="unReg">重新注册</a>】</p>');
-	html.push('<table class="regTable" style="display:none;">');
+	html.push('<table class="regTable" style="display:none;width:98%;">');
 	html.push('<tr>');
-	html.push('<td>用户名</td>');
-	html.push('<td><input type="text" /></td>');
-	html.push('<td rowspan="2"><p>请使用您正在运行助手的浏览器直接申请。</p><p><a href="http://www.fishlee.net/Apps/Cn12306/GetNormalRegKey" target="_blank">请点击这里获得免费序列号</a></p></td>');
-	html.push('</tr>');
-	html.push('<tr>');
-	html.push('<td>序列号</td>');
-	html.push('<td><input type="text" /></td>');
-	html.push('</tr>');
-	html.push('<tr>');
-	html.push('<td>浏览器标记</td>');
-	html.push('<td colspan="2"><input type="text" value="' + navigator.userAgent + '" style="width:400px;" /></td>');
-	html.push('</tr>');
-	html.push('<tr><td></td>');
-	html.push('<td colspan="2"><input type="button" id="regButton" value="确定完成" /></td>');
+	html.push('<td>请黏贴注册信息 【<a href="http://www.fishlee.net/Apps/Cn12306/GetNormalRegKey?v=1" target="_blank">免费获得序列号</a>】</td>');
+	html.push('</tr><tr>');
+	html.push('<td style="text-align:center;"><textarea id="regContent" style="width:98%; height:50px;"></textarea></td>');
+	html.push('</tr><tr>');
+	html.push('<td><input type="button" id="regButton" value="确定完成" /></td>');
 	html.push('</tr>');
 	html.push('</table>');
 	html.push('</div>');
@@ -173,15 +164,13 @@ function injectDom() {
 
 	var opt = $("#fishOption");
 	$("#regButton").click(function () {
-		var data = opt.find(".regTable :text");
-		var name = data.eq(0).val();
-		var sn = data.eq(1).val();
+		var sn = $("#regContent").val();
 
-		var rt = utility.verifySn(false, name, sn);
+		var rt = utility.verifySn(false, "", sn);
 		if (rt.result != 0) {
 			alert("很抱歉, 注册失败. 代码 " + rt.result + ", " + rt.msg);
 		} else {
-			utility.setSnInfo(name, sn);
+			utility.setSnInfo("", sn);
 			alert("注册成功, 注册给 - " + rt.name + " , 注册类型 - " + rt.typeDesc.replace(/<[^>]*>/gi, ""));
 			top.location.reload();
 		}
@@ -226,6 +215,8 @@ function injectDom() {
 		var info = opt.find(".registered").show().find("strong");
 		info.eq(0).html(result.name);
 		info.eq(1).html(result.typeDesc);
+
+
 	} else {
 		opt.find(".regTable").show();
 
@@ -234,6 +225,7 @@ function injectDom() {
 			utility.showOptionDialog("tabReg");
 		}
 	}
+	utility.regInfo = result;
 }
 
 //#endregion
@@ -245,6 +237,7 @@ var utility = {
 	icon: "http://www.12306.cn/mormhweb/images/favicon.ico",
 	notifyObj: null,
 	timerObj: null,
+	regInfo: null,
 	notify: function (msg, timeout) {
 		console.log("信息提示: " + msg);
 		if (window.webkitNotifications) {
@@ -539,14 +532,34 @@ var utility = {
 		if (tab) utility.configTab.showTab(tab);
 		utility.showDialog($("#fishOption"));
 	},
+	addCookie: function (name, value, expDays) {
+		var cook = name + "=" + value + "; path=/; domain=.12306.cn";
+		if (expDays > 0) {
+			cook += "; expires=" + new Date(new Date().getTime() + expDays * 3600 * 1000 * 24).toGMTString();
+		}
+		document.cookie = cook;
+	},
+	getCookie: function (name) {
+		var cook = document.cookie;
+		var arr = cook.split("; ");
+		for (var i = 0; i < arr.length; i++) {
+			var arg = arr[i].split('=');
+			if (arg[0] == name) return arg[1];
+		}
+	},
 	setSnInfo: function (name, sn) {
 		utility.setPref("helper.regUser", name);
 		utility.setPref("helper.regSn", sn);
+		utility.addCookie("helper.regUser", name, 999);
+		utility.addCookie("helper.regSn", sn, 999);
 	},
 	verifySn: function (skipTimeVerify, name, sn) {
-		name = name || utility.getPref("helper.regUser");
-		sn = sn || utility.getPref("helper.regSn");
+		name = name || utility.getPref("helper.regUser") || utility.getCookie("helper.regUser");
+		sn = sn || utility.getPref("helper.regSn") || utility.getCookie("helper.regSn");
+		if (!name && sn) return utility.verifySn2(skipTimeVerify, sn);
 		if (!name || !sn) return { result: -4, msg: "未注册" };
+
+		utility.setSnInfo(name, sn);
 
 		var args = sn.split(',');
 		if (!skipTimeVerify) {
@@ -554,16 +567,16 @@ var utility = {
 				return { result: -1, msg: "序列号注册已失效" };
 			}
 		}
-		var agent = navigator.userAgent;
-		var key = 0;
-		for (var i = 0; i < agent.length; i++) {
-			key = (key + agent.charCodeAt(i)) % 7;
-		}
-		if (key != parseInt(args[1])) {
-			return { result: -2, msg: "内部错误" };
-		}
+		//var agent = navigator.userAgent;
+		//var key = 0;
+		//for (var i = 0; i < agent.length; i++) {
+		//	key = (key + agent.charCodeAt(i)) % 7;
+		//}
+		//if (key != parseInt(args[1])) {
+		//	return { result: -2, msg: "内部错误" };
+		//}
 		var dec = [];
-		var encKey = args[0] + key;
+		var encKey = args[0] + args[1];
 		var j = 0;
 		for (var i = 0; i < args[2].length; i += 4) {
 			dec.push(String.fromCharCode(parseInt(args[2].substr(i, 4), 16) ^ encKey.charCodeAt(j)));
@@ -577,6 +590,56 @@ var utility = {
 		data.typeDesc = data.type == "NRML" ? "正式版" : (data.type == "GROP" ? "内部版, <span style='color:blue;'>感谢您参与我们之中</span>!" : "<span style='color:red;'>捐助版, 非常感谢您的支持</span>!");
 
 		return data;
+	},
+	verifySn2: function (skipTimeVerify, data) {
+		try {
+			var nameLen = parseInt(data.substr(0, 2), 16);
+			var name = data.substr(2, nameLen);
+			data = data.substring(2 + nameLen);
+
+			var arr = [];
+			for (var i = 0; i < data.length; i++) {
+				var c = data.charCodeAt(i);
+				if (c >= 97) arr.push(String.fromCharCode(c - 49));
+				else arr.push(data.charAt(i));
+			}
+			data = arr.join("");
+			var ticket = parseInt(data.substr(0, 14), 16);
+			var key = parseInt(data.substr(14, 1), 16);
+			var encKey = ticket.toString(16).toUpperCase() + key.toString().toUpperCase();
+			data = data.substring(15);
+			var dec = [];
+			var j = 0;
+			for (var i = 0; i < data.length; i += 4) {
+				dec.push(String.fromCharCode(parseInt(data.substr(i, 4), 16) ^ encKey.charCodeAt(j)));
+				j++;
+				if (j >= encKey.length) j = 0;
+			}
+			dec = dec.join("").split('|');
+			var regVersion = dec[0].substr(0, 4);
+			var regName = dec[0].substring(4);
+			var bindAcc = dec[1] || "";
+
+			if (!bindAcc && !skipTimeVerify && (new Date() - ticket) / 60000 > 5) {
+				return { result: -1, msg: "注册码已失效， 请重新申请" };
+			}
+			if (regName != name) {
+				return { result: -3, msg: "注册失败，用户名不匹配" };
+			}
+			var data = { name: name, type: regVersion, bindAcc: bindAcc, ticket: ticket, result: 0, msg: "成功注册" };
+			switch (data.type) {
+				case "NRML": data.typeDesc = "正式版"; break;
+				case "GROP": data.typeDesc = "内部版, <span style='color:blue;'>感谢您参与我们之中</span>!"; break;
+				case "DONT": data.typeDesc = "<span style='color:red;'>捐助版, 非常感谢您的支持</span>!"; break;
+				case "PART": data.typeDesc = "合作版，欢迎您的使用";
+			}
+			data.regTime = new Date(ticket);
+			data.regVersion = 2;
+
+			return data;
+		} catch (e) {
+			return { result: -4, msg: "数据错误" };
+		}
 	}
 }
 
@@ -666,6 +729,9 @@ if (location.host == "dynamic.12306.cn") {
 	} else if (!window.localStorage) {
 		alert("警告! localStorage 为 null, 助手无法运行. 请查看浏览器是否已经禁用 localStorage!\nFirefox请设置 about:config 中的 dom.storage.enabled 为 true .");
 	} else {
+		//记录更新
+		utility.setPref("updates", updates.join("\t"));
+
 		initUIDisplay();
 		unsafeInvoke(injectDom);
 		beginExecute();
@@ -680,15 +746,12 @@ function entryPoint() {
 	var location = window.location;
 	var path = location.pathname;
 
-	//记录更新
-	utility.setPref("updates", updates.join("\t"));
-
 	if (utility.verifySn(true).result != 0) {
 		return;
 	}
 
 	unsafeInvoke(autoReloadIfError);
-	if (path == "/otsweb/loginAction.do" || path == "/otsweb/login.jsp") {
+	if ((path == "/otsweb/loginAction.do" && location.search != '?method=initForMy12306') || path == "/otsweb/login.jsp") {
 		//登录页
 		safeInvoke(initLogin);
 		checkUpdate();
@@ -1621,6 +1684,13 @@ function initLogin() {
 	var form = $("#loginForm");
 	var trs = form.find("tr");
 	trs.eq(1).find("td:last").html('<label><input type="checkbox" id="keepInfo" /> 记录密码</label>');
+	//注册判断
+	form.submit(function () {
+		//	if (utility.regInfo.bindAcc && utility.regInfo.bindAcc != $("#UserName").val()) {
+		//		alert("警告！ 当前订票助手授权账户绑定在【" + utility.regInfo.bindAcc + "】上，无法继续运行。要切换12306帐户，请重新注册助手的授权！");
+		//		return false;
+		//	}
+	});
 
 	if (!window.webkitNotifications || window.webkitNotifications.checkPermission() == 0) {
 		$("#enableNotification").remove();
@@ -1680,7 +1750,7 @@ function initLogin() {
 			if (this.name == "refundFlag" && !document.getElementById("refundFlag").checked) return;
 			data[this.name] = this.value;
 		});
-		if (!data["loginUser.user_name"] || !data["user.password"] || !data.randCode || data.randCode.length != 4)
+		if (!data["loginUser.user_name"] || !data["user.password"] || !data.randCode || data.randCode.length != 4/* || (utility.regInfo.bindAcc && utility.regInfo.bindAcc != data["loginUser.user_name"])*/)
 			return;
 
 		if ($("#keepInfo")[0].checked) {
