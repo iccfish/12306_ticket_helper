@@ -207,7 +207,7 @@ function injectDom() {
 		utility.showOptionDialog("tabVersion");
 
 		alert("【作者郑重提示】\n========================\n相信大家都已经领教了9月10日铁道部升级所引入的排队系统的蛋疼程度……为了让大家更清晰的明白怎么回事，特此说明如下：\n\n1.排队系统是铁道部引入的，不是助手带来的;\n2.排队时间是十分不准确的，不要带有慢慢就会到头的幻想;\n" +
-			"3.提交成功不一定能拿到票，提示你付款时才真正有票，所以请不要放松;\n4.强烈建议不要放弃电话订票，在排队的时候努力用电话拨打订票热线95105015，死马当活马医;\n5.排队时，可能的话，请用别的浏览器或其它的电脑注册新的帐号并同时排队，可以提高成功率;\n6.遇到铁道部封了您的IP（拒绝访问）时，请加群，有自动换IP工具;\n\n" +
+			"3.提交成功不一定能拿到票，提示你付款时才真正有票，所以请不要放松;\n4.强烈建议不要放弃电话订票，在排队的时候努力用电话拨打订票热线95105105，死马当活马医;\n5.排队时，可能的话，请用别的浏览器或其它的电脑注册新的帐号并同时排队，可以提高成功率;\n6.遇到铁道部封了您的IP（拒绝访问）时，请加群，有自动换IP工具;\n\n" +
 			"任何时候回家都是一种永恒的夙愿，祝大家都能安全快捷地回家 :-)"
 			);
 	}
@@ -761,7 +761,7 @@ function entryPoint() {
 		safeInvoke(initLogin);
 		checkUpdate();
 	}
-	if (utility.regInfo.bindAcc && localStorage.getItem("_sessionuser") && utility.regInfo.bindAcc[0] != "*") {
+	if (utility.regInfo.bindAcc && localStorage.getItem("_sessionuser") && utility.regInfo.bindAcc.length>0 && utility.regInfo.bindAcc[0] && utility.regInfo.bindAcc[0] != "*") {
 		var user = localStorage.getItem("_sessionuser");
 		var ok = false;
 		for (var i = 0; i < utility.regInfo.bindAcc.length; i++) {
@@ -1853,7 +1853,7 @@ function initLogin() {
 	function relogin() {
 		var user = $("#UserName").val();
 		if (!user) return;
-		if (utility.regInfo.bindAcc && $.inArray(user, utility.regInfo.bindAcc) && utility.regInfo.bindAcc[0] != "*") {
+		if (utility.regInfo.bindAcc && utility.regInfo.bindAcc.length && utility.regInfo.bindAcc[0] && $.inArray(user, utility.regInfo.bindAcc) && utility.regInfo.bindAcc[0] != "*") {
 			alert("很抱歉，12306订票助手的授权许可已绑定至【" + utility.regInfo.bindAcc.join() + "】，未授权用户，助手停止运行，请手动操作。");
 			return;
 		}
