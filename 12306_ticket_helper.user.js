@@ -11,7 +11,7 @@
 // @require			https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js
 // @icon			http://www.12306.cn/mormhweb/images/favicon.ico
 // @run-at			document-idle
-// @version 		3.3.2
+// @version 		3.3.4
 // @updateURL		http://www.fishlee.net/Service/Download.ashx/44/47/12306_ticket_helper.user.js
 // @supportURL		http://www.fishlee.net/soft/44/
 // @homepage		http://www.fishlee.net/soft/44/
@@ -23,12 +23,13 @@
 // @id				12306_ticket_helper_by_ifish@fishlee.net
 // @namespace		ifish@fishlee.net
 
-var version = "3.3.2";
+var version = "3.3.4";
 var updates = [
 	"移除自动提交排队时右下角的提示，因为排队太蛋疼，所以看得很多人也比较蛋疼 ╮(╯▽╰)╭",
 	"添加提交预定、未完成订单页面的出错自动重载功能",
 	"添加排队订票成功后，转到支付页时音乐提醒的功能",
-	"修正访问人数过多时，自动重新提交表单没有时间间隔的BUG"
+	"修正访问人数过多时，自动重新提交表单没有时间间隔的BUG",
+	"修正绑定多帐户时，无法正常使用的问题"
 ];
 
 var faqUrl = "http://www.fishlee.net/soft/44/faq.html";
@@ -118,7 +119,7 @@ function injectDom() {
 	html.push('<p class="registered" style="display:none;">您好，<strong>fishcn@foxmail.com</strong>，感谢您的使用。已注册版本：<strong>正式版</strong>【<a href="javascript:;" id="unReg">重新注册</a>】</p>');
 	html.push('<table class="regTable" style="display:none;width:98%;">');
 	html.push('<tr>');
-	html.push('<td>请黏贴注册信息 【<a href="http://www.fishlee.net/Apps/Cn12306/GetNormalRegKey?v=1" target="_blank">免费获得序列号</a>】</td>');
+	html.push('<td>请黏贴注册信息 【<a href="http://www.fishlee.net/Apps/Cn12306/GetNormalRegKey?v=1" target="_blank" style="color:red;">免费获得序列号 (请使用V2版授权！)</a>】</td>');
 	html.push('</tr><tr>');
 	html.push('<td style="text-align:center;"><textarea id="regContent" style="width:98%; height:50px;"></textarea></td>');
 	html.push('</tr><tr>');
@@ -621,7 +622,7 @@ var utility = {
 			dec = dec.join("").split('|');
 			var regVersion = dec[0].substr(0, 4);
 			var regName = dec[0].substring(4);
-			var bindAcc = dec[1] || "";
+			var bindAcc = dec.slice(1, dec.length);
 
 			if (!bindAcc && !skipTimeVerify && (new Date() - ticket) / 60000 > 5) {
 				return { result: -1, msg: "注册码已失效， 请重新申请" };
@@ -629,7 +630,7 @@ var utility = {
 			if (regName != name) {
 				return { result: -3, msg: "注册失败，用户名不匹配" };
 			}
-			var data = { name: name, type: regVersion, bindAcc: bindAcc.split("|"), ticket: ticket, result: 0, msg: "成功注册" };
+			var data = { name: name, type: regVersion, bindAcc: bindAcc, ticket: ticket, result: 0, msg: "成功注册" };
 			switch (data.type) {
 				case "NRML": data.typeDesc = "正式版"; break;
 				case "GROP": data.typeDesc = "内部版, <span style='color:blue;'>感谢您参与我们之中</span>!"; break;
@@ -1853,7 +1854,7 @@ function initLogin() {
 	function relogin() {
 		var user = $("#UserName").val();
 		if (!user) return;
-		if (utility.regInfo.bindAcc && utility.regInfo.bindAcc.length && utility.regInfo.bindAcc[0] && $.inArray(user, utility.regInfo.bindAcc) && utility.regInfo.bindAcc[0] != "*") {
+		if (utility.regInfo.bindAcc && utility.regInfo.bindAcc.length && utility.regInfo.bindAcc[0] && $.inArray(user, utility.regInfo.bindAcc)==-1 && utility.regInfo.bindAcc[0] != "*") {
 			alert("很抱歉，12306订票助手的授权许可已绑定至【" + utility.regInfo.bindAcc.join() + "】，未授权用户，助手停止运行，请手动操作。");
 			return;
 		}
