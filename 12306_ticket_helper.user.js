@@ -11,7 +11,7 @@
 // @require			https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js
 // @icon			http://www.12306.cn/mormhweb/images/favicon.ico
 // @run-at			document-idle
-// @version 		3.3.1
+// @version 		3.3.2
 // @updateURL		http://www.fishlee.net/Service/Download.ashx/44/47/12306_ticket_helper.user.js
 // @supportURL		http://www.fishlee.net/soft/44/
 // @homepage		http://www.fishlee.net/soft/44/
@@ -23,16 +23,14 @@
 // @id				12306_ticket_helper_by_ifish@fishlee.net
 // @namespace		ifish@fishlee.net
 
-var version = "3.3.1";
+var version = "3.3.2";
 var updates = [
-	"修正点击我的12306却跳转到查询的BUG",
-	"注册系统升级，新的序列号注册更简单，新增绑定12306帐户而没有注册时间限制的序列号",
-	"<span style='color:red'>由于作者改到凌晨3点半扛不住了。。序列号升级功能会在星期一再加入。。。</span>"
+	"移除自动提交排队时右下角的提示，因为排队太蛋疼，所以看得很多人也比较蛋疼 ╮(╯▽╰)╭",
+	"添加提交预定、未完成订单页面的出错自动重载功能",
+	"添加排队订票成功后，转到支付页时音乐提醒的功能",
+	"修正访问人数过多时，自动重新提交表单没有时间间隔的BUG"
 ];
 
-var queryActionUrl = "/otsweb/order/querySingleAction.do";
-//预定
-var confirmOrderUrl = "/otsweb/order/confirmPassengerAction.do";
 var faqUrl = "http://www.fishlee.net/soft/44/faq.html";
 //标记
 var utility_emabed = false;
@@ -207,6 +205,11 @@ function injectDom() {
 	if (utility.getPref("helperVersion") != window.helperVersion) {
 		utility.setPref("helperVersion", window.helperVersion);
 		utility.showOptionDialog("tabVersion");
+
+		alert("【作者郑重提示】\n========================\n相信大家都已经领教了9月10日铁道部升级所引入的排队系统的蛋疼程度……为了让大家更清晰的明白怎么回事，特此说明如下：\n\n1.排队系统是铁道部引入的，不是助手带来的;\n2.排队时间是十分不准确的，不要带有慢慢就会到头的幻想;\n" +
+			"3.提交成功不一定能拿到票，提示你付款时才真正有票，所以请不要放松;\n4.强烈建议不要放弃电话订票，在排队的时候努力用电话拨打订票热线95105015，死马当活马医;\n5.排队时，可能的话，请用别的浏览器或其它的电脑注册新的帐号并同时排队，可以提高成功率;\n6.遇到铁道部封了您的IP（拒绝访问）时，请加群，有自动换IP工具;\n\n" +
+			"任何时候回家都是一种永恒的夙愿，祝大家都能安全快捷地回家 :-)"
+			);
 	}
 
 	//注册
@@ -626,7 +629,7 @@ var utility = {
 			if (regName != name) {
 				return { result: -3, msg: "注册失败，用户名不匹配" };
 			}
-			var data = { name: name, type: regVersion, bindAcc: bindAcc, ticket: ticket, result: 0, msg: "成功注册" };
+			var data = { name: name, type: regVersion, bindAcc: bindAcc.split("|"), ticket: ticket, result: 0, msg: "成功注册" };
 			switch (data.type) {
 				case "NRML": data.typeDesc = "正式版"; break;
 				case "GROP": data.typeDesc = "内部版, <span style='color:blue;'>感谢您参与我们之中</span>!"; break;
@@ -746,25 +749,57 @@ function entryPoint() {
 	var location = window.location;
 	var path = location.pathname;
 
-	if (utility.verifySn(true).result != 0) {
+	utility.regInfo = utility.verifySn(true);
+	if (utility.regInfo.result != 0) {
 		return;
 	}
 
+	//
 	unsafeInvoke(autoReloadIfError);
 	if ((path == "/otsweb/loginAction.do" && location.search != '?method=initForMy12306') || path == "/otsweb/login.jsp") {
 		//登录页
 		safeInvoke(initLogin);
 		checkUpdate();
-	} else if (path == queryActionUrl) {
-		unsafeInvoke(initTicketQuery);
-	} else if (path == "/otsweb/order/myOrderAction.do" && location.search.indexOf("method=resign") != -1) {
-		unsafeInvoke(initTicketQuery);
-	} else if (path == confirmOrderUrl || path == "/otsweb/order/confirmPassengerResignAction.do") {
-		unsafeInvoke(initAutoCommitOrder);
-		safeInvoke(autoCommitOrderInSandbox);
-	} else if (path.indexOf("/otsweb/order/myOrderAction.do?method=laterEpay") == 0 || path.indexOf("/otsweb/order/myOrderAction.do?method=queryMyOrderNotComplete") == 0) {
-		unsafeInvoke(initPayOrder);
-	} else if (path == "/otsweb/main.jsp" || path == "/otsweb/") {
+	}
+	if (utility.regInfo.bindAcc && localStorage.getItem("_sessionuser") && utility.regInfo.bindAcc[0] != "*") {
+		var user = localStorage.getItem("_sessionuser");
+		var ok = false;
+		for (var i = 0; i < utility.regInfo.bindAcc.length; i++) {
+			if (utility.regInfo.bindAcc[i] == user) {
+				ok = true;
+				break;
+			}
+		}
+		if (!ok) return;
+	}
+	if (path == "/otsweb/order/querySingleAction.do") {
+		if (location.search == "?method=init") {
+			unsafeInvoke(initTicketQuery);
+		}
+		if (location.search == "?method=submutOrderRequest") {
+			unsafeInvoke(initSubmitOrderQuest);
+		}
+	}
+	if (path == "/otsweb/order/myOrderAction.do") {
+		if (location.search.indexOf("method=resign") != -1) {
+			unsafeInvoke(initTicketQuery);
+		}
+	}
+	if (path == "/otsweb/order/confirmPassengerAction.do") {
+		if (location.search == "?method=init") {
+			unsafeInvoke(initAutoCommitOrder);
+			safeInvoke(autoCommitOrderInSandbox);
+		}
+		if (location.search.indexOf("?method=payOrder") != -1) {
+			unsafeInvoke(initPagePayOrder);
+		}
+	}
+	if (path == "/otsweb/order/myOrderAction.do") {
+		if (location.search.indexOf("?method=laterEpay") != -1 || location.search.indexOf("?method=queryMyOrderNotComplete") != -1) {
+			unsafeInvoke(initPayOrder);
+		}
+	}
+	if (path == "/otsweb/main.jsp" || path == "/otsweb/") {
 		//主框架
 		console.log("正在注入主框架脚本。");
 
@@ -781,6 +816,24 @@ function entryPoint() {
 
 		safeInvoke(injectMainPageFunction);
 	}
+}
+
+//#endregion
+
+//#region 提交页面出错
+
+function initSubmitOrderQuest() {
+	if ($("div.error_text").length > 0) {
+		parent.window.resubmitForm();
+	}
+}
+
+//#endregion
+
+//#region 订票页面，声音提示
+
+function initPagePayOrder() {
+	new Audio(utility.getAudioUrl()).play();
 }
 
 //#endregion
@@ -819,12 +872,12 @@ function injectMainPageFunction() {
 		alert("请启用通告，不然提交会变慢！");
 	}
 
-	var resubmitForm = function () {
+	window.resubmitForm = function () {
 		var form = $("#orderForm");
 		if (form.length == 0) return;
 
 		utility.notify("页面出错了！正在重新预定！");
-		form.submit();
+		setTimeout(form.submit, 3000);
 	}
 }
 
@@ -841,9 +894,7 @@ function initAutoCommitOrder() {
 	//#region 如果系统出错，那么重新提交
 
 	if ($(".error_text").length > 0 && parent.$("#orderForm").length > 0) {
-		setTimeout(function () {
-			parent.resubmitForm();
-		}, 3000);
+		parent.resubmitForm();
 
 		return;
 	}
@@ -923,6 +974,7 @@ function initAutoCommitOrder() {
 					stop(errmsg);
 					reloadCode();
 				} else {
+					utility.notifyOnTop("订单提交成功, 正在等待队列完成操作，请及时注意订单状态");
 					waitingForQueueComplete();
 				}
 			},
@@ -951,6 +1003,7 @@ function initAutoCommitOrder() {
 
 	function waitingForQueueComplete() {
 		setCurOperationInfo(true, "订单提交成功, 正在等待队列完成操作....");
+
 		$.ajax({
 			url: '/otsweb/order/myOrderAction.do?method=getOrderWaitTime&tourFlag=' + tourFlag + '&' + Math.random(),
 			data: {},
@@ -961,7 +1014,7 @@ function initAutoCommitOrder() {
 				console.log(json);
 
 				if (json.waitTime == -1 || json.waitTime == 0) {
-					utility.notify("订票成功!");
+					utility.notifyOnTop("订票成功!");
 					if (json.orderId)
 						window.location.replace("/otsweb/order/confirmPassengerAction.do?method=payOrder&orderSequence_no=" + json.orderId);
 					else window.location.replace('/otsweb/order/myOrderAction.do?method=queryMyOrderNotComplete&leftmenu=Y');
@@ -993,7 +1046,6 @@ function initAutoCommitOrder() {
 				} else {
 					var msg = "订单提交成功, 但是大约需要 " + utility.getSecondInfo(json.waitTime) + " 处理完成, 请稍等.";
 					setTipMessage(msg);
-					utility.notify(msg);
 					utility.delayInvoke("#countEle", waitingForQueueComplete, 1000);
 				}
 			},
@@ -1686,10 +1738,7 @@ function initLogin() {
 	trs.eq(1).find("td:last").html('<label><input type="checkbox" id="keepInfo" /> 记录密码</label>');
 	//注册判断
 	form.submit(function () {
-		//	if (utility.regInfo.bindAcc && utility.regInfo.bindAcc != $("#UserName").val()) {
-		//		alert("警告！ 当前订票助手授权账户绑定在【" + utility.regInfo.bindAcc + "】上，无法继续运行。要切换12306帐户，请重新注册助手的授权！");
-		//		return false;
-		//	}
+		utility.setPref("_sessionuser", $("#UserName").val());
 	});
 
 	if (!window.webkitNotifications || window.webkitNotifications.checkPermission() == 0) {
@@ -1802,7 +1851,15 @@ function initLogin() {
 
 
 	function relogin() {
+		var user = $("#UserName").val();
+		if (!user) return;
+		if (utility.regInfo.bindAcc && $.inArray(user, utility.regInfo.bindAcc) && utility.regInfo.bindAcc[0] != "*") {
+			alert("很抱歉，12306订票助手的授权许可已绑定至【" + utility.regInfo.bindAcc.join() + "】，未授权用户，助手停止运行，请手动操作。");
+			return;
+		}
+
 		count++;
+		utility.setPref("_sessionuser", $("#UserName").val());
 		getLoginRandCode();
 	}
 
@@ -1840,6 +1897,12 @@ function initLogin() {
 //#region 自动重新支付
 
 function initPayOrder() {
+	//如果出错，自动刷新
+	if ($("div.error_text").length > 0) {
+		utility.notifyOnTop("页面出错，稍后自动刷新！");
+		setTimeout(self.reload, 3000);
+	}
+
 	return;
 	// undone
 
