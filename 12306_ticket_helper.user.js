@@ -879,7 +879,7 @@ function injectMainPageFunction() {
 		if (form.length == 0) return;
 
 		utility.notify("页面出错了！正在重新预定！");
-		setTimeout(form.submit, 3000);
+		setTimeout(function () { form.submit(); }, 3000);
 	}
 }
 
@@ -1996,7 +1996,7 @@ function updateScriptContentForChrome() {
 			if (utility.getPref("diableUpdateVersion") == version_12306_helper) return;
 
 			if (typeof (external.mxCall) != 'undefined') {
-				$("#updateFound a").attr("href", "http://www.fishlee.net/soft/44/#C-192").attr("target", "_blank");
+				$("#updateFound a").attr("href", "http://www.fishlee.net/soft/44/download.html").attr("target", "_blank");
 			}
 			$("#updateFound").show();
 			var info = '助手脚本已经发布了最新版 ' + version_12306_helper + '，请在登录页面上点击更新链接更新，更新后请刷新当前页面！\n\n版本更新内容如下，请确定您是否需要进行更新：\n';

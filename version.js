@@ -1,4 +1,4 @@
-var version_12306_helper="3.3.5";
+var version_12306_helper="3.3.4";
 var version_updater = [
 	"允许禁用自动登录改用手动登录",
 	"增加对 https://www.12306.cn/otsweb/ 网址的支持",
