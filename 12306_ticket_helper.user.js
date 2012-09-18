@@ -11,7 +11,7 @@
 // @require			https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js
 // @icon			http://www.12306.cn/mormhweb/images/favicon.ico
 // @run-at			document-idle
-// @version 		3.3.4
+// @version 		3.3.5
 // @updateURL		http://www.fishlee.net/Service/Download.ashx/44/47/12306_ticket_helper.user.js
 // @supportURL		http://www.fishlee.net/soft/44/
 // @homepage		http://www.fishlee.net/soft/44/
@@ -23,13 +23,13 @@
 // @id				12306_ticket_helper_by_ifish@fishlee.net
 // @namespace		ifish@fishlee.net
 
-var version = "3.3.4";
+var version = "3.3.5";
 var updates = [
-	"移除自动提交排队时右下角的提示，因为排队太蛋疼，所以看得很多人也比较蛋疼 ╮(╯▽╰)╭",
-	"添加提交预定、未完成订单页面的出错自动重载功能",
-	"添加排队订票成功后，转到支付页时音乐提醒的功能",
-	"修正访问人数过多时，自动重新提交表单没有时间间隔的BUG",
-	"修正绑定多帐户时，无法正常使用的问题"
+	"允许禁用自动登录改用手动登录",
+	"增加对 https://www.12306.cn/otsweb/ 网址的支持",
+	"修改自动更新逻辑，允许在更新前查看更新内容以决定是否更新，并允许屏蔽指定版本的更新推送",
+	"登录页添加快速链接区， 并添加重新注册快速链接",
+	"其它细节修改"
 ];
 
 var faqUrl = "http://www.fishlee.net/soft/44/faq.html";
@@ -142,7 +142,7 @@ function injectDom() {
 	html.push('<div class="tabContent tabFaq">');
 	html.push('<table>');
 	html.push('<tr>');
-	html.push('<td colspan="4"> 您好，你在订票过程中可能会遇到各种问题，由于12306网站本身没有任何介绍，所以作者整理了相关问题，供您参考。如果还有不明白的问题，请加群讨论：<strong>216126338</strong>。 </td>');
+	html.push('<td colspan="4"> 您好，你在订票过程中可能会遇到各种问题，由于12306网站本身没有任何介绍，所以作者整理了相关问题，供您参考。如果还有不明白的问题，请加群讨论。 </td>');
 	html.push('</tr>');
 	html.push('<tr>');
 	html.push('<td colspan="2" style="color:purple;">啊吖....死鱼头既忙又懒, 还木有整理乜 ╮(╯▽╰)╭</td>');
@@ -170,15 +170,15 @@ function injectDom() {
 			alert("很抱歉, 注册失败. 代码 " + rt.result + ", " + rt.msg);
 		} else {
 			utility.setSnInfo("", sn);
-			alert("注册成功, 注册给 - " + rt.name + " , 注册类型 - " + rt.typeDesc.replace(/<[^>]*>/gi, ""));
+			alert("注册成功, 请刷新浏览器。\n注册给 - " + rt.name + " , 注册类型 - " + rt.typeDesc.replace(/<[^>]*>/gi, ""));
 			top.location.reload();
 		}
 	});
-	$("#unReg").click(function () {
+	$("#unReg, a.reSignHelper").live("click", function () {
 		if (!confirm("确定要重新注册吗?")) return;
 
 		utility.setSnInfo("", "");
-		top.location.reload();
+		self.location.reload();
 	});
 
 	//初始化设置
@@ -301,12 +301,13 @@ var utility = {
 	},
 	reloadPrefs: function (obj, prefix) {
 		var objs = obj.find("input");
+		prefix = prefix || "";
 		objs.each(function () {
 			var e = $(this);
 			var type = e.attr("type");
 			var id = e.attr("id");
 			var value = utility.getPref(prefix + "_" + id);
-			if (typeof (value) == "undefined") return;
+			if (typeof (value) == "undefined" || value == null) return;
 
 			if (type == "text") e.val(value);
 			else if (type == "checkbox") this.checked = value == "1";
@@ -724,7 +725,7 @@ function buildObjectJavascriptCode(object) {
 var isChrome = navigator.userAgent.indexOf("AppleWebKit") != -1;
 var isFirefox = navigator.userAgent.indexOf("Firefox") != -1;
 
-if (location.host == "dynamic.12306.cn") {
+if (location.host == "dynamic.12306.cn" || (location.host == "www.12306.cn" && location.protocol == "http:")) {
 	if (!isChrome && !isFirefox) {
 		alert("很抱歉，未能识别您的浏览器，或您的浏览器尚不支持脚本运行，请使用Firefox或Chrome浏览器！\n如果您运行的是Maxthon3，请确认当前页面运行在高速模式而不是兼容模式下 :-)");
 	} else if (isFirefox && typeof (GM_notification) == 'undefined') {
@@ -759,10 +760,10 @@ function entryPoint() {
 	unsafeInvoke(autoReloadIfError);
 	if ((path == "/otsweb/loginAction.do" && location.search != '?method=initForMy12306') || path == "/otsweb/login.jsp") {
 		//登录页
-		safeInvoke(initLogin);
+		unsafeInvoke(initLogin);
 		checkUpdate();
 	}
-	if (utility.regInfo.bindAcc && localStorage.getItem("_sessionuser") && utility.regInfo.bindAcc.length>0 && utility.regInfo.bindAcc[0] && utility.regInfo.bindAcc[0] != "*") {
+	if (utility.regInfo.bindAcc && localStorage.getItem("_sessionuser") && utility.regInfo.bindAcc.length > 0 && utility.regInfo.bindAcc[0] && utility.regInfo.bindAcc[0] != "*") {
 		var user = localStorage.getItem("_sessionuser");
 		var ok = false;
 		for (var i = 0; i < utility.regInfo.bindAcc.length; i++) {
@@ -1243,7 +1244,7 @@ function initTicketQuery() {
 <tr class='fish_sep caption'><td colspan='4'>相关设置</td></tr>\
 <tr class='fish_sep musicFunc'><td class='name'>自定义音乐地址</td><td colspan='3'><input type='text' id='txtMusicUrl' value='" + utility.getAudioUrl() + "' onfocus='this.select();' style='width:70%;' /> <input type='button' onclick='new Audio(document.getElementById(\"txtMusicUrl\").value).play();' value='测试'/><input type='button' onclick='utility.resetAudioUrl(); document.getElementById(\"txtMusicUrl\").value=utility.getAudioUrl();' value='恢复默认'/></td></tr>\
 <tr class='fish_sep musicFunc'><td class='name'>可用音乐地址</td><td colspan='3'><span style='color:gray;'>* 暂时木有，如果您有好的地址，请告知作者</span></td></tr>\
-<tr class='fish_sep'><td style='text-align:center;' colspan='4'>12306.CN 订票助手 by iFish(木鱼) | <a href='http://t.qq.com/ccfish/' target='_blank' style='color:blue;'>腾讯微博</a> | <a href='http://www.fishlee.net/soft/44/' style='color:blue;' target='_blank'>助手主页</a> | <a href='http://www.fishlee.net/Discussion/Index/44' target='_blank'>反馈BUG</a> | <a style='font-weight:bold;color:red;' href='http://www.fishlee.net/honor/index.html' target='_blank'>捐助作者</a></td></tr>\
+<tr class='fish_sep'><td style='text-align:center;' colspan='4'>12306.CN 订票助手 by iFish(木鱼) | <a href='http://t.qq.com/ccfish/' target='_blank' style='color:blue;'>腾讯微博</a> | <a href='http://www.fishlee.net/soft/44/' style='color:blue;' target='_blank'>助手主页</a> | <a href='http://www.fishlee.net/Discussion/Index/44' target='_blank'>反馈BUG</a> | <a style='font-weight:bold;color:red;' href='http://www.fishlee.net/honor/index.html' target='_blank'>捐助作者</a> | 版本 v" + window.helperVersion + "，许可于 <strong>" + utility.regInfo.name + "，类型 - " + utility.regInfo.typeDesc + "</strong> 【<a href='javascript:;' class='reSignHelper'>重新注册</a>】</td></tr>\
 		</table></div></div></div>");
 	$("#stopBut").before("<div class='jmp_cd' style='text-align:center;'><input type='button' class='fish_button' id='btnFilter' value='加入黑名单' /><input type='button' class='fish_button' id='btnAutoBook' value='自动预定本车次' /></div>");
 	$("#txtMusicUrl").change(function () { window.localStorage["audioUrl"] = this.value; });
@@ -1417,6 +1418,8 @@ function initTicketQuery() {
 		if (window.Audio && $("#chkAudioOn")[0].checked) {
 			if (!audio) {
 				audio = new Audio($("#txtMusicUrl").val());
+			} else {
+				audio.stop();
 			}
 			audio.loop = $("#chkAudioLoop")[0].checked;
 			$("#btnStopSound")[0].disabled = false;
@@ -1713,7 +1716,7 @@ function initLogin() {
 
 	}
 	if (!isTop) {
-		$("#loginForm table tr:first td:last").append("<a href='https://dynamic.12306.cn/otsweb/' target='_blank' style='font-weight:bold;color:red;'>强烈建议全屏订票！</a>");
+		$("#loginForm table tr:first td:last").append("<a href='https://dynamic.12306.cn/otsweb/' target='_blank' style='font-weight:bold;color:red;'>点击这里全屏订票！</a>");
 	}
 
 
@@ -1728,15 +1731,49 @@ function initLogin() {
 		"<li style='color:green;'><strong>最后操作时间</strong>：<span>--</span></li>" +
 		"<li> <a href='javascript:;' class='configLink' tab='tabLogin'>登录设置</a> | <a href='http://t.qq.com/ccfish/' target='_blank' style='color:blue;'>腾讯微博</a> | <a href='http://www.fishlee.net/soft/44/' style='color:blue;' target='_blank'>助手主页</a></li><li><a href='http://www.fishlee.net/Discussion/Index/44' target='_blank'>反馈BUG</a> | <a style='font-weight:bold;color:red;' href='http://www.fishlee.net/honor/index.html' target='_blank'>捐助作者</a></li>" +
 		"<li id='updateFound' style='display:none;'><a style='font-weight:bold; color:red;' href='http://www.fishlee.net/Service/Download.ashx/44/47/12306_ticket_helper.user.js'>发现新版本！点此更新</a></li>" +
-		'<li id="enableNotification"><input type="button" id="enableNotify" onclick="$(this).parent().hide();window.webkitNotifications.requestPermission();" value="请点击以启用通告" style="line-height:25px;padding:5px;" /></li><li style="padding-top:10px;line-height:normal;color:gray;">请输入用户名和密码，<strong style="color: red;">最后输入验证码</strong>，输入完成后系统将自动帮你提交。登录过程中，请勿离开当前页面。如果系统繁忙，系统会自动重新刷新验证码并自动定位到验证码输入框中，请直接输入验证码，输入完成后助手将自动帮你提交。</li>' +
+		'<li id="enableNotification"><input type="button" id="enableNotify" onclick="$(this).parent().hide();window.webkitNotifications.requestPermission();" value="请点击以启用通告" style="line-height:25px;padding:5px;" /></li><li style="padding-top:10px;line-height:normal;color:gray;">请<strong style="color: red;">最后输验证码</strong>，输入完成后系统将自动帮你提交。登录过程中，请勿离开当前页。如系统繁忙，会自动重新刷新验证码，请直接输入验证码，输入完成后助手将自动帮你提交。</li>' +
 		"</ul>" +
 		"</div>" +
 		"</div>");
+
+	var html = [];
+	html.push("<div class='outerbox' style='margin:15px;'><div class='box'><div class='title'>小提示</div><div style='padding:10px;'>");
+	html.push("<table><tr><td style='width:33%;font-weight:bold;background-color:#f5f5f5;'><strong>您还可以通过以下网址访问订票网站：</strong></td><td style='width:33%;font-weight:bold;background-color:#f5f5f5;'>助手运行常见问题</td><td style='font-weight:bold;background-color:#f5f5f5;'>版本信息</td></tr>");
+	html.push("<tr><td><ul><li style='list-style:disc inside;'><a href='https://www.12306.cn/otsweb/' target='blank'>https://www.12306.cn/otsweb/</a></li>");
+	html.push("<li style='list-style:disc inside;'><a href='https://dynamic.12306.cn/otsweb/' target='blank'>https://dynamic.12306.cn/otsweb/</a></li><li style='list-style:disc inside;'><a href='http://dynamic.12306.cn/otsweb/' target='blank'>http://dynamic.12306.cn/otsweb/</a></li>");
+	html.push("</ul></td><td><ol>");
+	$.each([
+		["http://www.fishlee.net/soft/44/12306faq.html", "订票和助手的常见问题"],
+		["http://www.fishlee.net/soft/44/faq.html", "助手运行的常见问题"],
+		["http://www.fishlee.net/soft/44/faq_on_firefox.html", "Firefox上运行的常见问题"],
+		["http://www.fishlee.net/soft/44/faq_on_chrome.html", "谷歌和Firefox上运行的常见问题"],
+		["http://www.fishlee.net/soft/44/faq_on_other_browsers.html", "其它浏览器上运行的常见问题"]
+	], function (i, n) {
+		html.push("<li style='list-style:disc inside;'><a href='" + n[0] + "' target='blank'>" + (n[1] || n[0]) + "</a></li>");
+	});
+	html.push("</ol></td><td><ul>");
+	var info = [];
+	info.push("已许可于：" + utility.regInfo.name);
+	if (utility.regInfo.bindAcc) {
+		if (!utility.regInfo.bindAcc[0] || utility.regInfo.bindAcc[0] == "*") info.push("许可12306帐户：<em>无限</em>");
+		else info.push("许可12306帐户：" + utility.regInfo.bindAcc);
+	}
+	info.push(utility.regInfo.typeDesc);
+	info.push("版本：<strong>" + window.helperVersion + "</strong>");
+	$.each(info, function (i, n) { html.push("<li style='list-style:disc inside;'>" + n + "</li>"); });
+	html.push("<li style='list-style:disc inside;'>【<a href='javascript:;' class='reSignHelper'>重新注册</a>】</li>");
+	html.push("</ul></td></tr></table>");
+	html.push("</div></div></div>");
+
+	$("div.enter_help").before(html.join(""));
+
 
 	//插入登录标记
 	var form = $("#loginForm");
 	var trs = form.find("tr");
 	trs.eq(1).find("td:last").html('<label><input type="checkbox" id="keepInfo" /> 记录密码</label>');
+	$("#loginForm td:last").html('<label><input type="checkbox" checked="checked" id="autoLogin" name="autoLogin" /> 自动登录</label>');
+	utility.reloadPrefs($("#loginForm td:last"));
 	//注册判断
 	form.submit(function () {
 		utility.setPref("_sessionuser", $("#UserName").val());
@@ -1854,8 +1891,8 @@ function initLogin() {
 	function relogin() {
 		var user = $("#UserName").val();
 		if (!user) return;
-		if (utility.regInfo.bindAcc && utility.regInfo.bindAcc.length && utility.regInfo.bindAcc[0] && $.inArray(user, utility.regInfo.bindAcc)==-1 && utility.regInfo.bindAcc[0] != "*") {
-			alert("很抱歉，12306订票助手的授权许可已绑定至【" + utility.regInfo.bindAcc.join() + "】，未授权用户，助手停止运行，请手动操作。");
+		if (utility.regInfo.bindAcc && utility.regInfo.bindAcc.length && utility.regInfo.bindAcc[0] && $.inArray(user, utility.regInfo.bindAcc) == -1 && utility.regInfo.bindAcc[0] != "*") {
+			alert("很抱歉，12306订票助手的授权许可已绑定至【" + utility.regInfo.bindAcc.join() + "】，未授权用户，助手停止运行，请手动操作。\n您可以在登录页面下方的帮助区点击【重新注册】来修改绑定。");
 			return;
 		}
 
@@ -1888,6 +1925,8 @@ function initLogin() {
 		$("#randCode")[0].focus();
 	}
 	$("#randCode").keyup(function (e) {
+		if (!$("#autoLogin")[0].checked) return;
+
 		e = e || event;
 		if (e.charCode == 13 || $("#randCode").val().length == 4) relogin();
 	});
@@ -1950,15 +1989,26 @@ function checkUpdate() {
 
 function updateScriptContentForChrome() {
 	var updateScipt = document.createElement('script');
-	updateScipt.src = 'https://github.com/iccfish/12306_ticket_helper/raw/master/version.js?' + Math.random();
+	updateScipt.src = 'https://github.com/iccfish/12306_ticket_helper/raw/master/version.js';
 	updateScipt.type = 'text/javascript';
 	updateScipt.addEventListener('load', function () {
 		if (compareVersion(version, version_12306_helper) < 0) {
+			if (utility.getPref("diableUpdateVersion") == version_12306_helper) return;
+
 			if (typeof (external.mxCall) != 'undefined') {
 				$("#updateFound a").attr("href", "http://www.fishlee.net/soft/44/#C-192").attr("target", "_blank");
 			}
 			$("#updateFound").show();
-			alert('助手脚本已经发布了最新版 ' + version_12306_helper + '，请在登录页面上点击更新链接更新 :-)\n\n更新后请刷新当前页面！');
+			var info = '助手脚本已经发布了最新版 ' + version_12306_helper + '，请在登录页面上点击更新链接更新，更新后请刷新当前页面！\n\n版本更新内容如下，请确定您是否需要进行更新：\n';
+			if (typeof (version_updater) != 'undefined' && version_updater) {
+				info += "*" + version_updater.join(";\n* ");
+			} else {
+				info += "(暂时没有相关更新内容)";
+			}
+			info += "\n\n如果此次不更新，点击『是』下次依然提醒；点击『否』永久屏蔽此版本更新提示！";
+			if (!confirm(info)) {
+				utility.setPref("diableUpdateVersion", version_12306_helper);
+			}
 		}
 	});
 	document.head.appendChild(updateScipt);
