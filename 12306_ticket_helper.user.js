@@ -11,7 +11,7 @@
 // @require			https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js
 // @icon			http://www.12306.cn/mormhweb/images/favicon.ico
 // @run-at			document-idle
-// @version 		3.3.5
+// @version 		3.3.6
 // @updateURL		http://www.fishlee.net/Service/Download.ashx/44/47/12306_ticket_helper.user.js
 // @supportURL		http://www.fishlee.net/soft/44/
 // @homepage		http://www.fishlee.net/soft/44/
@@ -23,12 +23,13 @@
 // @id				12306_ticket_helper_by_ifish@fishlee.net
 // @namespace		ifish@fishlee.net
 
-var version = "3.3.5";
+var version = "3.3.6";
 var updates = [
 	"允许禁用自动登录改用手动登录",
 	"增加对 https://www.12306.cn/otsweb/ 网址的支持",
 	"修改自动更新逻辑，允许在更新前查看更新内容以决定是否更新，并允许屏蔽指定版本的更新推送",
 	"登录页添加快速链接区， 并添加重新注册快速链接",
+	"修正预定操作提示系统忙时无法自动重试的BUG",
 	"其它细节修改"
 ];
 
@@ -879,7 +880,7 @@ function injectMainPageFunction() {
 		if (form.length == 0) return;
 
 		utility.notify("页面出错了！正在重新预定！");
-		setTimeout(function () { form.submit(); }, 3000);
+		setTimeout(function () { document.getElementById("orderForm").submit(); }, 3000);
 	}
 }
 
