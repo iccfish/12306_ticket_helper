@@ -1,4 +1,3 @@
-
 // ==UserScript==
 // @name 			12306.CN 订票助手 For Firefox&Chrome
 // @namespace		http://www.u-tide.com/fish/
@@ -8,6 +7,7 @@
 // @description		帮你订票的小助手 :-)
 // @match			http://dynamic.12306.cn/otsweb/*
 // @match			https://dynamic.12306.cn/otsweb/*
+// @match			https://www.12306.cn/otsweb/*
 // @require			https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js
 // @icon			http://www.12306.cn/mormhweb/images/favicon.ico
 // @run-at			document-idle
@@ -726,7 +726,7 @@ function buildObjectJavascriptCode(object) {
 var isChrome = navigator.userAgent.indexOf("AppleWebKit") != -1;
 var isFirefox = navigator.userAgent.indexOf("Firefox") != -1;
 
-if (location.host == "dynamic.12306.cn" || (location.host == "www.12306.cn" && location.protocol == "http:")) {
+if (location.host == "dynamic.12306.cn" || (location.host == "www.12306.cn" && location.protocol == "https:")) {
 	if (!isChrome && !isFirefox) {
 		alert("很抱歉，未能识别您的浏览器，或您的浏览器尚不支持脚本运行，请使用Firefox或Chrome浏览器！\n如果您运行的是Maxthon3，请确认当前页面运行在高速模式而不是兼容模式下 :-)");
 	} else if (isFirefox && typeof (GM_notification) == 'undefined') {
