@@ -1,3 +1,4 @@
+
 // ==UserScript==
 // @name 			12306.CN 订票助手 For Firefox&Chrome
 // @namespace		http://www.u-tide.com/fish/
@@ -11,7 +12,7 @@
 // @require			https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js
 // @icon			http://www.12306.cn/mormhweb/images/favicon.ico
 // @run-at			document-idle
-// @version 		3.3.6
+// @version 		3.4.0
 // @updateURL		http://www.fishlee.net/Service/Download.ashx/44/47/12306_ticket_helper.user.js
 // @supportURL		http://www.fishlee.net/soft/44/
 // @homepage		http://www.fishlee.net/soft/44/
@@ -23,14 +24,14 @@
 // @id				12306_ticket_helper_by_ifish@fishlee.net
 // @namespace		ifish@fishlee.net
 
-var version = "3.3.6";
+var version = "3.4.0";
 var updates = [
-	"允许禁用自动登录改用手动登录",
-	"增加对 https://www.12306.cn/otsweb/ 网址的支持",
-	"修改自动更新逻辑，允许在更新前查看更新内容以决定是否更新，并允许屏蔽指定版本的更新推送",
-	"登录页添加快速链接区， 并添加重新注册快速链接",
-	"修正预定操作提示系统忙时无法自动重试的BUG",
-	"其它细节修改"
+	"订票提交页面添加实时队列数显示！",
+	"修正对 https://www.12306.cn/otsweb/ 的支持 【感谢（K.T.S）的提交！】",
+	"修正对【改签】页面自动刷新的支持",
+	"修正在提交订单页面出现错误后，重试之间没有时间间隔的BUG",
+	"恢复老版本的音乐地址，因为新版本的音乐地址经常有人放不出来(仅WEBKIT内核，Firefox对HTTP地址拒绝播放)",
+	"增加排队时间过久的警告"
 ];
 
 var faqUrl = "http://www.fishlee.net/soft/44/faq.html";
@@ -322,14 +323,14 @@ var utility = {
 		return m && m[1] ? m[1] : "&lt;未知信息&gt;";
 	},
 	delayInvoke: function (target, callback, timeout) {
-		var e = $(target);
+		var e = $(target || "#countEle");
 		if (timeout <= 0) {
 			e.html("正在执行").removeClass("fish_clock").addClass("fish_running");
 			callback();
 		} else {
 			var str = (Math.floor(timeout / 100) / 10) + '';
 			if (str.indexOf(".") == -1) str += ".0";
-			e.html(str + " 秒后重试....").removeClass("fish_running").addClass("fish_clock");
+			e.html(str + " 秒后再来!...").removeClass("fish_running").addClass("fish_clock");
 			setTimeout(function () {
 				utility.delayInvoke(target, callback, timeout - 500);
 			}, 500);
@@ -368,7 +369,7 @@ var utility = {
 	},
 	getAudioUrl: function () {
 		/// <summary>获得音乐地址</summary>
-		return window.localStorage["audioUrl"] || "https://github.com/iccfish/12306_ticket_helper/raw/master/res/song.ogg";
+		return window.localStorage["audioUrl"] || (navigator.userAgent.indexOf("Firefox") != -1 ? "https://github.com/iccfish/12306_ticket_helper/raw/master/res/song.ogg" : "http://www.w3school.com.cn/i/song.ogg");
 	},
 	resetAudioUrl: function () {
 		/// <summary>恢复音乐地址为默认</summary>
@@ -432,6 +433,17 @@ var utility = {
 			data: data,
 			timeout: 30000,
 			type: "POST",
+			success: succCallback,
+			error: errorCallback,
+			dataType: dataType
+		});
+	},
+	get: function (url, data, dataType, succCallback, errorCallback) {
+		$.ajax({
+			url: url,
+			data: data,
+			timeout: 30000,
+			type: "GET",
 			success: succCallback,
 			error: errorCallback,
 			dataType: dataType
@@ -929,7 +941,11 @@ function initAutoCommitOrder() {
 		return 1000 * Math.max(parseInt($("#pauseTime").val()), 1);
 	};
 
+	//订单等待时间过久的警告
+	var waitTimeTooLong_alert = false;
+
 	function submitForm() {
+		stopCheckCount();
 		if (!window.submit_form_check || !submit_form_check("confirmPassenger")) {
 			setCurOperationInfo(false, "您的表单没有填写完整!");
 			stop("请填写完整表单");
@@ -945,6 +961,7 @@ function initAutoCommitOrder() {
 		}
 		$("#btnCancelAuto").show().removeClass().addClass("long_button_u_down")[0].disabled = false; //阻止被禁用
 		breakFlag = 0;
+		waitTimeTooLong_alert = false;
 
 		jQuery.ajax({
 			url: '/otsweb/order/confirmPassengerAction.do?method=confirmSingleForQueueOrder',
@@ -983,7 +1000,7 @@ function initAutoCommitOrder() {
 			},
 			error: function (msg) {
 				setCurOperationInfo(false, "当前请求发生错误");
-				submitForm();
+				utility.delayInvoke(null, submitForm, 3000);
 			}
 		});
 	}
@@ -1034,21 +1051,23 @@ function initAutoCommitOrder() {
 					stop(msg);
 					reloadCode();
 				}
-					//else if (json.waitTime == -4) {
-					//	var msg = "正在处理中，请稍等";
-					//	setTipMessage(msg);
-					//	utility.notify(msg);
-					//	utility.delayInvoke("#countEle", waitingForQueueComplete, 1000);
-					//}
 				else if (json.waitTime < 0) {
 					var msg = '很抱歉, 未知的状态信息 : waitTime=' + json.waitTime + ', 可能已成功，请验证未支付订单.';
 					setTipMessage(msg);
 					utility.notifyOnTop(msg);
-					//utility.delayInvoke("#countEle", waitingForQueueComplete, 1000);
 					window.location.replace('/otsweb/order/myOrderAction.do?method=queryMyOrderNotComplete&leftmenu=Y');
 				} else {
 					var msg = "订单提交成功, 但是大约需要 " + utility.getSecondInfo(json.waitTime) + " 处理完成, 请稍等.";
+					if (json.waitTime > 1800) {
+						msg += "<span style='color:red; font-weight: bold;'>警告：排队时间大于30分钟，请不要放弃电话订票或用小号重新排队等其它方式继续订票！</span>";
+					}
 					setTipMessage(msg);
+
+					if (json.waitTime > 1800 && !waitTimeTooLong_alert) {
+						waitTimeTooLong_alert = true;
+						utility.notifyOnTop("警告！排队时间大于30分钟，成功率较低，请尽快电话订票或用小号重新排队！");
+					}
+
 					utility.delayInvoke("#countEle", waitingForQueueComplete, 1000);
 				}
 			},
@@ -1084,7 +1103,7 @@ function initAutoCommitOrder() {
 	}
 
 	//进度提示框
-	$("table.table_qr tr:last").before("<tr><td style='border-top:1px dotted #ccc;' colspan='9'><ul id='tipScript'>" +
+	$("table.table_qr tr:last").before("<tr><td style='border-top:1px dotted #ccc;height:100px;' colspan='9' id='orderCountCell'></td></tr><tr><td style='border-top:1px dotted #ccc;' colspan='9'><ul id='tipScript'>" +
 	"<li class='fish_clock' id='countEle' style='font-weight:bold;'>等待操作</li>" +
 	"<li style='color:green;'><strong>操作信息</strong>：<span>休息中</span></li>" +
 	"<li style='color:green;'><strong>最后操作时间</strong>：<span>--</span></li></ul></td></tr>");
@@ -1115,13 +1134,64 @@ function initAutoCommitOrder() {
 	$("#showHelp").change(function () {
 		if (this.checked) {
 			window.localStorage.setItem("showHelp", "1");
-			$("table.table_qr tr:eq(10)").show();
+			$("table.table_qr tr:eq(11)").show();
 		}
 		else {
 			window.localStorage.removeItem("showHelp");
-			$("table.table_qr tr:eq(10)").hide();
+			$("table.table_qr tr:eq(11)").hide();
 		}
 	}).change();
+
+	//#region 自动刷新席位预定请求数
+
+	var stopCheckCount = null;
+
+	(function () {
+		var data = { train_date: $("#start_date").val(), station: $("#station_train_code").val(), seat: "", from: $("#from_station_telecode").val(), to: $("#to_station_telecode").val() };
+		var url = "confirmPassengerAction.do?method=getQueueCount";
+		var allSeats = $("#passenger_1_seat option");
+		var html = [];
+		var queue = [];
+		var checkCountStopped = false;
+
+		function beginCheck() {
+			if (!stopCheckCount) return;
+
+			html = [];
+			html.push("当前实时排队状态（五秒钟轮询）：");
+
+			allSeats.each(function () { queue.push({ id: this.value, name: this.text }); });
+			if (queue.length > 0) executeQueue();
+		}
+
+		function executeQueue() {
+			if (!stopCheckCount) return;
+
+			var type = queue.shift();
+			data.seat = type.id;
+			utility.get(url, data, "json", function (data) {
+				html.push("席位【<span style='color:blue; font-weight: bold;'>" + type.name + "</span>】当前排队【<span style='color:blue; font-weight: bold;'>" + data.count + "</span>】，最大值【<span style='color:blue; font-weight: bold;'>" + data.countMax + "</span>】" + (data.count > data.countMax ? "<span style='color:red; font-weight: bold;'>排队有危险！</span>" : "<span style='color:green; font-weight: bold;'>请尽快提交！</span>"));
+
+				$("#orderCountCell").html(html.join("<br />"));
+				if (queue.length > 0) {
+					setTimeout(executeQueue, 1000);
+				} else {
+					setTimeout(beginCheck, 5000);
+				}
+			}, function () {
+				queue.unshift(type);
+				setTimeout(executeQueue, 3000);
+			});
+		}
+
+		stopCheckCount = function () {
+			checkCountStopped = true;
+		}
+
+		beginCheck();
+	})();
+
+	//#endregion
 }
 
 function autoCommitOrderInSandbox() {
@@ -1138,10 +1208,11 @@ function autoCommitOrderInSandbox() {
 //#endregion
 
 //#region -----------------自动刷新----------------------
+
 function initTicketQuery() {
 	//#region 兼容性检测 for Maxthon3.
 	//在Maxthon3下该入口函数会神奇地在日期选择界面出现，原因未查
-	if (typeof (seatTypeRelation) == 'undefined' || !seatTypeRelation) return;
+	if ($("#submitQuery").length == 0) return;
 	//#endregion
 
 	//#region 参数配置和常规工具界面
@@ -1419,8 +1490,6 @@ function initTicketQuery() {
 		if (window.Audio && $("#chkAudioOn")[0].checked) {
 			if (!audio) {
 				audio = new Audio($("#txtMusicUrl").val());
-			} else {
-				audio.stop();
 			}
 			audio.loop = $("#chkAudioLoop")[0].checked;
 			$("#btnStopSound")[0].disabled = false;
