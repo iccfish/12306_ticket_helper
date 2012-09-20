@@ -26,12 +26,10 @@
 
 var version = "3.4.0";
 var updates = [
-	"订票提交页面添加实时队列数显示！",
-	"修正对 https://www.12306.cn/otsweb/ 的支持 【感谢（K.T.S）的提交！】",
-	"修正对【改签】页面自动刷新的支持",
-	"修正在提交订单页面出现错误后，重试之间没有时间间隔的BUG",
-	"恢复老版本的音乐地址，因为新版本的音乐地址经常有人放不出来(仅WEBKIT内核，Firefox对HTTP地址拒绝播放)",
-	"增加排队时间过久的警告"
+	"修正订单提交排队逻辑，解决当被强行退出登录时出现的错误并反复重新请求",
+	"排队提示中增加当前排队人数",
+	"增加对未完成订单页面支持，显示时间和排队更及时完整，订单成功失败均有声音提示",
+	"增加两首用于提示的音乐（蓝精灵、超级玛丽），添加订票失败的悲歌（忽然之间 by 莫文蔚）……"
 ];
 
 var faqUrl = "http://www.fishlee.net/soft/44/faq.html";
@@ -133,6 +131,7 @@ function injectDom() {
 	html.push('<h4 style="font-size:18px; font-weight:bold; margin: 0px; line-height: 26px; border-bottom: 1px dotted #ccc;">12306 订票助手 <small>ver ' + window.helperVersion + '</small></h4>');
 	html.push('<p> 12306 订票助手是一款基于12306.CN订票网站、并运行在各浏览器平台基础之上的助手软件，支持的浏览器为Firefox/谷歌浏览器/遨游3，以及相关衍生浏览器。<strong>本软件免费开源，无需付费使用，仅接受捐助。</strong> </p>');
 	html.push('<p style="color: red;"> <strong style="font-size:16px;">特别提醒！本助手免费发布且不作为独立的软件出售！</strong>如果您在淘宝上购买本软件，请务必确认您购买的不是本助手且已经经过作者授权！如果相关宝贝页上没有说明本助手本身免费，请向作者举报，联系方式请<a href="http://www.fishlee.net/about/" target="_blank">参见这里</a>。 </p>');
+	html.push('<p style="color:purple;"> 回家是一个单纯而简单的心愿，希望我们不会变得太复杂……</p>');
 	html.push('<p> 有很多朋友捐助，非常感谢你们的支持和鼓励。详细捐助名单和相关的捐助方式，请<a href="http://www.fishlee.net/soft/44/donate.html" target="_blank">参见这里</a>。 </p>');
 	html.push('<p style="font-weight:bold;">当前版本更新内容</p>');
 	html.push('<ol>');
@@ -244,6 +243,9 @@ var utility = {
 	notifyObj: null,
 	timerObj: null,
 	regInfo: null,
+	isWebKit: function () {
+		return navigator.userAgent.indexOf("WebKit") != -1;
+	},
 	notify: function (msg, timeout) {
 		console.log("信息提示: " + msg);
 		if (window.webkitNotifications) {
@@ -370,6 +372,13 @@ var utility = {
 	getAudioUrl: function () {
 		/// <summary>获得音乐地址</summary>
 		return window.localStorage["audioUrl"] || (navigator.userAgent.indexOf("Firefox") != -1 ? "https://github.com/iccfish/12306_ticket_helper/raw/master/res/song.ogg" : "http://www.w3school.com.cn/i/song.ogg");
+	},
+	getFailAudioUrl: function () {
+		return (utility.isWebKit() ? "http://resbak.fishlee.net/res/" : "https://github.com/iccfish/12306_ticket_helper/raw/master/res/") + "music3.ogg";
+	},
+	playFailAudio: function () {
+		if (!window.Audio) return;
+		new Audio(utility.getFailAudioUrl()).play()
 	},
 	resetAudioUrl: function () {
 		/// <summary>恢复音乐地址为默认</summary>
@@ -811,6 +820,7 @@ function entryPoint() {
 	}
 	if (path == "/otsweb/order/myOrderAction.do") {
 		if (location.search.indexOf("?method=laterEpay") != -1 || location.search.indexOf("?method=queryMyOrderNotComplete") != -1) {
+			unsafeInvoke(initNotCompleteOrderPage);
 			unsafeInvoke(initPayOrder);
 		}
 	}
@@ -829,8 +839,70 @@ function entryPoint() {
 			}
 		}, 100);
 
-		safeInvoke(injectMainPageFunction);
+		unsafeInvoke(injectMainPageFunction);
 	}
+}
+
+//#endregion
+
+//#region 未完成订单查询页面
+
+function initNotCompleteOrderPage() {
+	//处理显示时间的
+	(function () {
+		var tagInputs = $("input[name=cache_tour_flag]");
+		var flags = $.map(tagInputs, function (e, i) { return e.value; });
+		$.each(flags, function () { $("#showTime_" + this).hide().after("<span id='status_" + this + "'>正在查询...</span>"); });
+
+		function doCheck() {
+			var flag = flags.shift();
+			flags.push(flag);
+
+			utility.get("https://dynamic.12306.cn/otsweb/order/myOrderAction.do?method=getOrderWaitTime&tourFlag=" + flag, null, "json", function (data) {
+				var obj = $("#status_" + flag);
+				if (data.waitTime == 0 || data.waitTime == -1) {
+					obj.css({ "color": "green" }).html("订票成功！");
+					utility.notifyOnTop("订票成功！请尽快付款！");
+					parent.playAudio();
+					self.location.reload();
+					return;
+				}
+
+				if (data.waitTime == -2) {
+					utility.notifyOnTop("出票失败！请重新订票！" + data.msg);
+					parent.playFailAudio();
+					obj.css({ "color": "red" }).html("出票失败！" + data.msg);
+
+					return;
+				}
+				if (data.waitTime == -3) {
+					utility.notifyOnTop("订单已经被取消！");
+					parent.playFailAudio();
+					obj.css({ "color": "red" }).html("订单已经被取消！！");
+
+					return;
+				}
+				if (data.waitTime == -4) {
+					utility.notifyOnTop("正在处理中....");
+					obj.css({ "color": "blue" }).html("正在处理中....");
+				}
+
+				if (data.waitTime > 0) {
+					obj.css({ "color": "red" }).html("排队中<br />排队数【" + (data.waitCount || "未知") + "】<br />预计时间【" + utility.getSecondInfo(data.waitTime) + "】<br />不过这时间不<br />怎么靠谱 ╮(╯▽╰)╭");
+				} else {
+					obj.css({ "color": "red" }).html("奇怪的状态码 [" + data.waitTime + "]....");
+				}
+
+
+				setTimeout(doCheck, 2000);
+			}, function () {
+				utility.notifyOnTop("查询状态错误，正在刷新页面！");
+				self.location.reload();
+			});
+		}
+
+		if (flags.length > 0) doCheck();
+	})();
 }
 
 //#endregion
@@ -894,6 +966,12 @@ function injectMainPageFunction() {
 		utility.notify("页面出错了！正在重新预定！");
 		setTimeout(function () { document.getElementById("orderForm").submit(); }, 3000);
 	}
+	window.playAudio = function () {
+		new Audio(utility.getAudioUrl()).play();
+	};
+	window.playFailAudio = function () {
+		utility.playFailAudio();
+	};
 }
 
 //#endregion
@@ -1055,9 +1133,9 @@ function initAutoCommitOrder() {
 					var msg = '很抱歉, 未知的状态信息 : waitTime=' + json.waitTime + ', 可能已成功，请验证未支付订单.';
 					setTipMessage(msg);
 					utility.notifyOnTop(msg);
-					window.location.replace('/otsweb/order/myOrderAction.do?method=queryMyOrderNotComplete&leftmenu=Y');
+					location.href = '/otsweb/order/myOrderAction.do?method=queryMyOrderNotComplete&leftmenu=Y';
 				} else {
-					var msg = "订单提交成功, 但是大约需要 " + utility.getSecondInfo(json.waitTime) + " 处理完成, 请稍等.";
+					var msg = "订单需要 " + utility.getSecondInfo(json.waitTime) + " 处理完成， 请等待，不过你知道的，铁道部说的一直不怎么准。（排队人数=" + (json.waitCount || "未知") + "）";
 					if (json.waitTime > 1800) {
 						msg += "<span style='color:red; font-weight: bold;'>警告：排队时间大于30分钟，请不要放弃电话订票或用小号重新排队等其它方式继续订票！</span>";
 					}
@@ -1072,8 +1150,8 @@ function initAutoCommitOrder() {
 				}
 			},
 			error: function (json) {
-				setTipMessage("当前请求出现错误, 正在等待重试...");
-				utility.delayInvoke("#countEle", waitingForQueueComplete, getSleepTime());
+				utility.notifyOnTop("请求发生异常，可能是登录状态不对，请验证。如果没有问题，请手动进入未完成订单页面查询。");
+				self.location.reload();
 			}
 		});
 	}
@@ -1306,7 +1384,8 @@ function initTicketQuery() {
 	//#endregion
 
 	//#region 显示额外的功能区
-	$("body").append("<div class='outerbox' id='helperbox'><div class='box'><div class='title'>辅助工具 [<a href='#querySingleForm'>返回订票列表</a>]</div><div class='content'>\
+	var extrahtml = [];
+	extrahtml.push("<div class='outerbox' id='helperbox'><div class='box'><div class='title'>辅助工具 [<a href='#querySingleForm'>返回订票列表</a>]</div><div class='content'>\
 <table id='helpertooltable'><tr><td colspan='4'><input type='button' value='添加自定义车票时间段' id='btnDefineTimeRange' />\
 <input type='button' value='清除自定义车票时间段' id='btnClearDefineTimeRange' /></td></tr>\
 <tr class='fish_sep caption'><td colspan='4'>以下是车次过滤以及自动预定列表。要将车次加入下列的列表，请在上面查询的结果中，将鼠标移动到车次链接上，并点击出现的提示框中的过滤或自动预定按钮。</td></tr>\
@@ -1314,10 +1393,23 @@ function initTicketQuery() {
 		<td><strong>自动预定</strong><br /><span style='color:gray;'>指定车次可用<br />时，将会自动<br />进入预定页面</td><td><select id='autoBookList' size='10' style='width:200px;height:100px;' multiple='multiple'></select><input type='button' class='btn_list_delete' value='删除' /><input type='button' class='btn_list_clear' value='清空' /></td></tr>\
 <tr class='fish_sep'><td colspan='4'><label><input type='checkbox' id='autoBookTip' checked='checked' /> 如果自动预定成功，进入预定页面后播放提示音乐并弹窗提示</label></td></tr>\
 <tr class='fish_sep caption'><td colspan='4'>相关设置</td></tr>\
-<tr class='fish_sep musicFunc'><td class='name'>自定义音乐地址</td><td colspan='3'><input type='text' id='txtMusicUrl' value='" + utility.getAudioUrl() + "' onfocus='this.select();' style='width:70%;' /> <input type='button' onclick='new Audio(document.getElementById(\"txtMusicUrl\").value).play();' value='测试'/><input type='button' onclick='utility.resetAudioUrl(); document.getElementById(\"txtMusicUrl\").value=utility.getAudioUrl();' value='恢复默认'/></td></tr>\
-<tr class='fish_sep musicFunc'><td class='name'>可用音乐地址</td><td colspan='3'><span style='color:gray;'>* 暂时木有，如果您有好的地址，请告知作者</span></td></tr>\
+<tr class='fish_sep musicFunc'><td class='name'>自定义音乐地址</td><td colspan='3'><input type='text' id='txtMusicUrl' value='" + utility.getAudioUrl() + "' onfocus='this.select();' style='width:50%;' /> <input type='button' onclick='new Audio(document.getElementById(\"txtMusicUrl\").value).play();' value='测试'/><input type='button' onclick='utility.resetAudioUrl(); document.getElementById(\"txtMusicUrl\").value=utility.getAudioUrl();' value='恢复默认'/> (地址第一次使用可能会需要等待一会儿)</td></tr>\
+<tr class='fish_sep musicFunc'><td class='name'>可用音乐地址</td><td colspan='3'>");
+
+	var host = navigator.userAgent.indexOf("WebKit") != -1 ? "http://resbak.fishlee.net/res/" : "https://github.com/iccfish/12306_ticket_helper/raw/master/res/";
+	var musics = [[host + "music1.ogg", "超级玛丽"], [host + "music2.ogg", "蓝精灵"]];
+	$.each(musics, function () {
+		extrahtml.push("<a href='javascript:;' url='" + this[0] + "' class='murl'>" + this[1] + "</a>&nbsp;&nbsp;&nbsp;&nbsp;");
+	});
+
+	extrahtml.push("</td></tr>\
 <tr class='fish_sep'><td style='text-align:center;' colspan='4'>12306.CN 订票助手 by iFish(木鱼) | <a href='http://t.qq.com/ccfish/' target='_blank' style='color:blue;'>腾讯微博</a> | <a href='http://www.fishlee.net/soft/44/' style='color:blue;' target='_blank'>助手主页</a> | <a href='http://www.fishlee.net/Discussion/Index/44' target='_blank'>反馈BUG</a> | <a style='font-weight:bold;color:red;' href='http://www.fishlee.net/honor/index.html' target='_blank'>捐助作者</a> | 版本 v" + window.helperVersion + "，许可于 <strong>" + utility.regInfo.name + "，类型 - " + utility.regInfo.typeDesc + "</strong> 【<a href='javascript:;' class='reSignHelper'>重新注册</a>】</td></tr>\
 		</table></div></div></div>");
+
+	$("body").append(extrahtml.join(""));
+	$("a.murl").live("click", function () {
+		$("#txtMusicUrl").val(this.getAttribute("url")).change();
+	});
 	$("#stopBut").before("<div class='jmp_cd' style='text-align:center;'><input type='button' class='fish_button' id='btnFilter' value='加入黑名单' /><input type='button' class='fish_button' id='btnAutoBook' value='自动预定本车次' /></div>");
 	$("#txtMusicUrl").change(function () { window.localStorage["audioUrl"] = this.value; });
 	$("form[name=querySingleForm]").attr("id", "querySingleForm");
