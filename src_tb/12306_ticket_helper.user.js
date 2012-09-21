@@ -1,35 +1,14 @@
 
-// ==UserScript==
-// @name 			12306.CN 订票助手 For Firefox&Chrome
-// @namespace		http://www.u-tide.com/fish/
-// @author			iFish@FishLee.net <ifish@fishlee.net> http://www.fishlle.net/
-// @developer		iFish
-// @contributor		
-// @description		帮你订票的小助手 :-)
-// @match			http://dynamic.12306.cn/otsweb/*
-// @match			https://dynamic.12306.cn/otsweb/*
-// @match			https://www.12306.cn/otsweb/*
-// @require			https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js
-// @icon			http://www.12306.cn/mormhweb/images/favicon.ico
-// @run-at			document-idle
-// @version 		3.4.0
-// @updateURL		http://www.fishlee.net/Service/Download.ashx/44/47/12306_ticket_helper.user.js
-// @supportURL		http://www.fishlee.net/soft/44/
-// @homepage		http://www.fishlee.net/soft/44/
-// @contributionURL	https://me.alipay.com/imfish
-// @contributionAmount	￥5.00
-// ==/UserScript==
-
-
-// @id				12306_ticket_helper_by_ifish@fishlee.net
-// @namespace		ifish@fishlee.net
-
-var version = "3.4.0";
+var version = "3.4.3";
 var updates = [
+	"增加谷歌的扩展包CRX类型的助手！（如果安装此类型，切记卸载脚本版的助手！）",
 	"修正订单提交排队逻辑，解决当被强行退出登录时出现的错误并反复重新请求",
-	"排队提示中增加当前排队人数",
+	"排队提示中增加当前排队人数，并将显示逻辑同步到铁道部最新更改",
 	"增加对未完成订单页面支持，显示时间和排队更及时完整，订单成功失败均有声音提示",
-	"增加两首用于提示的音乐（蓝精灵、超级玛丽），添加订票失败的悲歌（忽然之间 by 莫文蔚）……"
+	"增加两首用于提示的音乐（蓝精灵、超级玛丽），添加订票失败的悲歌（忽然之间 by 莫文蔚）……",
+	"修改选项对话框显示位置，防止显示在可视区域之外",
+	"修改登录逻辑，防止多次重试",
+	"修复各查询页面提示刷新却失效的问题"
 ];
 
 var faqUrl = "http://www.fishlee.net/soft/44/faq.html";
@@ -113,9 +92,8 @@ function injectDom() {
 	html.push('</table>');
 	html.push('</div>');
 	html.push('<div class="tabContent tabReg" style="text-indent: 20px">');
-	html.push('<p>您好，为了避免未经授权便将作者免费发布的软件作为商品出售，请注册。<strong>注册码免费发布</strong>，<span style="color:red;">如果您从相关渠道购买捐助版本，请向卖家索取序列号（切记为捐助版序列号，非捐助版序列号一律为未授权出售，请向作者举报！）</span></p>');
-	html.push('<p style="color: red;"> <strong style="font-size:16px;">特别提醒！本助手免费发布且不作为独立的软件出售！</strong>如果您在淘宝上购买本软件，请务必确认您购买的不是本助手且已经经过作者授权！如果相关宝贝页上没有说明本助手本身免费，请向作者举报，联系方式请<a href="http://www.fishlee.net/about/" target="_blank">参见这里</a>。 </p>');
-	html.push('<p>任何版本之间，功能上没有任何区别，请各位谅解作者为防有卖家未经授权进行销售而加入的措施。</p>');
+	html.push('<p>您好，12306 订票助手（淘宝专版）是专门为淘宝浏览器定制的一款免费扩展，不需要注册即可使用。但因为作者投入了很大的时间和精力，因此如果您愿意捐助，那么捐助后在此依然可以注册，注册将会将授权信息更改为您的个人信息。非常感谢您的支持！</p>');
+	html.push('<p style="color: red;">请注意， 12306订票助手本身完全免费，请不要从任何渠道购买本助手，如已购买，请根据此页面的<a href="http://www.fishlee.net/about/" target="_blank">联系方式</a>向作者举报！</p>');
 	html.push('<p class="registered" style="display:none;">您好，<strong>fishcn@foxmail.com</strong>，感谢您的使用。已注册版本：<strong>正式版</strong>【<a href="javascript:;" id="unReg">重新注册</a>】</p>');
 	html.push('<table class="regTable" style="display:none;width:98%;">');
 	html.push('<tr>');
@@ -128,11 +106,11 @@ function injectDom() {
 	html.push('</table>');
 	html.push('</div>');
 	html.push('<div class="tabContent tabVersion" style="text-indent: 20px">');
-	html.push('<h4 style="font-size:18px; font-weight:bold; margin: 0px; line-height: 26px; border-bottom: 1px dotted #ccc;">12306 订票助手 <small>ver ' + window.helperVersion + '</small></h4>');
-	html.push('<p> 12306 订票助手是一款基于12306.CN订票网站、并运行在各浏览器平台基础之上的助手软件，支持的浏览器为Firefox/谷歌浏览器/遨游3，以及相关衍生浏览器。<strong>本软件免费开源，无需付费使用，仅接受捐助。</strong> </p>');
-	html.push('<p style="color: red;"> <strong style="font-size:16px;">特别提醒！本助手免费发布且不作为独立的软件出售！</strong>如果您在淘宝上购买本软件，请务必确认您购买的不是本助手且已经经过作者授权！如果相关宝贝页上没有说明本助手本身免费，请向作者举报，联系方式请<a href="http://www.fishlee.net/about/" target="_blank">参见这里</a>。 </p>');
+	html.push('<h4 style="font-size:18px; font-weight:bold; margin: 0px; line-height: 26px; border-bottom: 1px dotted #ccc;">12306 订票助手 (淘宝浏览器专版) <small>ver ' + window.helperVersion + '</small></h4>');
+	html.push('<p> 12306 订票助手(淘宝浏览器专版) 是基于『12306订票助手』并特别为淘宝浏览器定制的订票辅助工具。<strong>本软件免费开源，无需付费使用，仅接受捐助。</strong> </p>');
+	html.push('<p style="color: red;"> <strong>特别提醒！本助手免费发布且不作为独立的软件出售！</strong>请不要通过任何渠道购买本助手，如已购买，请根据此页面的<a href="http://www.fishlee.net/about/" target="_blank">联系方式</a>向作者举报。</p>');
 	html.push('<p style="color:purple;"> 回家是一个单纯而简单的心愿，希望我们不会变得太复杂……</p>');
-	html.push('<p> 有很多朋友捐助，非常感谢你们的支持和鼓励。详细捐助名单和相关的捐助方式，请<a href="http://www.fishlee.net/soft/44/donate.html" target="_blank">参见这里</a>。 </p>');
+	html.push('<p>作者非常感谢大家的支持和鼓励。详细捐助名单和捐助方式，请<a href="http://www.fishlee.net/soft/44/donate.html" target="_blank">参见这里</a>。 </p>');
 	html.push('<p style="font-weight:bold;">当前版本更新内容</p>');
 	html.push('<ol>');
 	$.each(utility.getPref("updates").split('\t'), function (i, n) {
@@ -176,10 +154,14 @@ function injectDom() {
 		}
 	});
 	$("#unReg, a.reSignHelper").live("click", function () {
-		if (!confirm("确定要重新注册吗?")) return;
+		if (utility.regInfo.result == 0) {
+			if (!confirm("确定要重新注册吗?")) return;
 
-		utility.setSnInfo("", "");
-		self.location.reload();
+			utility.setSnInfo("", "");
+			self.location.reload();
+		} else {
+			utility.showOptionDialog("tabReg");
+		}
 	});
 
 	//初始化设置
@@ -208,29 +190,21 @@ function injectDom() {
 		utility.setPref("helperVersion", window.helperVersion);
 		utility.showOptionDialog("tabVersion");
 
-		alert("【作者郑重提示】\n========================\n相信大家都已经领教了9月10日铁道部升级所引入的排队系统的蛋疼程度……为了让大家更清晰的明白怎么回事，特此说明如下：\n\n1.排队系统是铁道部引入的，不是助手带来的;\n2.排队时间是十分不准确的，不要带有慢慢就会到头的幻想;\n" +
+		alert("【关于排队系统那些不得不说的事】\n========================\n为了让大家更清晰的明白怎么回事，特此说明如下：\n\n1.排队系统是铁道部引入的，不是助手带来的;\n2.排队时间是十分不准确的，不要带有慢慢就会到头的幻想;\n" +
 			"3.提交成功不一定能拿到票，提示你付款时才真正有票，所以请不要放松;\n4.强烈建议不要放弃电话订票，在排队的时候努力用电话拨打订票热线95105105，死马当活马医;\n5.排队时，可能的话，请用别的浏览器或其它的电脑注册新的帐号并同时排队，可以提高成功率;\n6.遇到铁道部封了您的IP（拒绝访问）时，请加群，有自动换IP工具;\n\n" +
 			"任何时候回家都是一种永恒的夙愿，祝大家都能安全快捷地回家 :-)"
 			);
 	}
 
 	//注册
-	var result = utility.verifySn(true);
-	if (result.result == 0) {
+	utility.regInfo = utility.verifySn(true);
+	if (utility.regInfo.result == 0) {
 		var info = opt.find(".registered").show().find("strong");
-		info.eq(0).html(result.name);
-		info.eq(1).html(result.typeDesc);
-
-
+		info.eq(0).html(utility.regInfo.name || "淘宝浏览器用户");
+		info.eq(1).html(utility.regInfo.typeDesc || "正式版");
 	} else {
 		opt.find(".regTable").show();
-
-		if (location.pathname == "/otsweb/loginAction.do") {
-			alert("您好, 您的12306助手尚未注册, 为了防止有人未经作者授权直接出售获利, 请注册.\n注册是免费的, 但请不要从淘宝等渠道购买未注明【免费】的非捐助版本！");
-			utility.showOptionDialog("tabReg");
-		}
 	}
-	utility.regInfo = result;
 }
 
 //#endregion
@@ -463,12 +437,13 @@ var utility = {
 		return (function (opt) {
 			var dataKey = "fs_dlg_opt";
 			if (this.data(dataKey)) {
-				this.closeDialog();
+				this.data(dataKey).closeDialog();
+				return;
 			}
 
 			opt = $.extend({ bindControl: null, removeDialog: this.attr("autoCreate") == "1", onClose: null, animationMove: 20, speed: "fast", fx: "linear", show: "fadeInDown", hide: "fadeOutUp", onShow: null, timeOut: 0 }, opt);
 			this.data("fs_dlg_opt", opt);
-			var top = "50%";
+			var top = "100px";
 			var left = "50%";
 
 			this.css({
@@ -476,7 +451,7 @@ var utility = {
 				"left": left,
 				"top": top,
 				"margin-left": "-" + (this.width() / 2) + "px",
-				"margin-top": "-" + (this.height() / 2 + 20) + "px",
+				"margin-top": "0px",
 				"z-index": "9999"
 			});
 			if ($.browser.msie && $.browser.version <= 6) {
@@ -524,7 +499,7 @@ var utility = {
 			//show it
 			if (opt.bindControl) opt.bindControl.disable();
 			this.animate({ "marginTop": "+=" + opt.animationMove + "px", "opacity": "show" }, opt.speed, opt.fx, function () { opt.onShow && opt.onShow.call(obj); })
-
+			this.data(dataKey, this);
 
 			return this;
 		}).call(object, optx);
@@ -558,6 +533,7 @@ var utility = {
 	showOptionDialog: function (tab) {
 		if (tab) utility.configTab.showTab(tab);
 		utility.showDialog($("#fishOption"));
+		location.hash = "fishOption";
 	},
 	addCookie: function (name, value, expDays) {
 		var cook = name + "=" + value + "; path=/; domain=.12306.cn";
@@ -748,21 +724,16 @@ var isChrome = navigator.userAgent.indexOf("AppleWebKit") != -1;
 var isFirefox = navigator.userAgent.indexOf("Firefox") != -1;
 
 if (location.host == "dynamic.12306.cn" || (location.host == "www.12306.cn" && location.protocol == "https:")) {
-	if (!isChrome && !isFirefox) {
-		alert("很抱歉，未能识别您的浏览器，或您的浏览器尚不支持脚本运行，请使用Firefox或Chrome浏览器！\n如果您运行的是Maxthon3，请确认当前页面运行在高速模式而不是兼容模式下 :-)");
-	} else if (isFirefox && typeof (GM_notification) == 'undefined') {
-		alert("很抱歉，本脚本需要最新的Scriptish扩展，请安装它！");
-		window.open("https://addons.mozilla.org/zh-CN/firefox/addon/scriptish/");
-	} else if (!window.localStorage) {
-		alert("警告! localStorage 为 null, 助手无法运行. 请查看浏览器是否已经禁用 localStorage!\nFirefox请设置 about:config 中的 dom.storage.enabled 为 true .");
-	} else {
-		//记录更新
-		utility.setPref("updates", updates.join("\t"));
-
-		initUIDisplay();
-		unsafeInvoke(injectDom);
-		beginExecute();
+	if (navigator.userAgent.indexOf("TaoBrowser") == -1) {
+		alert("很抱歉，这是淘宝浏览器专版12306订票助手，非淘宝浏览器请使用通用版。点击确定查看更多。");
+		window.open("http://www.fishlee.net/soft/44/download.html");
 	}
+	//记录更新
+	utility.setPref("updates", updates.join("\t"));
+
+	initUIDisplay();
+	unsafeInvoke(injectDom);
+	beginExecute();
 }
 
 //#endregion
@@ -774,9 +745,6 @@ function entryPoint() {
 	var path = location.pathname;
 
 	utility.regInfo = utility.verifySn(true);
-	if (utility.regInfo.result != 0) {
-		return;
-	}
 
 	//
 	unsafeInvoke(autoReloadIfError);
@@ -784,17 +752,6 @@ function entryPoint() {
 		//登录页
 		unsafeInvoke(initLogin);
 		checkUpdate();
-	}
-	if (utility.regInfo.bindAcc && localStorage.getItem("_sessionuser") && utility.regInfo.bindAcc.length > 0 && utility.regInfo.bindAcc[0] && utility.regInfo.bindAcc[0] != "*") {
-		var user = localStorage.getItem("_sessionuser");
-		var ok = false;
-		for (var i = 0; i < utility.regInfo.bindAcc.length; i++) {
-			if (utility.regInfo.bindAcc[i] == user) {
-				ok = true;
-				break;
-			}
-		}
-		if (!ok) return;
 	}
 	if (path == "/otsweb/order/querySingleAction.do") {
 		if (location.search == "?method=init") {
@@ -1225,39 +1182,54 @@ function initAutoCommitOrder() {
 	var stopCheckCount = null;
 
 	(function () {
-		var data = { train_date: $("#start_date").val(), station: $("#station_train_code").val(), seat: "", from: $("#from_station_telecode").val(), to: $("#to_station_telecode").val() };
+		var data = { train_date: $("#start_date").val(), station: $("#station_train_code").val(), seat: "", from: $("#from_station_telecode").val(), to: $("#to_station_telecode").val(), ticket: $("#left_ticket").val() };
 		var url = "confirmPassengerAction.do?method=getQueueCount";
 		var allSeats = $("#passenger_1_seat option");
-		var html = [];
 		var queue = [];
 		var checkCountStopped = false;
 
 		function beginCheck() {
-			if (!stopCheckCount) return;
+			if (checkCountStopped) return;
 
-			html = [];
-			html.push("当前实时排队状态（五秒钟轮询）：");
+			var html = [];
+			html.push("当前实时排队状态（每隔2秒轮询）：");
 
-			allSeats.each(function () { queue.push({ id: this.value, name: this.text }); });
+
+			allSeats.each(function () {
+				queue.push({ id: this.value, name: this.text });
+				html.push("席位【<span style='color:blue; font-weight: bold;'>" + this.text + "</span>】状态：<span id='queueStatus_" + this.value + "'>等待查询中....</span>");
+			});
+			$("#orderCountCell").html(html.join("<br />"));
 			if (queue.length > 0) executeQueue();
 		}
 
 		function executeQueue() {
-			if (!stopCheckCount) return;
+			if (checkCountStopped) return;
 
 			var type = queue.shift();
+			queue.push(type);
+
 			data.seat = type.id;
 			utility.get(url, data, "json", function (data) {
-				html.push("席位【<span style='color:blue; font-weight: bold;'>" + type.name + "</span>】当前排队【<span style='color:blue; font-weight: bold;'>" + data.count + "</span>】，最大值【<span style='color:blue; font-weight: bold;'>" + data.countMax + "</span>】" + (data.count > data.countMax ? "<span style='color:red; font-weight: bold;'>排队有危险！</span>" : "<span style='color:green; font-weight: bold;'>请尽快提交！</span>"));
-
-				$("#orderCountCell").html(html.join("<br />"));
-				if (queue.length > 0) {
-					setTimeout(executeQueue, 1000);
+				var msg = "余票：<strong>" + getTicketCountDesc($("#left_ticket").val(), type.id) + "</strong>";
+				msg += "，当前排队【<span style='color:blue; font-weight: bold;'>" + data.count + "</span>】，";
+				if (data.op_2) {
+					msg += "<span style='color:blue; font-weight: red;'>排队人数已经超过余票数，可能无法提交</span>。";
 				} else {
-					setTimeout(beginCheck, 5000);
+					if (data.countT > 0) {
+						msg += "排队人数已超过系统参数，<span style='color:red; font-weight: bold;'>排队有危险</span>";
+						//} else if (data.op_1) {
+						//	msg += "排队人数已超过系统参数，<span style='color:red; font-weight: bold;'>排队有危险</span>";
+					} else {
+						msg += "请尽快提交";
+					}
+
 				}
+				msg += "&nbsp;&nbsp;&nbsp;&nbsp;(" + utility.getTimeInfo() + ")";
+
+				$("#queueStatus_" + type.id).html(msg);
+				setTimeout(executeQueue, 2000);
 			}, function () {
-				queue.unshift(type);
 				setTimeout(executeQueue, 3000);
 			});
 		}
@@ -1403,7 +1375,7 @@ function initTicketQuery() {
 	});
 
 	extrahtml.push("</td></tr>\
-<tr class='fish_sep'><td style='text-align:center;' colspan='4'>12306.CN 订票助手 by iFish(木鱼) | <a href='http://t.qq.com/ccfish/' target='_blank' style='color:blue;'>腾讯微博</a> | <a href='http://www.fishlee.net/soft/44/' style='color:blue;' target='_blank'>助手主页</a> | <a href='http://www.fishlee.net/Discussion/Index/44' target='_blank'>反馈BUG</a> | <a style='font-weight:bold;color:red;' href='http://www.fishlee.net/honor/index.html' target='_blank'>捐助作者</a> | 版本 v" + window.helperVersion + "，许可于 <strong>" + utility.regInfo.name + "，类型 - " + utility.regInfo.typeDesc + "</strong> 【<a href='javascript:;' class='reSignHelper'>重新注册</a>】</td></tr>\
+<tr class='fish_sep'><td style='text-align:center;' colspan='4'>12306.CN 订票助手 by iFish(木鱼) | <a href='http://t.qq.com/ccfish/' target='_blank' style='color:blue;'>腾讯微博</a> | <a href='http://www.fishlee.net/soft/44/' style='color:blue;' target='_blank'>助手主页</a> | <a href='http://www.fishlee.net/Discussion/Index/44' target='_blank'>反馈BUG</a> | <a style='font-weight:bold;color:red;' href='http://www.fishlee.net/honor/index.html' target='_blank'>捐助作者</a> | 版本 v" + window.helperVersion + "，许可于 <strong>" + (utility.regInfo.name || "淘宝浏览器用户") + "，类型 - " + (utility.regInfo.typeDesc || "正式版") + "</strong> 【<a href='javascript:;' class='reSignHelper'>重新注册</a>】</td></tr>\
 		</table></div></div></div>");
 
 	$("body").append(extrahtml.join(""));
@@ -1892,7 +1864,7 @@ function initLogin() {
 		"<li style='color:green;'><strong>操作信息</strong>：<span>休息中</span></li>" +
 		"<li style='color:green;'><strong>最后操作时间</strong>：<span>--</span></li>" +
 		"<li> <a href='javascript:;' class='configLink' tab='tabLogin'>登录设置</a> | <a href='http://t.qq.com/ccfish/' target='_blank' style='color:blue;'>腾讯微博</a> | <a href='http://www.fishlee.net/soft/44/' style='color:blue;' target='_blank'>助手主页</a></li><li><a href='http://www.fishlee.net/Discussion/Index/44' target='_blank'>反馈BUG</a> | <a style='font-weight:bold;color:red;' href='http://www.fishlee.net/honor/index.html' target='_blank'>捐助作者</a></li>" +
-		"<li id='updateFound' style='display:none;'><a style='font-weight:bold; color:red;' href='http://www.fishlee.net/Service/Download.ashx/44/47/12306_ticket_helper.user.js'>发现新版本！点此更新</a></li>" +
+		"<li id='updateFound' style='display:none;'><a style='font-weight:bold; color:red;' href='http://www.fishlee.net/Service/Download.ashx/44/65/12306_ticket_helper.crx' target='_blank'>发现新版本！点此更新</a></li>" +
 		'<li id="enableNotification"><input type="button" id="enableNotify" onclick="$(this).parent().hide();window.webkitNotifications.requestPermission();" value="请点击以启用通告" style="line-height:25px;padding:5px;" /></li><li style="padding-top:10px;line-height:normal;color:gray;">请<strong style="color: red;">最后输验证码</strong>，输入完成后系统将自动帮你提交。登录过程中，请勿离开当前页。如系统繁忙，会自动重新刷新验证码，请直接输入验证码，输入完成后助手将自动帮你提交。</li>' +
 		"</ul>" +
 		"</div>" +
@@ -1915,12 +1887,12 @@ function initLogin() {
 	});
 	html.push("</ol></td><td><ul>");
 	var info = [];
-	info.push("已许可于：" + utility.regInfo.name);
+	info.push("已许可于：" + (utility.regInfo.name || "淘宝浏览器用户"));
 	if (utility.regInfo.bindAcc) {
 		if (!utility.regInfo.bindAcc[0] || utility.regInfo.bindAcc[0] == "*") info.push("许可12306帐户：<em>无限</em>");
 		else info.push("许可12306帐户：" + utility.regInfo.bindAcc);
 	}
-	info.push(utility.regInfo.typeDesc);
+	info.push(utility.regInfo.typeDesc || "正式版");
 	info.push("版本：<strong>" + window.helperVersion + "</strong>");
 	$.each(info, function (i, n) { html.push("<li style='list-style:disc inside;'>" + n + "</li>"); });
 	html.push("<li style='list-style:disc inside;'>【<a href='javascript:;' class='reSignHelper'>重新注册</a>】</li>");
@@ -1948,6 +1920,7 @@ function initLogin() {
 	var tip = $("#tipScript li");
 	var count = 1;
 	var errorCount = 0;
+	var inRunning = false;
 
 	//以下是函数
 	function setCurOperationInfo(running, msg) {
@@ -2033,17 +2006,17 @@ function initLogin() {
 					window.location.href = "https://dynamic.12306.cn/otsweb/order/querySingleAction.do?method=init";
 				} else {
 					setTipMessage(msg);
-					utility.delayInvoke("#countEle", relogin, utility.getLoginRetryTime());
+					utility.delayInvoke("#countEle", getLoginRandCode, utility.getLoginRetryTime());
 				}
 			},
 			error: function (msg) {
 				errorCount++;
 				if (xhr.status == 403) {
 					setTipMessage("[" + errorCount + "] 警告! 403错误, IP已被封!")
-					utility.delayInvoke("#countEle", relogin, 10 * 1000);
+					utility.delayInvoke("#countEle", getLoginRandCode, 10 * 1000);
 				} else {
 					setTipMessage("[" + errorCount + "] 网络请求错误，重试")
-					utility.delayInvoke("#countEle", relogin, utility.getLoginRetryTime());
+					utility.delayInvoke("#countEle", getLoginRandCode, utility.getLoginRetryTime());
 				}
 			}
 		});
@@ -2051,15 +2024,11 @@ function initLogin() {
 
 
 	function relogin() {
-		var user = $("#UserName").val();
-		if (!user) return;
-		if (utility.regInfo.bindAcc && utility.regInfo.bindAcc.length && utility.regInfo.bindAcc[0] && $.inArray(user, utility.regInfo.bindAcc) == -1 && utility.regInfo.bindAcc[0] != "*") {
-			alert("很抱歉，12306订票助手的授权许可已绑定至【" + utility.regInfo.bindAcc.join() + "】，未授权用户，助手停止运行，请手动操作。\n您可以在登录页面下方的帮助区点击【重新注册】来修改绑定。");
-			return;
-		}
+		if (inRunning) return;
 
 		count++;
 		utility.setPref("_sessionuser", $("#UserName").val());
+		inRunning = true;
 		getLoginRandCode();
 	}
 
@@ -2067,6 +2036,7 @@ function initLogin() {
 		//等待重试时，刷新验证码
 		$("#img_rrand_code").click();
 		$("#randCode").val("")[0].select();
+		inRunning = false;
 	}
 
 	//初始化
@@ -2102,7 +2072,7 @@ function initPayOrder() {
 	//如果出错，自动刷新
 	if ($("div.error_text").length > 0) {
 		utility.notifyOnTop("页面出错，稍后自动刷新！");
-		setTimeout(self.reload, 3000);
+		setTimeout(function () { self.location.reload(); }, 3000);
 	}
 
 	return;
@@ -2151,15 +2121,12 @@ function checkUpdate() {
 
 function updateScriptContentForChrome() {
 	var updateScipt = document.createElement('script');
-	updateScipt.src = 'https://github.com/iccfish/12306_ticket_helper/raw/master/version.js';
+	updateScipt.src = 'https://github.com/iccfish/12306_ticket_helper/raw/master/version_taobao.js';
 	updateScipt.type = 'text/javascript';
 	updateScipt.addEventListener('load', function () {
 		if (compareVersion(version, version_12306_helper) < 0) {
 			if (utility.getPref("diableUpdateVersion") == version_12306_helper) return;
 
-			if (typeof (external.mxCall) != 'undefined') {
-				$("#updateFound a").attr("href", "http://www.fishlee.net/soft/44/download.html").attr("target", "_blank");
-			}
 			$("#updateFound").show();
 			var info = '助手脚本已经发布了最新版 ' + version_12306_helper + '，请在登录页面上点击更新链接更新，更新后请刷新当前页面！\n\n版本更新内容如下，请确定您是否需要进行更新：\n';
 			if (typeof (version_updater) != 'undefined' && version_updater) {

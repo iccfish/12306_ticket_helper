@@ -11,8 +11,7 @@
 	} ],
 	"converted_from_user_script": true,
 	"description": "帮您订票的小助手 by 木鱼 :-)",
-	"key": "7k6gnXVACvUPU2DfslJgSrWJTHqIg5uwd+Kgl/5zSg==",
-	"name": "12306 订票助手 (淘宝浏览器专版)",
+	"name": "12306 订票助手 for Chrome",
 	"version": "3.4.3",
 	"manifest_version": 2,
 	"icons": {
@@ -21,6 +20,5 @@
 		"48": "icons/icon_48.png"
 	},
 	"homepage_url": "http://www.fishlee.net/",
-	"permissions": [ "http://*/", "https://*/", "notifications" ],
-   "update_url": "http://www.fishlee.net/Service/Download.ashx/44/66/updateinfo.xml"
+	"permissions": [ "http://*/", "https://*/", "notifications" ]
 }

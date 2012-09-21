@@ -563,6 +563,7 @@ var utility = {
 	showOptionDialog: function (tab) {
 		if (tab) utility.configTab.showTab(tab);
 		utility.showDialog($("#fishOption"));
+		location.hash = "fishOption";
 	},
 	addCookie: function (name, value, expDays) {
 		var cook = name + "=" + value + "; path=/; domain=.12306.cn";
