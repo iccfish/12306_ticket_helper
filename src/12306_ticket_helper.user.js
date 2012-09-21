@@ -12,7 +12,7 @@
 // @require			https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js
 // @icon			http://www.12306.cn/mormhweb/images/favicon.ico
 // @run-at			document-idle
-// @version 		3.4.0
+// @version 		3.4.3
 // @updateURL		http://www.fishlee.net/Service/Download.ashx/44/47/12306_ticket_helper.user.js
 // @supportURL		http://www.fishlee.net/soft/44/
 // @homepage		http://www.fishlee.net/soft/44/
@@ -24,12 +24,16 @@
 // @id				12306_ticket_helper_by_ifish@fishlee.net
 // @namespace		ifish@fishlee.net
 
-var version = "3.4.0";
+var version = "3.4.3";
 var updates = [
+	"增加谷歌的扩展包CRX类型的助手！（如果安装此类型，切记卸载脚本版的助手！）",
 	"修正订单提交排队逻辑，解决当被强行退出登录时出现的错误并反复重新请求",
-	"排队提示中增加当前排队人数",
+	"排队提示中增加当前排队人数，并将显示逻辑同步到铁道部最新更改",
 	"增加对未完成订单页面支持，显示时间和排队更及时完整，订单成功失败均有声音提示",
-	"增加两首用于提示的音乐（蓝精灵、超级玛丽），添加订票失败的悲歌（忽然之间 by 莫文蔚）……"
+	"增加两首用于提示的音乐（蓝精灵、超级玛丽），添加订票失败的悲歌（忽然之间 by 莫文蔚）……",
+	"修改选项对话框显示位置，防止显示在可视区域之外",
+	"修改登录逻辑，防止多次重试",
+	"修复各查询页面提示刷新却失效的问题"
 ];
 
 var faqUrl = "http://www.fishlee.net/soft/44/faq.html";
@@ -113,7 +117,7 @@ function injectDom() {
 	html.push('</table>');
 	html.push('</div>');
 	html.push('<div class="tabContent tabReg" style="text-indent: 20px">');
-	html.push('<p>您好，为了避免未经授权便将作者免费发布的软件作为商品出售，请注册。<strong>注册码免费发布</strong>，<span style="color:red;">如果您从相关渠道购买捐助版本，请向卖家索取序列号（切记为捐助版序列号，非捐助版序列号一律为未授权出售，请向作者举报！）</span></p>');
+	html.push('<p>您好，为了避免未经授权便将作者免费发布的软件作为商品出售，请注册。<strong>注册码免费发布</strong>，<span style="color:red;">如果您从相关渠道购买捐助版本，请向卖家索取序列号（切记为合作版序列号，非合作版序列号一律为未授权出售，请向作者举报！）</span></p>');
 	html.push('<p style="color: red;"> <strong style="font-size:16px;">特别提醒！本助手免费发布且不作为独立的软件出售！</strong>如果您在淘宝上购买本软件，请务必确认您购买的不是本助手且已经经过作者授权！如果相关宝贝页上没有说明本助手本身免费，请向作者举报，联系方式请<a href="http://www.fishlee.net/about/" target="_blank">参见这里</a>。 </p>');
 	html.push('<p>任何版本之间，功能上没有任何区别，请各位谅解作者为防有卖家未经授权进行销售而加入的措施。</p>');
 	html.push('<p class="registered" style="display:none;">您好，<strong>fishcn@foxmail.com</strong>，感谢您的使用。已注册版本：<strong>正式版</strong>【<a href="javascript:;" id="unReg">重新注册</a>】</p>');
@@ -463,12 +467,13 @@ var utility = {
 		return (function (opt) {
 			var dataKey = "fs_dlg_opt";
 			if (this.data(dataKey)) {
-				this.closeDialog();
+				this.data(dataKey).closeDialog();
+				return;
 			}
 
 			opt = $.extend({ bindControl: null, removeDialog: this.attr("autoCreate") == "1", onClose: null, animationMove: 20, speed: "fast", fx: "linear", show: "fadeInDown", hide: "fadeOutUp", onShow: null, timeOut: 0 }, opt);
 			this.data("fs_dlg_opt", opt);
-			var top = "50%";
+			var top = "100px";
 			var left = "50%";
 
 			this.css({
@@ -476,7 +481,7 @@ var utility = {
 				"left": left,
 				"top": top,
 				"margin-left": "-" + (this.width() / 2) + "px",
-				"margin-top": "-" + (this.height() / 2 + 20) + "px",
+				"margin-top": "0px",
 				"z-index": "9999"
 			});
 			if ($.browser.msie && $.browser.version <= 6) {
@@ -524,7 +529,7 @@ var utility = {
 			//show it
 			if (opt.bindControl) opt.bindControl.disable();
 			this.animate({ "marginTop": "+=" + opt.animationMove + "px", "opacity": "show" }, opt.speed, opt.fx, function () { opt.onShow && opt.onShow.call(obj); })
-
+			this.data(dataKey, this);
 
 			return this;
 		}).call(object, optx);
@@ -1225,39 +1230,54 @@ function initAutoCommitOrder() {
 	var stopCheckCount = null;
 
 	(function () {
-		var data = { train_date: $("#start_date").val(), station: $("#station_train_code").val(), seat: "", from: $("#from_station_telecode").val(), to: $("#to_station_telecode").val() };
+		var data = { train_date: $("#start_date").val(), station: $("#station_train_code").val(), seat: "", from: $("#from_station_telecode").val(), to: $("#to_station_telecode").val(), ticket: $("#left_ticket").val() };
 		var url = "confirmPassengerAction.do?method=getQueueCount";
 		var allSeats = $("#passenger_1_seat option");
-		var html = [];
 		var queue = [];
 		var checkCountStopped = false;
 
 		function beginCheck() {
-			if (!stopCheckCount) return;
+			if (checkCountStopped) return;
 
-			html = [];
-			html.push("当前实时排队状态（五秒钟轮询）：");
+			var html = [];
+			html.push("当前实时排队状态（每隔2秒轮询）：");
 
-			allSeats.each(function () { queue.push({ id: this.value, name: this.text }); });
+
+			allSeats.each(function () {
+				queue.push({ id: this.value, name: this.text });
+				html.push("席位【<span style='color:blue; font-weight: bold;'>" + this.text + "</span>】状态：<span id='queueStatus_" + this.value + "'>等待查询中....</span>");
+			});
+			$("#orderCountCell").html(html.join("<br />"));
 			if (queue.length > 0) executeQueue();
 		}
 
 		function executeQueue() {
-			if (!stopCheckCount) return;
+			if (checkCountStopped) return;
 
 			var type = queue.shift();
+			queue.push(type);
+
 			data.seat = type.id;
 			utility.get(url, data, "json", function (data) {
-				html.push("席位【<span style='color:blue; font-weight: bold;'>" + type.name + "</span>】当前排队【<span style='color:blue; font-weight: bold;'>" + data.count + "</span>】，最大值【<span style='color:blue; font-weight: bold;'>" + data.countMax + "</span>】" + (data.count > data.countMax ? "<span style='color:red; font-weight: bold;'>排队有危险！</span>" : "<span style='color:green; font-weight: bold;'>请尽快提交！</span>"));
-
-				$("#orderCountCell").html(html.join("<br />"));
-				if (queue.length > 0) {
-					setTimeout(executeQueue, 1000);
+				var msg = "余票：<strong>" + getTicketCountDesc($("#left_ticket").val(), type.id) + "</strong>";
+				msg += "，当前排队【<span style='color:blue; font-weight: bold;'>" + data.count + "</span>】，";
+				if (data.op_2) {
+					msg += "<span style='color:blue; font-weight: red;'>排队人数已经超过余票数，可能无法提交</span>。";
 				} else {
-					setTimeout(beginCheck, 5000);
+					if (data.countT > 0) {
+						msg += "排队人数已超过系统参数，<span style='color:red; font-weight: bold;'>排队有危险</span>";
+						//} else if (data.op_1) {
+						//	msg += "排队人数已超过系统参数，<span style='color:red; font-weight: bold;'>排队有危险</span>";
+					} else {
+						msg += "请尽快提交";
+					}
+
 				}
+				msg += "&nbsp;&nbsp;&nbsp;&nbsp;(" + utility.getTimeInfo() + ")";
+
+				$("#queueStatus_" + type.id).html(msg);
+				setTimeout(executeQueue, 2000);
 			}, function () {
-				queue.unshift(type);
 				setTimeout(executeQueue, 3000);
 			});
 		}
@@ -1892,7 +1912,7 @@ function initLogin() {
 		"<li style='color:green;'><strong>操作信息</strong>：<span>休息中</span></li>" +
 		"<li style='color:green;'><strong>最后操作时间</strong>：<span>--</span></li>" +
 		"<li> <a href='javascript:;' class='configLink' tab='tabLogin'>登录设置</a> | <a href='http://t.qq.com/ccfish/' target='_blank' style='color:blue;'>腾讯微博</a> | <a href='http://www.fishlee.net/soft/44/' style='color:blue;' target='_blank'>助手主页</a></li><li><a href='http://www.fishlee.net/Discussion/Index/44' target='_blank'>反馈BUG</a> | <a style='font-weight:bold;color:red;' href='http://www.fishlee.net/honor/index.html' target='_blank'>捐助作者</a></li>" +
-		"<li id='updateFound' style='display:none;'><a style='font-weight:bold; color:red;' href='http://www.fishlee.net/Service/Download.ashx/44/47/12306_ticket_helper.user.js'>发现新版本！点此更新</a></li>" +
+		"<li id='updateFound' style='display:none;'><a style='font-weight:bold; color:red;' href='http://www.fishlee.net/soft/44/download.html' target='_blank'>发现新版本！点此更新</a></li>" +
 		'<li id="enableNotification"><input type="button" id="enableNotify" onclick="$(this).parent().hide();window.webkitNotifications.requestPermission();" value="请点击以启用通告" style="line-height:25px;padding:5px;" /></li><li style="padding-top:10px;line-height:normal;color:gray;">请<strong style="color: red;">最后输验证码</strong>，输入完成后系统将自动帮你提交。登录过程中，请勿离开当前页。如系统繁忙，会自动重新刷新验证码，请直接输入验证码，输入完成后助手将自动帮你提交。</li>' +
 		"</ul>" +
 		"</div>" +
@@ -1948,6 +1968,7 @@ function initLogin() {
 	var tip = $("#tipScript li");
 	var count = 1;
 	var errorCount = 0;
+	var inRunning = false;
 
 	//以下是函数
 	function setCurOperationInfo(running, msg) {
@@ -2033,17 +2054,17 @@ function initLogin() {
 					window.location.href = "https://dynamic.12306.cn/otsweb/order/querySingleAction.do?method=init";
 				} else {
 					setTipMessage(msg);
-					utility.delayInvoke("#countEle", relogin, utility.getLoginRetryTime());
+					utility.delayInvoke("#countEle", getLoginRandCode, utility.getLoginRetryTime());
 				}
 			},
 			error: function (msg) {
 				errorCount++;
 				if (xhr.status == 403) {
 					setTipMessage("[" + errorCount + "] 警告! 403错误, IP已被封!")
-					utility.delayInvoke("#countEle", relogin, 10 * 1000);
+					utility.delayInvoke("#countEle", getLoginRandCode, 10 * 1000);
 				} else {
 					setTipMessage("[" + errorCount + "] 网络请求错误，重试")
-					utility.delayInvoke("#countEle", relogin, utility.getLoginRetryTime());
+					utility.delayInvoke("#countEle", getLoginRandCode, utility.getLoginRetryTime());
 				}
 			}
 		});
@@ -2051,6 +2072,8 @@ function initLogin() {
 
 
 	function relogin() {
+		if (inRunning) return;
+
 		var user = $("#UserName").val();
 		if (!user) return;
 		if (utility.regInfo.bindAcc && utility.regInfo.bindAcc.length && utility.regInfo.bindAcc[0] && $.inArray(user, utility.regInfo.bindAcc) == -1 && utility.regInfo.bindAcc[0] != "*") {
@@ -2060,6 +2083,7 @@ function initLogin() {
 
 		count++;
 		utility.setPref("_sessionuser", $("#UserName").val());
+		inRunning = true;
 		getLoginRandCode();
 	}
 
@@ -2067,6 +2091,7 @@ function initLogin() {
 		//等待重试时，刷新验证码
 		$("#img_rrand_code").click();
 		$("#randCode").val("")[0].select();
+		inRunning = false;
 	}
 
 	//初始化
@@ -2102,7 +2127,7 @@ function initPayOrder() {
 	//如果出错，自动刷新
 	if ($("div.error_text").length > 0) {
 		utility.notifyOnTop("页面出错，稍后自动刷新！");
-		setTimeout(self.reload, 3000);
+		setTimeout(function () { self.location.reload(); }, 3000);
 	}
 
 	return;
@@ -2157,9 +2182,6 @@ function updateScriptContentForChrome() {
 		if (compareVersion(version, version_12306_helper) < 0) {
 			if (utility.getPref("diableUpdateVersion") == version_12306_helper) return;
 
-			if (typeof (external.mxCall) != 'undefined') {
-				$("#updateFound a").attr("href", "http://www.fishlee.net/soft/44/download.html").attr("target", "_blank");
-			}
 			$("#updateFound").show();
 			var info = '助手脚本已经发布了最新版 ' + version_12306_helper + '，请在登录页面上点击更新链接更新，更新后请刷新当前页面！\n\n版本更新内容如下，请确定您是否需要进行更新：\n';
 			if (typeof (version_updater) != 'undefined' && version_updater) {
