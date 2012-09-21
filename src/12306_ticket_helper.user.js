@@ -1290,6 +1290,23 @@ function initAutoCommitOrder() {
 	})();
 
 	//#endregion
+
+    //#region  记住上次选择的人
+    var filterPanel = $('#showPassengerFilter');
+    var input = $('<br/><label><input id="checkboxauto" type="checkbox"/>记住我选择的联系人，下次自动选中</label>').appendTo(filterPanel);
+    filterPanel.find(':checkbox').change(function() {
+        localStorage.autocheckids = filterPanel.find(':checked').map(function() {
+            return this.id;
+        }).get().join('|');
+    });
+    var ids = (localStorage.autocheckids || '').split('|');
+    // checkboxauto is checked
+    if(ids.length && ids[ids.length -1] == 'checkboxauto') {
+        ids.forEach(function(id) {
+            filterPanel.find('#' + id).attr('checked', true).click().attr('checked', true);
+        });
+    }
+    //#endregion
 }
 
 function autoCommitOrderInSandbox() {
@@ -2215,3 +2232,4 @@ function compareVersion(v1, v2) {
 }
 
 //#endregion
+// vim: fdm=marker fmr=#region,#endregion
