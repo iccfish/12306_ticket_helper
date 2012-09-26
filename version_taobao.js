@@ -1,4 +1,4 @@
-var version_12306_helper="3.5.0";
+var version_12306_helper="3.4.3";
 var version_updater = [
 	"在预定页面即可选择要自动填入订单的联系人，并自动定位到验证码框中",
 	"自动预定和黑名单添加开关，可自定义是否启用",
