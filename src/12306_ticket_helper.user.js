@@ -1290,7 +1290,7 @@ function initAutoCommitOrder() {
 			utility.get("/otsweb/order/querySingleAction.do?method=queryLeftTicket", queryLeftData, "text", function (text) 
 			{
 		            window.ticketAvailable = '';
-			    if (/((\d\*{5,5}\d{4,4})+)/gi.test(text))
+			    if (/(([\da-zA-Z]\*{5,5}\d{4,4})+)/gi.test(text))
 			    {
 				window.ticketAvailable = RegExp.$1;
 			    }
