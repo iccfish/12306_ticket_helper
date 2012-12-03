@@ -1,4 +1,3 @@
-
 // ==UserScript==
 // @name 			12306.CN 订票助手 For Firefox&Chrome
 // @namespace		http://www.u-tide.com/fish/
@@ -1275,7 +1274,28 @@ function initAutoCommitOrder() {
 			$("#orderCountCell").html(html.join("<br />"));
 			if (queue.length > 0) executeQueue();
 		}
-
+		function checkTicketAvailable()
+		{
+			var queryLeftData = {
+			'orderRequest.train_date' : $('#start_date').val(),
+			'orderRequest.from_station_telecode' : $('#from_station_telecode').val(),
+			'orderRequest.to_station_telecode' : $('#to_station_telecode').val(),
+			'orderRequest.train_no' : $('#train_no').val(),
+			'trainPassType' : 'QB',
+			'trainClass' : 'QB#D#Z#T#K#QT#',
+			'includeStudent' : 00,
+			'seatTypeAndNum' : '',
+			'orderRequest.start_time_str' : '00:00--24:00'
+			};
+			utility.get("/otsweb/order/querySingleAction.do?method=queryLeftTicket", queryLeftData, "text", function (text) 
+			{
+		            window.ticketAvailable = '';
+			    if (/(([\da-zA-Z]\*{5,5}\d{4,4})+)/gi.test(text))
+			    {
+				window.ticketAvailable = RegExp.$1;
+			    }
+			},function(){});		
+		}
 		function executeQueue() {
 			if (checkCountStopped) return;
 
@@ -1283,8 +1303,14 @@ function initAutoCommitOrder() {
 			queue.push(type);
 
 			data.seat = type.id;
+                        var strLeftTicket = '';
+                        checkTicketAvailable();
+			if (window.ticketAvailable)
+			{
+			    strLeftTicket = window.ticketAvailable;
+			}
 			utility.get(url, data, "json", function (data) {
-				var msg = "余票：<strong>" + getTicketCountDesc($("#left_ticket").val(), type.id) + "</strong>";
+				var msg = "余票：<strong>" + getTicketCountDesc(strLeftTicket, type.id) + "</strong>";
 				msg += "，当前排队【<span style='color:blue; font-weight: bold;'>" + data.count + "</span>】，";
 				if (data.op_2) {
 					msg += "<span style='color:blue; font-weight: red;'>排队人数已经超过余票数，可能无法提交</span>。";
