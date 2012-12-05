@@ -1777,7 +1777,7 @@ function initTicketQuery() {
 				var reg = utility.getRegCache(blackListDom.options[i].value);
 				if (reg.test(trainNo)) {
 					console.log(trainNo + " 已经被过滤，表达式：" + blackListDom.options[i].value);
-					row.hide();
+					this.hide();
 					return 0;
 				}
 			}

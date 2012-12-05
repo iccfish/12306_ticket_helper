@@ -12,7 +12,7 @@
 // @require			https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js
 // @icon			http://www.12306.cn/mormhweb/images/favicon.ico
 // @run-at			document-idle
-// @version 		3.5.5
+// @version 		3.5.6
 // @updateURL		http://www.fishlee.net/Service/Download.ashx/44/47/12306_ticket_helper.user.js
 // @supportURL		http://www.fishlee.net/soft/44/
 // @homepage		http://www.fishlee.net/soft/44/
@@ -24,7 +24,7 @@
 // @id				12306_ticket_helper_by_ifish@fishlee.net
 // @namespace		ifish@fishlee.net
 
-var version = "3.5.5";
+var version = "3.5.6";
 var updates = [
 	"修复自动预定中不能使用正则表达式的BUG",
 	"- 取消订票时间手动修改功能(喔……被铁道部枪毙了 ╮(╯▽╰)╭)",
@@ -747,7 +747,7 @@ var utility = {
 		return new RegExp("^(" + data.join("|") + ")$", "i");
 	},
 	enableLog: function () {
-		$("body").append('<button style="width:100px;position:fixed;left:0px;top:0px;height:50px;" onclick="utility.showLog();">显示运行日志</button>');
+		$("body").append('<button style="width:100px;position:fixed;left:0px;top:0px;height:35px;" onclick="utility.showLog();">显示运行日志</button>');
 		$(document).ajaxSuccess(function (a, b, c) {
 			c.log.response = b.responseText;
 			c.log.success = true;
@@ -1825,7 +1825,7 @@ function initTicketQuery() {
 				var reg = utility.getRegCache(blackListDom.options[i].value);
 				if (reg.test(trainNo)) {
 					console.log(trainNo + " 已经被过滤，表达式：" + blackListDom.options[i].value);
-					row.hide();
+					this.hide();
 					return 0;
 				}
 			}
