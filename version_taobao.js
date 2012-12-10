@@ -1,4 +1,4 @@
-var version_12306_helper="3.5.6";
+var version_12306_helper="3.5.5";
 var version_updater = [
 	"修复自动预定中不能使用正则表达式的BUG",
 	"- 取消订票时间手动修改功能(喔……被铁道部枪毙了 ╮(╯▽╰)╭)",
