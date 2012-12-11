@@ -1,14 +1,16 @@
 
-var version = "3.5.5";
+var version = "3.6.0";
 var updates = [
  	"修正登录成功但没有能判断出的错误(2012.12.11铁道部最新修改)",
-	"修复自动预定中不能使用正则表达式的BUG",
-	"- 取消订票时间手动修改功能(喔……被铁道部枪毙了 ╮(╯▽╰)╭)",
-	"增加订票最小张数限制",
-	"修改刷新余票为即时刷新 (感谢 cutefelix 的提交)",
-	"自动选择人员增加对护照等其它类型证件的支持",
-	"增加请求日志功能（左上角显示日志按钮，出现异常的操作时请点击此按钮并复制日志）",
-	"(其它细节更改)",
+	"修正自动预定功能失效的问题(2012.12.11铁道部最新修改)",
+	"修正过滤不可预定车次功能失效的问题(2012.12.11铁道部最新修改)",
+	"修正自动刷新查询功能混乱的问题(2012.12.11铁道部最新修改)",
+	"修正自动预选乘客功能失效的问题(2012.12.11铁道部最新修改)",
+	"修正因铁道部的弹出框出错而导致重新查询的问题(2012.12.11铁道部最新修改)",
+	"-----------------------------------------------------------",
+	"<span style='font-weight:bold;color:red;'>提示：如果您发现车次的提示信息无法显示，这是铁道部的问题，请不要怪责老衲 =。=</span>",
+	"-----------------------------------------------------------",
+	"(新功能陆续开发中，为避免封杀咱不透露细节 #^_^#)",
 	"<span style='color:red;'>警告！谷歌商店中由 www.6pmhaitao.com 发布的订票助手扩展为盗用本助手并加入恶意脚本后打包的，请大家不要安装！</span>"
 ];
 
@@ -719,13 +721,15 @@ var utility = {
 		return new RegExp("^(" + data.join("|") + ")$", "i");
 	},
 	enableLog: function () {
-		$("body").append('<button style="width:100px;position:fixed;left:0px;top:0px;height:50px;" onclick="utility.showLog();">显示运行日志</button>');
+		$("body").append('<button style="width:100px;position:fixed;left:0px;top:0px;height:35px;" onclick="utility.showLog();">显示运行日志</button>');
 		$(document).ajaxSuccess(function (a, b, c) {
+			if (!c.log) return;
 			c.log.response = b.responseText;
 			c.log.success = true;
 		}).ajaxSend(function (a, b, c) {
 			utility.appendLog(c);
 		}).ajaxError(function (a, b, c) {
+			if (!c.log) return;
 			c.log.response = b.responseText;
 		});
 	}
@@ -1248,11 +1252,11 @@ function initAutoCommitOrder() {
 	$("#showHelp").change(function () {
 		if (this.checked) {
 			window.localStorage.setItem("showHelp", "1");
-			$("table.table_qr tr:eq(11)").show();
+			$("table.table_qr tr:last").show();
 		}
 		else {
 			window.localStorage.removeItem("showHelp");
-			$("table.table_qr tr:eq(11)").hide();
+			$("table.table_qr tr:last").hide();
 		}
 	}).change();
 
@@ -1347,15 +1351,17 @@ function initAutoCommitOrder() {
 
 
 	//#region 自动选择联系人、自动选择上次选择的人
-
-	(function () {
+	function autoSelectPassenger() {
 		var pp = localStorage.getItem("preSelectPassenger") || "";
 		if (pp) {
 			pp = pp.split("|");
 
 			$.each(pp, function () {
-				if (!pp) return true;
-				$("#" + this + " input").attr("checked", true).click();
+				if (!this) return true;
+				console.log("[INFO][自动选择乘客] 自动选定-" + this);
+				console.log($("#" + this + "._checkbox_class"))
+				$("#" + this + "._checkbox_class").attr("checked", true).click().attr("checked", true);	//为啥设置两次？我也不知道，反正一次不对。
+				return true;
 			});
 		} else {
 			//#region  记住上次选择的人 by yangg
@@ -1375,8 +1381,14 @@ function initAutoCommitOrder() {
 			}
 			//#endregion
 		}
-	})();
+	};
 
+	$(window).ajaxComplete(function (e, xhr, s) {
+		if (s.url.indexOf("getpassengerJson") != -1) {
+			console.log("系统联系人加载完成，正在检测预先选定");
+			autoSelectPassenger();
+		}
+	});
 	//#endregion
 
 	//#region 为每个联系人都加上label，以便于选择
@@ -1786,7 +1798,7 @@ function initTicketQuery() {
 
 
 		var hasTicket = 1;
-		if ($("input.yuding_x", this).length > 0) return 0;
+		if ($("a.btn130", this).length > 0) return 0;
 
 		$("td", this).each(function (i, e) {
 			var cellResult = 0;
@@ -1805,8 +1817,9 @@ function initTicketQuery() {
 	});
 
 	//检测是否有余票的函数
-	var checkTickets = function (row) {
+	var checkTickets = function () {
 		var result = 0;
+		var row = this;
 		$.each(checkTicketsQueue, function () {
 			result = this.call(row, result) || result;
 
@@ -1826,10 +1839,12 @@ function initTicketQuery() {
 		var validRows = {};
 		rows.each(function () {
 			var row = $(this);
-			var valid = checkTickets(row);
+			var valid = checkTickets.call(row);
+			var code = getTrainNo(row);
+
+			console.log("[INFO][车票可用性校验] " + code + " 校验结果=" + valid);
 
 			if (valid == 2) {
-				var code = getTrainNo(row);
 				row.css("background-color", "#FD855C");
 				validRows[code] = row;
 			}
@@ -1849,7 +1864,7 @@ function initTicketQuery() {
 				if (document.getElementById("autoBookTip").checked) {
 					window.localStorage["bookTip"] = 1;
 				}
-				validRows[i].find(".yuding_u, .yuding_u_over").click();
+				validRows[i].find("a[name=btn130_2]").click();
 
 				break;
 			}
@@ -1882,6 +1897,7 @@ function initTicketQuery() {
 		}
 	});
 	$("body").ajaxError(function (e, r, s) {
+		if (s.url.indexOf("queryLeftTicket") == -1) return;
 		if (!$("#chkAutoRequery")[0].checked) return;
 		if (s.url.indexOf("/otsweb/order/querySingleAction.do") != -1) {
 			delayButton();
