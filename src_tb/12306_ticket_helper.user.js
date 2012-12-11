@@ -1,6 +1,7 @@
 
 var version = "3.5.5";
 var updates = [
+ 	"修正登录成功但没有能判断出的错误(2012.12.11铁道部最新修改)",
 	"修复自动预定中不能使用正则表达式的BUG",
 	"- 取消订票时间手动修改功能(喔……被铁道部枪毙了 ╮(╯▽╰)╭)",
 	"增加订票最小张数限制",
@@ -2325,7 +2326,7 @@ function initLogin() {
 					setTipMessage(msg);
 					setCurOperationInfo(false, "请重新输入。");
 					stopLogin();
-				} else if (html.indexOf("欢迎您！") != -1) {
+				} else if (html.indexOf("欢迎您登录") != -1) {
 					utility.notifyOnTop('登录成功，开始查询车票吧！');
 					window.location.href = "https://dynamic.12306.cn/otsweb/order/querySingleAction.do?method=init";
 				} else {
