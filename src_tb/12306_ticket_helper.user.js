@@ -1,16 +1,9 @@
 
-var version = "3.6.0";
+var version = "3.6.1";
 var updates = [
- 	"修正登录成功但没有能判断出的错误(2012.12.11铁道部最新修改)",
-	"修正自动预定功能失效的问题(2012.12.11铁道部最新修改)",
-	"修正过滤不可预定车次功能失效的问题(2012.12.11铁道部最新修改)",
-	"修正自动刷新查询功能混乱的问题(2012.12.11铁道部最新修改)",
-	"修正自动预选乘客功能失效的问题(2012.12.11铁道部最新修改)",
-	"修正因铁道部的弹出框出错而导致重新查询的问题(2012.12.11铁道部最新修改)",
-	"-----------------------------------------------------------",
-	"<span style='font-weight:bold;color:red;'>提示：如果您发现车次的提示信息无法显示，这是铁道部的问题，请不要怪责老衲 =。=</span>",
-	"-----------------------------------------------------------",
-	"(新功能陆续开发中，为避免封杀咱不透露细节 #^_^#)",
+	"支持预先选择席别并自动选中",
+	"修正部分情况下可能导致的自动选择乘客失败的问题",
+	"其它细节调整",
 	"<span style='color:red;'>警告！谷歌商店中由 www.6pmhaitao.com 发布的订票助手扩展为盗用本助手并加入恶意脚本后打包的，请大家不要安装！</span>"
 ];
 
@@ -721,7 +714,7 @@ var utility = {
 		return new RegExp("^(" + data.join("|") + ")$", "i");
 	},
 	enableLog: function () {
-		$("body").append('<button style="width:100px;position:fixed;left:0px;top:0px;height:35px;" onclick="utility.showLog();">显示运行日志</button>');
+		$("body").append('<button style="width:100px;position:fixed;right:0px;top:0px;height:35px;" onclick="utility.showLog();">显示运行日志</button>');
 		$(document).ajaxSuccess(function (a, b, c) {
 			if (!c.log) return;
 			c.log.response = b.responseText;
@@ -1353,6 +1346,7 @@ function initAutoCommitOrder() {
 	//#region 自动选择联系人、自动选择上次选择的人
 	function autoSelectPassenger() {
 		var pp = localStorage.getItem("preSelectPassenger") || "";
+		var pseat = localStorage.getItem("autoSelect_preSelectSeatType") || "";
 		if (pp) {
 			pp = pp.split("|");
 
@@ -1363,40 +1357,23 @@ function initAutoCommitOrder() {
 				$("#" + this + "._checkbox_class").attr("checked", true).click().attr("checked", true);	//为啥设置两次？我也不知道，反正一次不对。
 				return true;
 			});
-		} else {
-			//#region  记住上次选择的人 by yangg
-			var filterPanel = $('#showPassengerFilter');
-			var input = $('<br/><label><input id="checkboxauto" type="checkbox"/>记住我选择的联系人，下次自动选中</label>').appendTo(filterPanel);
-			filterPanel.find(':checkbox').change(function () {
-				localStorage.autocheckids = filterPanel.find(':checked').map(function () {
-					return this.id;
-				}).get().join('|');
-			});
-			var ids = (localStorage.autocheckids || '').split('|');
-			// checkboxauto is checked
-			if (ids.length && ids[ids.length - 1] == 'checkboxauto') {
-				ids.forEach(function (id) {
-					filterPanel.find('#' + id).attr('checked', true).click().attr('checked', true);
-				});
+			if (pseat) {
+				$(".passenger_class").each(function () { $(this).find("select:eq(0)").val(pseat); });
 			}
-			//#endregion
 		}
 	};
 
 	$(window).ajaxComplete(function (e, xhr, s) {
 		if (s.url.indexOf("getpassengerJson") != -1) {
-			console.log("系统联系人加载完成，正在检测预先选定");
+			console.log("[INFO][自动选择乘客] 系统联系人加载完成，正在检测预先选定");
 			autoSelectPassenger();
 		}
 	});
-	//#endregion
-
-	//#region 为每个联系人都加上label，以便于选择
-
-	(function () {
-		$("#showPassengerFilter>div>span").wrap("<label></label");
-	})();
-
+	//如果已经加载完成，那么直接选定
+	if ($("#showPassengerFilter div").length) {
+		console.log("[INFO][自动选择乘客] OOPS，居然加载完成了？直接选定联系人");
+		autoSelectPassenger();
+	}
 	//#endregion
 
 	//#region 自动定位到随机码中
@@ -2075,8 +2052,27 @@ function initTicketQuery() {
 		var html = [];
 		html.push("<tr class='caption'><td colspan='4'>自动添加乘客 （加入此列表的乘客将会自动在提交订单的页面中添加上，<strong>最多选五位</strong>）</td></tr>");
 		html.push("<tr class='fish_sep'><td id='passengerList' colspan='4'><span style='color:gray; font-style:italic;'>联系人列表正在加载中，请稍等...</span></td></tr>");
+		html.push("<tr class='fish_sep'><td class='name'>自动选定席别</td><td><select id='preSelectSeat'></select></td><td></td><td></td></tr>");
 
 		$("#helpertooltable tr:first").addClass("fish_sep").before(html.join(""));
+
+		var seatlist = [
+			["", "<无设置>"],
+			["9", "商务座"],
+			["4", "软卧"],
+			["3", "硬卧"],
+			["2", "软座"],
+			["1", "硬座"],
+			["M", "一等座"],
+			["O", "二等座"]
+		];
+		var seatDom = document.getElementById("preSelectSeat");
+		$.each(seatlist, function () {
+			seatDom.options[seatDom.options.length] = new Option(this[1], this[0]);
+		});
+		$(seatDom).val(window.localStorage.getItem("autoSelect_preSelectSeatType") || "").change(function () {
+			window.localStorage.setItem("autoSelect_preSelectSeatType", $(this).val());
+		});
 
 		//加载乘客
 		utility.getAllPassengers(function (list) {
