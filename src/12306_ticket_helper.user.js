@@ -1131,7 +1131,7 @@ function initAutoCommitOrder() {
 		         {
 								setCurOperationInfo(false, data.msg);
 								stop(data.msg);
-								reloadToken();               
+								reloadCode();               
 		         }
 		         else
 		         {
