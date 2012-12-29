@@ -1,4 +1,3 @@
-
 // ==UserScript==
 // @name 			12306.CN 订票助手 For Firefox&Chrome
 // @namespace		http://www.u-tide.com/fish/
@@ -1122,46 +1121,67 @@ function initAutoCommitOrder() {
 		breakFlag = 0;
 		waitTimeTooLong_alert = false;
 
-		jQuery.ajax({
-			url: '/otsweb/order/confirmPassengerAction.do?method=confirmSingleForQueueOrder',
-			data: $('#confirmPassenger').serialize(),
-			type: "POST",
-			timeout: 30000,
-			dataType: 'json',
-			success: function (msg) {
-				console.log(msg);
-
-				var errmsg = msg.errMsg;
-				if (errmsg != 'Y') {
-					if (errmsg.indexOf("包含未付款订单") != -1) {
-						alert("您有未支付订单! 等啥呢, 赶紧点确定支付去.");
-						window.location.replace("/otsweb/order/myOrderAction.do?method=queryMyOrderNotComplete&leftmenu=Y");
-						return;
+                $("#confirmPassenger").ajaxSubmit({ 
+    	            url  : 'confirmPassengerAction.do?method=checkOrderInfo&rand='+ $("#rand").val(), 
+    	            type : "POST",
+    	            data : {tFlag:'dc'},
+    	            dataType : "json",                                                                                                                                                                                                                                                                                                                                                
+                    success : function(data) {
+		         if ('Y' != data.errMsg || 'N' == data.checkHuimd || 'N' == data.check608) 
+		         {
+								setCurOperationInfo(false, data.msg);
+								stop(data.msg);
+								reloadCode();               
+		         }
+		         else
+		         {
+				jQuery.ajax({
+					url: '/otsweb/order/confirmPassengerAction.do?method=confirmSingleForQueueOrder',
+					data: $('#confirmPassenger').serialize(),
+					type: "POST",
+					timeout: 30000,
+					dataType: 'json',
+					success: function (msg) {
+						console.log(msg);
+		
+						var errmsg = msg.errMsg;
+						if (errmsg != 'Y') {
+							if (errmsg.indexOf("包含未付款订单") != -1) {
+								alert("您有未支付订单! 等啥呢, 赶紧点确定支付去.");
+								window.location.replace("/otsweb/order/myOrderAction.do?method=queryMyOrderNotComplete&leftmenu=Y");
+								return;
+							}
+							if (errmsg.indexOf("重复提交") != -1) {
+								console.log("TOKEN失效，刷新Token中....");
+								reloadToken();
+								return;
+							}
+							if (errmsg.indexOf("包含排队中") != -1) {
+								console.log("惊现排队中的订单， 进入轮询状态");
+								waitingForQueueComplete();
+								return;
+							}
+		
+							setCurOperationInfo(false, errmsg);
+							stop(errmsg);
+							reloadCode();
+						} else {
+							utility.notifyOnTop("订单提交成功, 正在等待队列完成操作，请及时注意订单状态");
+							waitingForQueueComplete();
+						}
+					},
+					error: function (msg) {
+						setCurOperationInfo(false, "当前请求发生错误");
+						utility.delayInvoke(null, submitForm, 3000);
 					}
-					if (errmsg.indexOf("重复提交") != -1) {
-						console.log("TOKEN失效，刷新Token中....");
-						reloadToken();
-						return;
-					}
-					if (errmsg.indexOf("包含排队中") != -1) {
-						console.log("惊现排队中的订单， 进入轮询状态");
-						waitingForQueueComplete();
-						return;
-					}
-
-					setCurOperationInfo(false, errmsg);
-					stop(errmsg);
-					reloadCode();
-				} else {
-					utility.notifyOnTop("订单提交成功, 正在等待队列完成操作，请及时注意订单状态");
-					waitingForQueueComplete();
-				}
-			},
-			error: function (msg) {
-				setCurOperationInfo(false, "当前请求发生错误");
-				utility.delayInvoke(null, submitForm, 3000);
-			}
-		});
+				});
+		         }
+                  },
+                  error :function(msg) {
+                          setCurOperationInfo(false, "当前请求发生错误");
+			  utility.delayInvoke(null, submitForm, 3000);
+       	          }
+             });				
 	}
 
 	function reloadToken() {
