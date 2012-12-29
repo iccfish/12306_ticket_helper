@@ -1,6 +1,10 @@
 
-var version = "3.6.2";
+var version = "3.6.4";
 var updates = [
+	"修正因铁道部改签页面程序问题导致的无法自动刷新（检测和刷新流程重写了）",
+	"增加对查票结果中星号（*）的处理",
+	"取消记录部分请求（因为有同学担心隐私泄漏）",
+	"对遨游3/4做兼容性改进（取消点击日期下拉时会弹重复安装的提示）",
 	"跟进最近修改，解决提交时显示非法提交的错误 (感谢 cutefelix 比作者还快的手 =。=)",
 	"增加预先选择上下铺功能，显示预定界面的上下铺选择（但作者无法保证一定起效）",
 	"其它细节调整",
@@ -741,7 +745,7 @@ function unsafeInvoke(callback) {
 function buildCallback(callback) {
 	var content = "";
 	if (!utility_emabed) {
-		content += "if(typeof(window.utility)!='undefined'){ alert('警告! 检测到您似乎同时运行了两个12306购票脚本! 请转到『附加组件管理『（Firefox）或『扩展管理』（Chrome）中卸载老版本的助手！');}; \r\nwindow.utility=" + buildObjectJavascriptCode(utility) + ";window.helperVersion='" + version + "';\r\n";
+		content += "if(typeof(window.utility)!='undefined' && navigator.userAgent.indexOf('Maxthon')==-1){ alert('警告! 检测到您似乎同时运行了两个12306购票脚本! 请转到『附加组件管理『（Firefox）或『扩展管理』（Chrome）中卸载老版本的助手！');}; \r\nwindow.utility=" + buildObjectJavascriptCode(utility) + ";window.helperVersion='" + version + "';\r\n";
 		utility_emabed = true;
 	}
 	content += "window.__cb=" + buildObjectJavascriptCode(callback) + ";\r\n\
@@ -824,7 +828,7 @@ function entryPoint() {
 		checkUpdate();
 	}
 	if (path == "/otsweb/order/querySingleAction.do") {
-		if (location.search == "?method=init") {
+		if (location.search == "?method=init" && document.getElementById("submitQuery")) {
 			unsafeInvoke(initTicketQuery);
 		}
 		if (location.search == "?method=submutOrderRequest") {
@@ -832,7 +836,7 @@ function entryPoint() {
 		}
 	}
 	if (path == "/otsweb/order/myOrderAction.do") {
-		if (location.search.indexOf("method=resign") != -1) {
+		if (location.search.indexOf("method=resign") != -1 && document.getElementById("submitQuery")) {
 			unsafeInvoke(initTicketQuery);
 		}
 	}
@@ -1009,7 +1013,7 @@ function initAutoCommitOrder() {
 	var breakFlag = 0;
 	var randCode = "";
 	var submitFlag = false;
-	var tourFlag;
+	var tourFlag = 'dc';
 
 	//启用日志
 	utility.enableLog();
@@ -1074,7 +1078,7 @@ function initAutoCommitOrder() {
 		$("#confirmPassenger").ajaxSubmit({
 			url: 'confirmPassengerAction.do?method=checkOrderInfo&rand=' + $("#rand").val(),
 			type: "POST",
-			data: { tFlag: 'dc' },
+			data: { tFlag: tourFlag },
 			dataType: "json",
 			success: function (data) {
 				if ('Y' != data.errMsg || 'N' == data.checkHuimd || 'N' == data.check608) {
@@ -1447,17 +1451,11 @@ function autoCommitOrderInSandbox() {
 //#region -----------------自动刷新----------------------
 
 function initTicketQuery() {
-	//#region 兼容性检测 for Maxthon3.
-	//在Maxthon3下该入口函数会神奇地在日期选择界面出现，原因未查
-	if ($("#submitQuery").length == 0) return;
-	//#endregion
-
 	//启用日志
 	utility.enableLog();
 
 	//#region 参数配置和常规工具界面
 
-	var autoRefresh = false;
 	var queryCount = 0;
 	var timer = null;
 	var isTicketAvailable = false;
@@ -1705,16 +1703,9 @@ function initTicketQuery() {
 	var onRequery = function () { };	//当重新查询时触发
 	var onNoTicket = function () { };	//当没有查到票时触发
 
-	//是否是学生票？
-	$("#submitQuery, #stu_submitQuery").click(function () {
-		clickButton = $(this);
-		autoRefresh = ($("#autoRequery")[0].checked);
-	});
 	$("#autoRequery").change(function () {
-		autoRefresh = this.checked;
-		if (!this.checked) return;
-
-		resetTimer();
+		if (!this.checked)
+			resetTimer();
 	});
 	//刷新时间间隔
 	$("#refereshInterval").change(function () { timeCount = Math.max(6, parseInt($("#refereshInterval").val())); }).change();
@@ -1724,7 +1715,7 @@ function initTicketQuery() {
 		queryCount = 0;
 		$("#btnStopRefresh")[0].disabled = true;
 		if (timer) {
-			clearTimeout(timer);
+			clearInterval(timer);
 			timer = null;
 		}
 		$("#refreshtimer").html("");
@@ -1734,19 +1725,22 @@ function initTicketQuery() {
 		timerCountDown--;
 		$("#refreshtimer").html(" 【" + timerCountDown + "秒后自动查询...】");
 
-		if (timerCountDown > 0) {
-			timer = setTimeout(countDownTimer, 1000);
-		} else {
-			onRequery();
-			doQuery();
-		}
+		if (timerCountDown > 0) return;
+
+		clearInterval(timer);
+		timer = null;
+		onRequery();
+		doQuery();
 	}
 
 	function startTimer() {
-		timerCountDown = timeCount + 1;
+		if (timer) return;
+
+		timerCountDown = timeCount;
+		$("#refreshtimer").html(" 【" + timerCountDown + "秒后自动查询...】");
 		//没有定时器的时候，开启定时器准备刷新
 		$("#btnStopRefresh")[0].disabled = false;
-		countDownTimer();
+		timer = setInterval(countDownTimer, 1000);
 	}
 
 	function displayQueryInfo() {
@@ -1759,7 +1753,7 @@ function initTicketQuery() {
 		timer = null;
 		if (audio) audio.pause();
 		displayQueryInfo();
-		clickButton.click();
+		sendQueryFunc();
 	}
 
 	//验证车票有开始
@@ -1792,10 +1786,10 @@ function initTicketQuery() {
 		var el = $(e);
 		var info = $.trim(el.text()); //Firefox不支持 innerText
 
-		if (info != "--" && info != "无") {
-			return 2;
+		if (info == "*" || info == "--" || info == "无") {
+			return 0;
 		}
-		return 0;
+		return 2;
 	});
 	//默认的行检测函数
 	checkTicketsQueue.push(function () {
@@ -1846,6 +1840,9 @@ function initTicketQuery() {
 
 	//目标表格，当ajax完成时检测是否有票
 	$("body").ajaxComplete(function (e, r, s) {
+		//HACK-阻止重复调用
+		if (timer != null) return;
+
 		if (s.url.indexOf("queryLeftTicket") == -1)
 			return;
 
@@ -1891,7 +1888,7 @@ function initTicketQuery() {
 
 		if (ticketValid) {
 			onticketAvailable();
-		} else if (autoRefresh) {
+		} else if (document.getElementById("chkAutoRequery").checked) {
 			onNoTicket();
 			startTimer();
 		}
@@ -2200,6 +2197,7 @@ function initTicketQuery() {
 
 			var text = $.trim(e.text());
 			if (text == "有") return 2;
+
 			return parseInt(text) >= limit ? 2 : 1;
 		});
 	})();
