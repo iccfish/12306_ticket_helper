@@ -11,7 +11,7 @@
 // @require			http://lib.sinaapp.com/js/jquery/1.8.3/jquery.min.js
 // @icon			http://www.12306.cn/mormhweb/images/favicon.ico
 // @run-at			document-idle
-// @version 		3.6.4
+// @version 		3.6.5
 // @updateURL		http://www.fishlee.net/Service/Download.ashx/44/47/12306_ticket_helper.user.js
 // @supportURL		http://www.fishlee.net/soft/44/
 // @homepage		http://www.fishlee.net/soft/44/
@@ -23,8 +23,9 @@
 // @id				12306_ticket_helper_by_ifish@fishlee.net
 // @namespace		ifish@fishlee.net
 
-var version = "3.6.4";
+var version = "3.6.5";
 var updates = [
+	"修正在3.6.4版本中导致的学生票刷新BUG",
 	"修正因铁道部改签页面程序问题导致的无法自动刷新（检测和刷新流程重写了）",
 	"增加对查票结果中星号（*）的处理",
 	"取消记录部分请求（因为有同学担心隐私泄漏）",
@@ -1802,7 +1803,7 @@ function initTicketQuery() {
 		timer = null;
 		if (audio) audio.pause();
 		displayQueryInfo();
-		sendQueryFunc();
+		sendQueryFunc.call(clickBuyStudentTicket == "Y" ? document.getElementById("stu_submitQuery") : document.getElementById("submitQuery"));
 	}
 
 	//验证车票有开始
