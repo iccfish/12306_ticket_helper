@@ -1,15 +1,10 @@
 
-var version = "3.6.5";
+var version = "3.6.7";
 var updates = [
-	"修正在3.6.4版本中导致的学生票刷新BUG",
-	"修正因铁道部改签页面程序问题导致的无法自动刷新（检测和刷新流程重写了）",
-	"增加对查票结果中星号（*）的处理",
-	"取消记录部分请求（因为有同学担心隐私泄漏）",
-	"对遨游3/4做兼容性改进（取消点击日期下拉时会弹重复安装的提示）",
-	"跟进最近修改，解决提交时显示非法提交的错误 (感谢 cutefelix 比作者还快的手 =。=)",
-	"增加预先选择上下铺功能，显示预定界面的上下铺选择（但作者无法保证一定起效）",
-	"其它细节调整",
-	"<span style='color:red;'>警告！谷歌商店中由 www.6pmhaitao.com 发布的订票助手扩展为盗用本助手并加入恶意脚本后打包的，请大家不要安装！</span>"
+	"修改自动预定逻辑, 现在预定当有多个车次有效时, 将会按照列表的顺序进行优先判定, 而不再是查询结果中的顺序",
+	"修正取消自动预定时依然会自动预定的BUG",
+	"修正通過查詢介面設置的自動選中上下鋪可能未能在预定界面设置的BUG",
+	"部分界面用于的调整(主要是日志部分)"
 ];
 
 var faqUrl = "http://www.fishlee.net/soft/44/faq.html";
@@ -131,7 +126,7 @@ function injectDom() {
 	html.push('<td><a href="http://www.fishlee.net/soft/44/faq.html" target="_blank">助手运行常见问题</a></td>');
 	html.push('</tr>');
 	html.push('</table>');
-	html.push('</div><div class="tabLog tabContent"><div>下面是当前页面的记录。请全部复制后发成邮件给作者：ifish@fishlee.net 以便于我们解决问题。</div><textarea id="runningLog" style="width:100%;height:200px;"></textarea></div>');
+	html.push('</div><div class="tabLog tabContent"><div>下面是当前页面的记录。如果您的助手遇到功能上的问题，请全部复制后发成邮件给作者：ifish@fishlee.net 以便于我们解决问题。<span style="color:red;font-weight:bold;">请在发送前务必剔除记录中包含的个人隐私如密码等信息。</span></div><textarea id="runningLog" style="width:100%;height:200px;"></textarea></div>');
 	html.push('<div class="control">');
 	html.push('<input type="button" class="close_button" value="关闭" />');
 	html.push('</div>');
@@ -221,11 +216,33 @@ var utility = {
 	isWebKit: function () {
 		return navigator.userAgent.indexOf("WebKit") != -1;
 	},
+	init: function () {
+		$.extend({
+			any: function (array, callback) {
+				var flag = false;
+				$.each(array, function (i, v) {
+					flag = callback.call(this, i, v);
+					if (flag) return false;
+				});
+				return flag;
+			},
+			first: function (array, callback) {
+				var result = null;
+				$.each(array, function (i, v) {
+					result = callback.call(this, i, v);
+					if (result) return false;
+				});
+				return result;
+			}
+		});
+	},
 	runningQueue: null,
 	appendLog: function (settings) {
 		/// <summary>记录日志</summary>
 		if (!utility.runningQueue) utility.runningQueue = [];
 		var log = { url: settings.url, data: settings.data, response: null, success: null };
+		if (log.url.indexOf("Passenger") != -1) return;	//不记录对乘客的请求
+
 		utility.runningQueue.push(log);
 		settings.log = log;
 	},
@@ -746,7 +763,7 @@ function unsafeInvoke(callback) {
 function buildCallback(callback) {
 	var content = "";
 	if (!utility_emabed) {
-		content += "if(typeof(window.utility)!='undefined' && navigator.userAgent.indexOf('Maxthon')==-1){ alert('警告! 检测到您似乎同时运行了两个12306购票脚本! 请转到『附加组件管理『（Firefox）或『扩展管理』（Chrome）中卸载老版本的助手！');}; \r\nwindow.utility=" + buildObjectJavascriptCode(utility) + ";window.helperVersion='" + version + "';\r\n";
+		content += "if(typeof(window.utility)!='undefined' && navigator.userAgent.indexOf('Maxthon')==-1){ alert('警告! 检测到您似乎同时运行了两个12306购票脚本! 请转到『附加组件管理『（Firefox）或『扩展管理』（Chrome）中卸载老版本的助手！');}; \r\nwindow.utility=" + buildObjectJavascriptCode(utility) + "; window.utility.init();window.helperVersion='" + version + "';\r\n";
 		utility_emabed = true;
 	}
 	content += "window.__cb=" + buildObjectJavascriptCode(callback) + ";\r\n\
@@ -1427,7 +1444,7 @@ function initAutoCommitOrder() {
 				l.hide();
 			var preseat = utility.getPref("preselectseatlevel");
 			if (preseat) {
-				l.val(preseat);
+				l.val(preseat).change();
 			}
 		}).change();
 
@@ -1872,24 +1889,27 @@ function initTicketQuery() {
 		});
 
 		//自动预定
-		if ($("#swAutoBook:not(:disabled)").length > 0) {
-			var reg = utility.preCompileReg($("#autoBookList option"));
-			for (var i in validRows) {
-				if (!reg.test(i)) continue;
+		if ($("#swAutoBook:not(:disabled):checked").length > 0) {
+			$("#autoBookList option").each(function () {
+				var reg = utility.getRegCache(this.text);
+				var row = $.first(validRows, function (i, v) {
+					if (reg.test(i)) return v;
+				});
 
-				if (document.getElementById("autoBookTip").checked) {
-					window.localStorage["bookTip"] = 1;
+				if (row) {
+					if (document.getElementById("autoBookTip").checked) {
+						window.localStorage["bookTip"] = 1;
+					}
+					row.find("a[name=btn130_2]").click();
+
+					return false;
 				}
-				validRows[i].find("a[name=btn130_2]").click();
-
-				break;
-			}
+			})
 		}
-
 
 		if (ticketValid) {
 			onticketAvailable();
-		} else if (document.getElementById("chkAutoRequery").checked) {
+		} else if (document.getElementById("autoRequery").checked) {
 			onNoTicket();
 			startTimer();
 		}
