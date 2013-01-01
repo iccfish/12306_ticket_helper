@@ -1,5 +1,5 @@
 
-var version = "3.7.0";
+var version = "3.7.1";
 var updates = [
 	"<span style='color:red;'>祝各位新年快乐</span>",
 	"+ 增加保存查的车次类型功能",
@@ -2264,9 +2264,11 @@ function initTicketQuery() {
 		var ccTypeCheck = $("input:checkbox[name=trainClassArr]");
 		var preccType = (utility.getPref("cctype") || "").split("|");
 
-		ccTypeCheck.each(function () {
-			this.checked = $.inArray(this.value, preccType) != -1;
-		});
+		if (preccType[0]) {
+			ccTypeCheck.each(function () {
+				this.checked = $.inArray(this.value, preccType) != -1;
+			});
+		}
 		ccTypeCheck.click(function () {
 			utility.setPref("cctype", $.map(ccTypeCheck.filter(":checked"), function (v, i) {
 				return v.value;
