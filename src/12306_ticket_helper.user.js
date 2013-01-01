@@ -11,7 +11,7 @@
 // @require			http://lib.sinaapp.com/js/jquery/1.8.3/jquery.min.js
 // @icon			http://www.12306.cn/mormhweb/images/favicon.ico
 // @run-at			document-idle
-// @version 		3.7.1
+// @version 		3.7.2
 // @updateURL		http://www.fishlee.net/Service/Download.ashx/44/47/12306_ticket_helper.user.js
 // @supportURL		http://www.fishlee.net/soft/44/
 // @homepage		http://www.fishlee.net/soft/44/
@@ -19,12 +19,15 @@
 // @contributionAmount	￥5.00
 // ==/UserScript==
 
-var version = "3.7.1";
+var version = "3.7.2";
 var updates = [
 	"<span style='color:red;'>祝各位新年快乐</span>",
 	"+ 增加保存查的车次类型功能",
 	"+ 增加过滤发到站或始发站不完全匹配的车次的功能",
-	"* 更新预售时间查询链接"
+	"* 更新预售时间查询链接",
+	"[3.7.2] 修正前版本中部分配置保存不了的BUG",
+	"[3.7.2] 修改过滤站点不匹配行为，直接隐藏对应车次",
+	"[3.7.2] 调整交换站点按钮样式，避免在Firefox下换行"
 ];
 
 var faqUrl = "http://www.fishlee.net/soft/44/faq.html";
@@ -190,7 +193,7 @@ function injectDom() {
 		var key = el.attr("name");
 		window.localStorage.setItem(key, el.val());
 	});
-	$("#configLink").live("click", function () {
+	$("#configLink, a.configLink").live("click", function () {
 		var el = $(this);
 		var dp = el.attr("tab");
 		if (dp) utility.configTab.showTab(dp);
@@ -1558,7 +1561,7 @@ function initTicketQuery() {
 		"<span style='font-weight:bold;margin-left:10px;color:blue;'><label><input type='checkbox' id='chkAutoResumitOrder' checked='checked' />预定失败时自动重试</label></span>" +
 		"<span style='font-weight:bold;margin-left:10px;color:blue;'><label><input type='checkbox' id='chkAutoRequery' checked='checked' />查询失败时自动重试</label></span>" +
 		"</td></tr>" +
-		"<tr><td id='filterFunctionRow' colspan='9'>" +
+		"<tr class='append_row'><td id='filterFunctionRow' colspan='9'>" +
 		"<span style='font-weight:bold;color:red;'><label><input type='checkbox' id='chkFilterNonBookable' />过滤不可预订的车次</label></span>" +
 		"<span style='font-weight:bold;margin-left:10px;color:red;'><label><input type='checkbox' id='chkFilterNonNeeded' />过滤不需要的席别</label></span>" +
 		"<span style='font-weight:bold;margin-left:10px;color:blue;display: none;'><label><input disabled='disabled' type='checkbox' id='chkFilterByTrain' />开启按车次过滤</label></span>" +
@@ -2066,7 +2069,6 @@ function initTicketQuery() {
 	if (!window.Audio) {
 		$(".musicFunc").hide();
 	}
-	utility.reloadPrefs($("tr.append_row"), "ticket_query");
 	//#endregion
 
 	//#region 时间快捷修改
@@ -2329,7 +2331,7 @@ function initTicketQuery() {
 		var toCode = $("#toStation");
 		var to = $("#toStationText");
 
-		from.css("width", "55px").after("<input type='button' value='<->' class='lineButton' title='交换出发地和目的地' id='btnExchangeStation' />");
+		from.css("width", "50px").after("<input type='button' value='<->' class='lineButton' title='交换出发地和目的地' id='btnExchangeStation' />");
 		$("#btnExchangeStation").click(function () {
 			var f1 = fromCode.val();
 			var f2 = from.val();
@@ -2348,11 +2350,7 @@ function initTicketQuery() {
 		var fromText = $("#fromStationText");
 		var toText = $("#toStationText");
 
-		$("#filterFunctionRow").append("<span style='font-weight:bold;color:red;margin-left:10px;'><label title='默认情况下，例如查找‘杭州’时，会包括‘杭州南’这个车站。勾选此选项，将会在搜索‘杭州’的时候，过滤那些不完全一致的车站，如‘杭州南’。'><input type='checkbox' id='closeFuseSearch'>过滤发到站或始发站不完全匹配的车次</label></span>");
-		if (utility.getPref("closeFuseSearch") == "1") document.getElementById("closeFuseSearch").checked = true;
-		$("#closeFuseSearch").change(function () {
-			utility.setPref("closeFuseSearch", this.checked ? 1 : 0);
-		});
+		$("#filterFunctionRow").append("<span style='font-weight:bold;color:red;margin-left:10px;'><label title='默认情况下，例如查找‘杭州’时，会包括‘杭州南’这个车站。勾选此选项，将会在搜索‘杭州’的时候，过滤那些不完全一致的车站，如‘杭州南’。'><input type='checkbox' id='closeFuseSearch'>过滤发到站不完全匹配的车次</label></span>");
 
 
 		function getStationName() {
@@ -2367,6 +2365,7 @@ function initTicketQuery() {
 			var ts = getStationName.call(this.find("td:eq(2)"));
 
 			if (fs != fromText.val() || ts != toText.val()) {
+				this.hide();
 				return 0;
 			}
 			return result;
@@ -2374,6 +2373,8 @@ function initTicketQuery() {
 	})();
 
 	//#endregion
+
+	utility.reloadPrefs($("tr.append_row"), "ticket_query");
 }
 
 //#endregion
@@ -2447,6 +2448,7 @@ function initDirectSubmitOrder() {
 		console.log(data);
 
 	}
+
 }
 
 //#endregion
@@ -2768,9 +2770,9 @@ function updateScriptContentForChrome() {
 			if (utility.getPref("diableUpdateVersion") == version_12306_helper) return;
 
 			$("#updateFound").show();
-			var info = '助手脚本已经发布了最新版 ' + version_12306_helper + '，请在登录页面上点击更新链接更新，更新后请刷新当前页面！\n\n版本更新内容如下，请确定您是否需要进行更新：\n';
+			var info = '订票助手已经发布了最新版 ' + version_12306_helper + '，请在登录页面上点击更新链接更新，更新后请刷新当前页面！\n\n版本更新内容如下，请确定您是否需要进行更新：\n';
 			if (typeof (version_updater) != 'undefined' && version_updater) {
-				info += "*" + version_updater.join(";\n* ");
+				info += "* " + version_updater.join(";\n* ");
 			} else {
 				info += "(暂时没有相关更新内容)";
 			}
