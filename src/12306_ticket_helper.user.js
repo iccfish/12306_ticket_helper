@@ -11,7 +11,7 @@
 // @require			http://lib.sinaapp.com/js/jquery/1.8.3/jquery.min.js
 // @icon			http://www.12306.cn/mormhweb/images/favicon.ico
 // @run-at			document-idle
-// @version 		3.6.7
+// @version 		3.7.0
 // @updateURL		http://www.fishlee.net/Service/Download.ashx/44/47/12306_ticket_helper.user.js
 // @supportURL		http://www.fishlee.net/soft/44/
 // @homepage		http://www.fishlee.net/soft/44/
@@ -19,16 +19,12 @@
 // @contributionAmount	￥5.00
 // ==/UserScript==
 
-
-// @id				12306_ticket_helper_by_ifish@fishlee.net
-// @namespace		ifish@fishlee.net
-
-var version = "3.6.7";
+var version = "3.7.0";
 var updates = [
-	"修改自动预定逻辑, 现在预定当有多个车次有效时, 将会按照列表的顺序进行优先判定, 而不再是查询结果中的顺序",
-	"修正取消自动预定时依然会自动预定的BUG",
-	"修正通過查詢介面設置的自動選中上下鋪可能未能在预定界面设置的BUG",
-	"部分界面用语的调整(主要是日志部分)"
+	"<span style='color:red;'>祝各位新年快乐</span>",
+	"+ 增加保存查的车次类型功能",
+	"+ 增加过滤发到站或始发站不完全匹配的车次的功能",
+	"* 更新预售时间查询链接"
 ];
 
 var faqUrl = "http://www.fishlee.net/soft/44/faq.html";
@@ -194,7 +190,7 @@ function injectDom() {
 		var key = el.attr("name");
 		window.localStorage.setItem(key, el.val());
 	});
-	$("a.configLink").live("click", function () {
+	$("#configLink").live("click", function () {
 		var el = $(this);
 		var dp = el.attr("tab");
 		if (dp) utility.configTab.showTab(dp);
@@ -376,7 +372,8 @@ var utility = {
 		return m && m[1] ? m[1] : "&lt;未知信息&gt;";
 	},
 	delayInvoke: function (target, callback, timeout) {
-		var e = $(target || "#countEle");
+		target = target || "#countEle";
+		var e = typeof (target) == "string" ? $(target) : target;
 		if (timeout <= 0) {
 			e.html("正在执行").removeClass("fish_clock").addClass("fish_running");
 			callback();
@@ -772,6 +769,28 @@ var utility = {
 			if (!c.log) return;
 			c.log.response = b.responseText;
 		});
+	},
+	analyzeForm: function (html) {
+		var data = {};
+
+		//action
+		var m = /<form.*?action="([^"]+)"/.exec(html);
+		data.action = m ? RegExp.$1 : "";
+
+		//inputs
+		data.fields = {};
+		var inputs = html.match(/<input\s*(.|\r|\n)*?>/gi);
+		$.each(inputs, function () {
+			if (!/name=['"]([^'"]+?)['"]/.exec(this)) return;
+			var name = RegExp.$1;
+			data.fields[RegExp.$1] = !/value=['"]([^'"]+?)['"]/.exec(this) ? "" : RegExp.$1;
+		});
+
+		//tourflag
+		m = /submit_form_confirm\('confirmPassenger','([a-z]+)'\)/.exec(html);
+		if (m) data.tourFlag = RegExp.$1;
+
+		return data;
 	}
 }
 
@@ -895,6 +914,7 @@ function entryPoint() {
 	if (path == "/otsweb/order/querySingleAction.do") {
 		if (location.search == "?method=init" && document.getElementById("submitQuery")) {
 			unsafeInvoke(initTicketQuery);
+			unsafeInvoke(initDirectSubmitOrder);
 		}
 		if (location.search == "?method=submutOrderRequest") {
 			unsafeInvoke(initSubmitOrderQuest);
@@ -903,6 +923,7 @@ function entryPoint() {
 	if (path == "/otsweb/order/myOrderAction.do") {
 		if (location.search.indexOf("method=resign") != -1 && document.getElementById("submitQuery")) {
 			unsafeInvoke(initTicketQuery);
+			unsafeInvoke(initDirectSubmitOrder);
 		}
 	}
 	if (path == "/otsweb/order/confirmPassengerAction.do") {
@@ -1530,18 +1551,19 @@ function initTicketQuery() {
 	var autoBook = false;
 	//初始化表单
 	var form = $("form[name=querySingleForm] .cx_from:first");
-	form.find("tr:last").after("<tr class='append_row'><td colspan='9'><label><input type='checkbox' id='keepinfo' checked='checked' />记住信息</label> <label><input checked='checked' type='checkbox' id='autoRequery' />自动重新查询</label>，查询周期(S)：<input type='text' value='6' size='4' id='refereshInterval' style='text-align:center;' />(不得小于6) " +
+	form.find("tr:last").after("<tr class='append_row'><td colspan='9' id='queryFunctionRow'><label><input type='checkbox' id='keepinfo' checked='checked' />记住信息</label> <label><input checked='checked' type='checkbox' id='autoRequery' />自动重新查询</label>，查询周期(S)：<input type='text' value='6' size='4' id='refereshInterval' style='text-align:center;' />(不得小于6) " +
 		"<label><input type='checkbox' checked='checked' id='chkAudioOn'>声音提示</label> <input type='button' id='chkSeatOnly' value='仅座票' class='lineButton' /> <input type='button' id='chkSleepOnly' value='仅卧铺' class='lineButton' />" +
 		"<input type='button' id='enableNotify' onclick='window.webkitNotifications.requestPermission();' value='请点击以启用通告' style='line-height:25px;padding:5px;' /> <span id='refreshinfo'>已刷新 0 次，最后查询：--</span> <span id='refreshtimer'></span></td></tr>" +
 		"<tr class='append_row'><td colspan='9'><input type='checkbox' checked='checked' id='chkAudioLoop'>声音循环</label>" +
 		"<span style='font-weight:bold;margin-left:10px;color:blue;'><label><input type='checkbox' id='chkAutoResumitOrder' checked='checked' />预定失败时自动重试</label></span>" +
 		"<span style='font-weight:bold;margin-left:10px;color:blue;'><label><input type='checkbox' id='chkAutoRequery' checked='checked' />查询失败时自动重试</label></span>" +
-		"<span style='font-weight:bold;margin-left:10px;color:red;'><label><input type='checkbox' id='chkFilterNonBookable' />过滤不可预订的车次</label></span>" +
+		"</td></tr>" +
+		"<tr><td id='filterFunctionRow' colspan='9'>" +
+		"<span style='font-weight:bold;color:red;'><label><input type='checkbox' id='chkFilterNonBookable' />过滤不可预订的车次</label></span>" +
 		"<span style='font-weight:bold;margin-left:10px;color:red;'><label><input type='checkbox' id='chkFilterNonNeeded' />过滤不需要的席别</label></span>" +
-		"<span style='font-weight:bold;margin-left:10px;color:blue;display:none;'><label><input disabled='disabled' type='checkbox' id='chkAutoPreOrder' />自动预定</label></span>" +
 		"<span style='font-weight:bold;margin-left:10px;color:blue;display: none;'><label><input disabled='disabled' type='checkbox' id='chkFilterByTrain' />开启按车次过滤</label></span>" +
-		"<a href='javascript:;' class='configLink' style='font-weight:bold; color:purple;'>【设置】</a></td></tr>" +
-		"<tr><td colspan='9'><input style='line-height:25px;padding:5px;' disabled='disabled' type='button' value='停止声音' id='btnStopSound' /><input style='line-height:25px;padding:5px;' disabled='disabled'  type='button' value='停止刷新' id='btnStopRefresh' /><span style='margin-left:20px;color:purple;font-weight:bold;' id='serverMsg'></span></td> </tr>"
+		"</td></tr>" +
+		"<tr><td colspan='9' id='opFunctionRow'><input style='line-height:25px;padding:5px;' disabled='disabled' type='button' value='停止声音' id='btnStopSound' /><input style='line-height:25px;padding:5px;' disabled='disabled'  type='button' value='停止刷新' id='btnStopRefresh' /><input style='line-height:25px;padding:5px;' type='button' value='设置' id='configLink' /><span style='margin-left:20px;color:purple;font-weight:bold;' id='serverMsg'></span></td> </tr>"
 	);
 
 	if (!window.Audio) {
@@ -1624,7 +1646,7 @@ function initTicketQuery() {
 	});
 
 	extrahtml.push("</td></tr>\
-<tr class='fish_sep'><td style='text-align:center;' colspan='4'>12306.CN 订票助手 by iFish(木鱼) | <a href='http://t.qq.com/ccfish/' target='_blank' style='color:blue;'>腾讯微博</a> | <a href='http://www.fishlee.net/soft/44/' style='color:blue;' target='_blank'>助手主页</a> | <a href='http://www.fishlee.net/Discussion/Index/44' target='_blank'>反馈BUG</a> | <a style='font-weight:bold;color:red;' href='http://www.fishlee.net/honor/index.html' target='_blank'>捐助作者</a> | 版本 v" + window.helperVersion + "，许可于 <strong>" + utility.regInfo.name + "，类型 - " + utility.regInfo.typeDesc + "</strong> 【<a href='javascript:;' class='reSignHelper'>重新注册</a>】</td></tr>\
+<tr class='fish_sep'><td style='text-align:center;' colspan='4'>12306.CN 订票助手 by iFish(木鱼) | <a href='http://t.qq.com/ccfish/' target='_blank' style='color:blue;'>腾讯微博</a> | <a href='http://www.fishlee.net/soft/44/' style='color:blue;' target='_blank'>助手主页</a> | <a href='http://www.fishlee.net/Discussion/Index/44' target='_blank'>反馈BUG</a> | <a style='font-weight:bold;color:red;' href='http://www.fishlee.net/soft/44/donate.html' target='_blank'>捐助作者</a> | 版本 v" + window.helperVersion + "，许可于 <strong>" + utility.regInfo.name + "，类型 - " + utility.regInfo.typeDesc + "</strong> 【<a href='javascript:;' class='reSignHelper'>重新注册</a>】</td></tr>\
 		</table></div></div></div>");
 
 	$("body").append(extrahtml.join(""));
@@ -1859,6 +1881,8 @@ function initTicketQuery() {
 	//默认的行检测函数
 	checkTicketsQueue.push(function () {
 		var trainNo = getTrainNo(this);
+
+		this.attr("tcode", trainNo);
 		//黑名单过滤
 		if (document.getElementById("swBlackList").checked) {
 			for (var i = 0; i < blackListDom.options.length; i++) {
@@ -1896,10 +1920,11 @@ function initTicketQuery() {
 		var result = 0;
 		var row = this;
 		$.each(checkTicketsQueue, function () {
-			result = this.call(row, result) || result;
+			result = this.call(row, result);
 
 			return result != 0;
 		});
+
 		return result;
 	}
 
@@ -2044,8 +2069,6 @@ function initTicketQuery() {
 	utility.reloadPrefs($("tr.append_row"), "ticket_query");
 	//#endregion
 
-	//---3.2中新增的功能---
-
 	//#region 时间快捷修改
 	(function () {
 		var datebox = $("table.cx_from tr:eq(0) td:eq(5), table.cx_from tr:eq(1) td:eq(3)");
@@ -2071,7 +2094,8 @@ function initTicketQuery() {
 		for (var i = 0; i < 20; i++) {
 			now = utility.addTimeSpan(now, 0, 0, 1, 0, 0, 0);
 			html.push("<label style='margin-right:16px;'><input type='checkbox' value='" + utility.formatDate(now) + "' cindex='" + i + "' />" + utility.formatDateShort(now) + "</label>");
-			if ((i + 1) % 10 == 0) html.push("<br />");
+			if ((i + 1) % 10 == 0)
+				html.push("<br />");
 		}
 		autoChangeDateList.html(html.join(""));
 		$("#autoChangeDate").change(function () {
@@ -2158,7 +2182,10 @@ function initTicketQuery() {
 		var html = [];
 		html.push("<tr class='caption'><td colspan='4'>自动添加乘客 （加入此列表的乘客将会自动在提交订单的页面中添加上，<strong>最多选五位</strong>）</td></tr>");
 		html.push("<tr class='fish_sep'><td id='passengerList' colspan='4'><span style='color:gray; font-style:italic;'>联系人列表正在加载中，请稍等...</span></td></tr>");
-		html.push("<tr class='fish_sep'><td class='name'>自动选定席别</td><td><select id='preSelectSeat'></select><select id='preselectseatlevel'></select>(作者无法保证上下铺选择一定有效)</td><td class='name'><!--<label><input type='checkbox' id='autoorder'/>自动提交订单</label>--></td><td><!--<p><img id='randCode' src='https://dynamic.12306.cn/otsweb/passCodeAction.do?rand=randp' /> <input size='4' type='text' id='randCodeTxt' /></p><p><span style='color:red;'>警告！选中后请务必输入验证码！请在使用此功能时仔细<br />阅读弹框提示的说明，否则可能会给你带来无法预计的损失！</span></p>--></td></tr>");
+		html.push("<tr class='fish_sep'><td class='name'>自动选定席别</td><td><select id='preSelectSeat'></select><select id='preselectseatlevel'></select>(作者无法保证上下铺选择一定有效)</td><td class='name autoordertd'><label style='display:none;'><input type='checkbox' id='autoorder'/>自动提交订单</label></td><td class='autoordertd'><p style='display:none;'><img id='randCode' src='https://dynamic.12306.cn/otsweb/passCodeAction.do?rand=randp' /> <input size='4' type='text' id='randCodeTxt' /> （<span style='font-weight:bold;color:red；'>请务必阅读说明！</span>）</p></td></tr>");
+		html.push("<tr style='display:none;' id='autoordertip' class='fish_sep'><td class='name' style='color:red;'>警告</td><td colspan='3' style='color:red;'>");
+		html.push("<p>1. 自动提交订单使用的是自动预定的列表顺序，取第一个有效的车次自动提交订单！请确认设置正确；</p><p>2. 自动提交的席别和联系人请在上方选择，和预设的是一致的；</p><p>3. 请务必输入验证码！</p><p>4 作者无法保证自动提交是否会因为铁老大的修改失效，因此请务必同时使用<b>其它浏览器</b>手动提交订单！否则可能会造成您不必要的损失！</p>");
+		html.push("</td></tr>");
 
 		$("#helpertooltable tr:first").addClass("fish_sep").before(html.join(""));
 
@@ -2192,6 +2219,8 @@ function initTicketQuery() {
 		$("#autoorder").click(function () {
 			if (this.checked) alert("警告！选中将会启用自动下单功能，并取代自动预定功能，请输入验证码，当指定的车次中的指定席别可用时，助手将会为您全自动下单。\n\n请确认您设置了正确的车次和席别！\n\n但是，作者无法保证是否会因为铁道部的修改导致失效，请使用此功能的同时务必使用传统的手动下单以保证不会导致您的损失！");
 			$("#swAutoBook")[0].disabled = this.checked;
+			if (this.checked) $("#autoordertip").show();
+			else $("#autoordertip").hide();
 		});
 		//禁用自动预定
 
@@ -2231,7 +2260,7 @@ function initTicketQuery() {
 		html.push("<tr class='fish_sep'><td colspan='4'>");
 
 		var urls = [
-			["各始发站放票时间查询", "http://www.12306.cn/mormhweb/zxdt/tlxw_tdbtz26.html"]
+			["各始发站放票时间查询", "http://www.12306.cn/mormhweb/zxdt/tlxw_tdbtz53.html"]
 		];
 		$.each(urls, function () {
 			html.push("<div style='float:left;'><a href='" + this[1] + "' target='_blank'>" + this[0] + "</a></div>");
@@ -2271,6 +2300,151 @@ function initTicketQuery() {
 	})();
 
 	//#endregion
+
+	//#region 保存查询车次类型配置
+
+	(function () {
+		var ccTypeCheck = $("input:checkbox[name=trainClassArr]");
+		var preccType = (utility.getPref("cctype") || "").split("|");
+
+		ccTypeCheck.each(function () {
+			this.checked = $.inArray(this.value, preccType) != -1;
+		});
+		ccTypeCheck.click(function () {
+			utility.setPref("cctype", $.map(ccTypeCheck.filter(":checked"), function (v, i) {
+				return v.value;
+			}).join("|"));
+		});
+	})();
+
+	//#endregion
+
+	//#region 增加互换目标的功能
+
+	(function () {
+		var fromCode = $("#fromStation");
+		var from = $("#fromStationText");
+		var toCode = $("#toStation");
+		var to = $("#toStationText");
+
+		from.css("width", "55px").after("<input type='button' value='<->' class='lineButton' title='交换出发地和目的地' id='btnExchangeStation' />");
+		$("#btnExchangeStation").click(function () {
+			var f1 = fromCode.val();
+			var f2 = from.val();
+			fromCode.val(toCode.val());
+			from.val(to.val());
+			toCode.val(f1);
+			to.val(f2);
+		});
+	})();
+
+	//#endregion
+
+	//#region 要求发到站和终点站完全匹配
+
+	(function () {
+		var fromText = $("#fromStationText");
+		var toText = $("#toStationText");
+
+		$("#filterFunctionRow").append("<span style='font-weight:bold;color:red;margin-left:10px;'><label title='默认情况下，例如查找‘杭州’时，会包括‘杭州南’这个车站。勾选此选项，将会在搜索‘杭州’的时候，过滤那些不完全一致的车站，如‘杭州南’。'><input type='checkbox' id='closeFuseSearch'>过滤发到站或始发站不完全匹配的车次</label></span>");
+		if (utility.getPref("closeFuseSearch") == "1") document.getElementById("closeFuseSearch").checked = true;
+		$("#closeFuseSearch").change(function () {
+			utility.setPref("closeFuseSearch", this.checked ? 1 : 0);
+		});
+
+
+		function getStationName() {
+			var txt = $.trim(this.text()).split(/\s/);
+			return txt[0];
+		}
+
+		checkTicketsQueue.push(function (result) {
+			if (result == 0 || !document.getElementById("closeFuseSearch").checked) return result;
+
+			var fs = getStationName.call(this.find("td:eq(1)"));
+			var ts = getStationName.call(this.find("td:eq(2)"));
+
+			if (fs != fromText.val() || ts != toText.val()) {
+				return 0;
+			}
+			return result;
+		});
+	})();
+
+	//#endregion
+}
+
+//#endregion
+
+//#region 自动提交订单
+
+function initDirectSubmitOrder() {
+	return;
+
+	console.log("[INFO] initialize direct submit order.");
+	$("td.autoordertd").show();
+	var html = "<div id='fishSubmitFormStatus' class='outerBox' style='position:fixed;right:0px;bottom:-100px;'><div class='box'><div class='title'>自动提交订单中</div>\
+<div class='content' style='width:150px;'><ul id='tipScript'>\
+<li class='fish_clock' id='countEle' style='font-weight:bold;'>等待操作</li>\
+<li style='color:green;'><strong>操作信息</strong>：<span>休息中</span></li>\
+<li style='color:green;'><strong>最后操作时间</strong>：<span>--</span></li></div>\
+		</div></div>";
+
+	top.window.$("#fishSubmitFormStatus").remove();
+	top.window.$("body").append(html);
+
+	var tip = top.window.$("#tipScript li");
+	var counter = top.window.$("#countEle");
+	var status = top.window.$("#fishSubmitFormStatus");
+	$("#autoorder")[0].disabled = false;
+
+	function setCurOperationInfo(running, msg) {
+		counter.removeClass().addClass(running ? "fish_running" : "fish_clock").html(msg || (running ? "正在操作中……" : "等待中……"));
+	}
+
+	function setTipMessage(msg) {
+		tip.eq(2).find("span").html(utility.getTimeInfo());
+		tip.eq(1).find("span").html(msg);
+	}
+
+	//窗口状态
+	var statusShown = false;
+	function showStatus() {
+		if (statusShown) return;
+		statusShown = true;
+		status.animate({ bottom: "0px" });
+	}
+	function hideStatus() {
+		if (!statusShown) return;
+		statusShown = false;
+		status.animate({ bottom: "-100px" });
+	}
+
+
+	$("#orderForm").submit(function () {
+		showStatus();
+		utility.notifyOnTop("开始自动提交预定订单！");
+		setCurOperationInfo(true, "正在自动提交订单");
+		var form = $(this);
+		utility.post(form.attr("action"), form.serialize(), "text", function (html) {
+			setTipMessage("正在分析内容");
+			getOrderFormInfo(html);
+		}, function () {
+			utility.notifyOnTop("提交预定请求发生错误，稍等重试！");
+			utility.delayInvoke(counter, function () { $("#orderForm").submit(); }, 2000);
+		});
+
+
+		return false;
+	});
+
+	function getOrderFormInfo(html) {
+		var data = utility.analyzeForm(html);
+		data["orderRequest.reserve_flag"] = "A";	//网上支付
+
+		console.log(data);
+
+	}
 }
 
 //#endregion
