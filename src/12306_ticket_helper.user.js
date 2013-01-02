@@ -98,6 +98,7 @@ function injectDom() {
 	html.push('<li tab="tabFaq">常见问题</li>');
 	html.push('<li tab="tabVersion">版本信息</li>');
 	html.push('<li tab="tabLog">运行日志</li>');
+	html.push('<li tab="tabLoginIE">登录到IE</li>');//获取登录到IE的代码 Add By XPHelper
 	html.push('</ul>');
 	html.push('<div class="tabContent tabLogin">');
 	html.push('<table>');
@@ -151,6 +152,8 @@ function injectDom() {
 	html.push('</tr>');
 	html.push('</table>');
 	html.push('</div><div class="tabLog tabContent"><div>下面是当前页面的记录。如果您的助手遇到功能上的问题，请全部复制后发成邮件给作者：ifish@fishlee.net 以便于我们解决问题。<span style="color:red;font-weight:bold;">请在发送前务必剔除记录中包含的个人隐私如密码等信息。</span></div><textarea id="runningLog" style="width:100%;height:200px;"></textarea></div>');
+	//获取登录到IE的代码 Add By XPHelper
+	html.push('<div class="tabLoginIE tabContent"><div>将以下代码复制到IE浏览器的地址栏，然后敲回车，再刷新即可登录。</div><textarea id="LoginIECode" style="width:100%;height:200px;"></textarea></div>');
 	html.push('<div class="control">');
 	html.push('<input type="button" class="close_button" value="关闭" />');
 	html.push('</div>');
@@ -286,6 +289,19 @@ var utility = {
 		$("#runningLog").val(log.join("\r\n----------------------------------\r\n"));
 
 		utility.showOptionDialog("tabLog");
+	},
+	//获取登录到IE的代码 Add By XPHelper
+	showLoginIE: function () {
+		var strCookie=document.cookie;
+		var arrCookie=strCookie.split("; ");
+		var IECode="javascript:";
+		for(var i=0;i<arrCookie.length;i++){
+			var arr=arrCookie[i].split("=");
+			IECode+="document.cookie=\"" + arr[0] + "=" + arr[1] + "\";"
+		}
+		IECode+="void(0);";
+		$("#LoginIECode").val(IECode);
+		utility.showOptionDialog("tabLoginIE");
 	},
 	formatData: function (data) {
 		if (!data) return "(null)";
@@ -773,6 +789,10 @@ var utility = {
 			c.log.response = b.responseText;
 		});
 	},
+	//获取登录到IE的代码 Add By XPHelper
+	enableLoginIE: function () {
+		$("body").append('<button style="width:150px;position:fixed;right:0px;top:0px;height:35px;" onclick="utility.showLoginIE();">获取登录到IE的代码</button>');
+	},
 	analyzeForm: function (html) {
 		var data = {};
 
@@ -936,12 +956,16 @@ function entryPoint() {
 		}
 		if (location.search.indexOf("?method=payOrder") != -1) {
 			unsafeInvoke(initPagePayOrder);
+			//获取登录到IE的代码 Add By XPHelper
+			unsafeInvoke(utility.enableLoginIE);
 		}
 	}
 	if (path == "/otsweb/order/myOrderAction.do") {
 		if (location.search.indexOf("?method=laterEpay") != -1 || location.search.indexOf("?method=queryMyOrderNotComplete") != -1) {
 			unsafeInvoke(initNotCompleteOrderPage);
 			unsafeInvoke(initPayOrder);
+			//获取登录到IE的代码 Add By XPHelper
+			unsafeInvoke(utility.enableLoginIE);
 		}
 	}
 	if (path == "/otsweb/main.jsp" || path == "/otsweb/") {
