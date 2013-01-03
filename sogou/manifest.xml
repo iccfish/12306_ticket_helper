@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<extension>
+	<id>net.fishlee.tickethelperfor12306</id>
+	<name>12306订票助手</name>
+	<show_icon>true</show_icon>
+	<description>帮您在极速模式下订票的助手</description>
+	<version>3.8.0</version>
+	<request_api_version>1</request_api_version>
+	<author>木鱼(www.fishlee.net)</author>
+	<background page="background.html" />
+	<content_scripts>
+		<content_script core_type="webkit" all_frames="true">
+			<match>http://http://www.12306.cn/mormhweb/kyfw/*</match>
+			<match>https://http://www.12306.cn/mormhweb/kyfw/*</match>
+			<match>http://dynamic.12306.cn/*</match>
+			<match>https://dynamic.12306.cn/*</match>
+			<js>12306_ticket_helper.user.js</js>
+		</content_script>
+		<content_script core_type="trident">
+			<match>http://*.12306.cn/*</match>
+			<match>https://*.12306.cn/*</match>
+			<js>12306_ticket_helper.tip.js</js>
+		</content_script>
+	</content_scripts>
+</extension>
