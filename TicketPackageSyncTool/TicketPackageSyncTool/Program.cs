@@ -181,7 +181,7 @@ namespace TicketPackageSyncTool
 				System.IO.File.ReadAllText(manifest, System.Text.Encoding.UTF8),
 				@"<version>\s*[\d\.]+\s*</version>",
 				"<version>" + version + "</version>")
-				, System.Text.Encoding.UTF8);
+				, new System.Text.UTF8Encoding(false, true));
 
 			//打包
 			Console.WriteLine("[INFO] 正在打包搜狗浏览器扩展....");
