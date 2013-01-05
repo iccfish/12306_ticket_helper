@@ -116,7 +116,7 @@ namespace TicketPackageSyncTool
 				dest.Add(lines[index++]);
 			}
 			//加入记录
-			dest.Add("**版本 " + _pluginVersion + "**");
+			dest.Add("**版本：" + _pluginVersion + "**");
 			foreach (var item in _updates)
 			{
 				var u = item.Trim(new[] { ' ', '\t', '\'', '"', ';', ',' });
