@@ -215,6 +215,8 @@ namespace TicketPackageSyncTool
 		{
 			//源文件目录
 			var src = System.IO.Path.Combine(_root, "src_lb");
+			if (!System.IO.Directory.Exists(src)) return;
+
 			//查找KEY文件
 			var pem = System.IO.Directory.GetFiles(_root, "*.pem").FirstOrDefault() ?? "";
 
@@ -236,6 +238,8 @@ namespace TicketPackageSyncTool
 		{
 			//源文件目录
 			var src = System.IO.Path.Combine(_root, "src_tb");
+			if (!System.IO.Directory.Exists(src)) return;
+
 			//查找KEY文件
 			var pem = System.IO.Directory.GetFiles(_root, "*.pem").FirstOrDefault() ?? "";
 
