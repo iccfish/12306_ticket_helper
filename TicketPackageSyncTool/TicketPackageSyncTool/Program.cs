@@ -198,7 +198,7 @@ namespace TicketPackageSyncTool
 			//源文件目录
 			var src = System.IO.Path.Combine(_root, "src");
 			Console.WriteLine("[INFO] 正在同步遨游扩展版本号");
-			ModifyManifestVersion(System.IO.Path.Combine(src, "def.json"), version);
+			ModifyManifestVersion(System.IO.Path.Combine(src, "def.json"), version, new System.Text.UnicodeEncoding(false, true));
 
 			//工具目录
 			var tool = System.IO.Path.Combine(_root, "tools\\mxpacker.exe");
