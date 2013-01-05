@@ -1,0 +1,44 @@
+﻿[
+  {
+    "type": "extension",
+    "frameworkVersion":"1.0.1",
+	"version": "3.8.0",
+    "guid": "{6bed16f5-90c6-4c7c-aa0e-3fd71b3c5f6a}",
+	"name": "12306cnTicketHelper",
+    "icon": "icon",
+    "title": {
+        "en": "12306.CN Ticket Assistant",
+        "zh-cn": "12306.CN 订票助手",
+    },
+    'author':{
+		'name':'iFish (木鱼)',
+		'email':'ifish@fishlee.net'
+    },
+    'description':{
+		'zh-cn':'(没有任何界面和按钮，安装后请直接进入铁道部官方订票网站，请注意切换浏览器模式，如果遇到任何问题，请在本助手官网上查找问题的原因) 12306 订票助手 for Chrome&Firefox 的遨游3移植版，帮助你更方便地在12306.cn上订购火车票的助手扩展。请在Webkit（高速）模式下订票。',
+		'en':'A portion of 12306.cn ticket assistant for maxthon3, to help you order ticket on 12306 more convenience. Please order ticket under webkit mode(high speed mode).'
+    },
+    'permissions':{
+		'httpRequest':[
+			'*.12306.cn',
+			'*.fishlee.net'
+		],
+		'notifications':true
+    },
+    "actions": [{
+        "type": "script",
+		"name": "taEntryPoint",
+		"icon": "icon",
+		'title': '主脚本执行入口',
+        "entryPoints": ["doc_end"],
+		"include": [
+			"dynamic.12306.cn",
+			"www.12306.cn"
+		],
+		"js": [
+			"12306_ticket_helper.user.js"
+		],
+        "includeFrames":true
+    }]
+  }
+]

@@ -4,3 +4,11 @@ mxaddon*
 *.zip
 google Store
 *.pem
+obj/
+bin/
+*.suo
+*.dotsettings
+*.user
+[pP]ublish/
+sogou/12306_ticket_helper.user.js
+webstore/12306_ticket_helper.user.js
