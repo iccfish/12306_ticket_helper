@@ -870,7 +870,7 @@ var isChrome = navigator.userAgent.indexOf("AppleWebKit") != -1;
 var isFirefox = navigator.userAgent.indexOf("Firefox") != -1;
 
 if (location.host == "dynamic.12306.cn" || (location.host == "www.12306.cn" && location.protocol == "https:")) {
-	if (navigator.userAgent.indexOf("TaoBrowser") == -1) {
+	if (navigator.userAgent.indexOf("LBBROWSER") == -1) {
 		alert("很抱歉，这是猎豹浏览器专版12306订票助手，非猎豹浏览器请使用通用版。点击确定查看更多。");
 		window.open("http://www.fishlee.net/soft/44/download.html");
 	}
