@@ -667,7 +667,7 @@ var utility = {
 		sn = sn || utility.getPref("helper.regSn") || utility.getCookie("helper.regSn");
 		if (!name && sn) return utility.verifySn2(skipTimeVerify, sn);
 
-		if (!name || !sn) {
+		if (name || sn) {
 			utility.setSnInfo("", "");
 			alert("您好，为精简助手运行代码量，V1版序列号已经失效，请重新注册。给您带来的不便，作者表示非常抱歉。");
 			window.open("http://www.fishlee.net/apps/cn12306/getnormalregkey");
