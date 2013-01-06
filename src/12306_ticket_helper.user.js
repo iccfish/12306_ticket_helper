@@ -19,12 +19,10 @@
 // @contributionAmount	￥5.00
 // ==/UserScript==
 
-var version = "3.8.2";
+var version = "3.8.4";
 var updates = [
-	"增加对取消订单后跳转的页面的自动的支持",
-	"预先选择席别后增加自动调整查询结果中的席别过滤选项",
-	"音乐地址同时提供HTTP和HTTPS的（但是好像依然不稳定，可以提供HTTPS协议音乐地址的同学请联系作者）",
-	"其它相关逻辑及提示上的修正"
+	"登录页面增加起售日期提示和查询",
+	"修正注册后无法刷新整页(框架时)"
 ];
 
 var faqUrl = "http://www.fishlee.net/soft/44/faq.html";
@@ -169,7 +167,12 @@ function injectDom() {
 		} else {
 			utility.setSnInfo("", sn);
 			alert("注册成功, 请刷新浏览器。\n注册给 - " + rt.name + " , 注册类型 - " + rt.typeDesc.replace(/<[^>]*>/gi, ""));
-			top.location.reload();
+
+			try {
+				top.location.reload();
+			} catch (e) {
+				alert("权限不足无法刷新页面， 请手动刷新当前页！");
+			}
 		}
 	});
 	$("#unReg, a.reSignHelper").live("click", function () {
@@ -2923,6 +2926,35 @@ function initLogin() {
 		e = e || event;
 		if (e.charCode == 13 || $("#randCode").val().length == 4) relogin();
 	});
+
+	//#region 起售时间提示和查询
+
+	function addDays(count) {
+		return new Date(this.getFullYear(), this.getMonth(), this.getDate() + count);
+	}
+	
+	var curDate = new Date();
+
+	var html = ["<li style='font-weight:bold; color:blue;'><u>助手提示</u>：网上和电话订票提前20天，本日起售【<u>"];
+	html.push(utility.formatDate(addDays.call(curDate, 19)));
+	html.push("</u>】日车票；代售点和车站提前18天，本日起售【<u>");
+	html.push(utility.formatDate(addDays.call(curDate, 17)));
+	html.push("</u>】日车票。<br />【<a href='javascript:;' id='querySaleDate'>根据乘车日期推算起售日期</a>】【<a href='http://www.12306.cn/mormhweb/zxdt/tlxw_tdbtz53.html' target='_blank'>以相关公告、车站公告为准</a>】");
+
+	$("div.enter_from ul").append(html.join(""));
+
+	$("#querySaleDate").click(function () {
+		var date = prompt("请输入您要乘车的日期，如：2013-02-01");
+		if (!date) return;
+
+		if (!/(\d{4})[-/]0?(\d{1,2})[-/]0?(\d{1,2})/.exec(date)) {
+			alert("很抱歉未能识别日期");
+		}
+		date = new Date(parseInt(RegExp.$1), parseInt(RegExp.$2) - 1, parseInt(RegExp.$3));
+		alert("您查询的乘车日期是：" + utility.formatDate(date) + "\n\n互联网、电话起售日期是：" + utility.formatDate(addDays.call(date, -19)) + "\n车站、代售点起售日期是：" + utility.formatDate(addDays.call(date, -17)) + "\n\n以上结果仅供参考。");
+	});
+
+	//#endregion
 }
 
 //#endregion
