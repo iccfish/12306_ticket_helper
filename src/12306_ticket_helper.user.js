@@ -666,14 +666,31 @@ var utility = {
 		name = name || utility.getPref("helper.regUser") || utility.getCookie("helper.regUser");
 		sn = sn || utility.getPref("helper.regSn") || utility.getCookie("helper.regSn");
 		if (!name && sn) return utility.verifySn2(skipTimeVerify, sn);
+		if (!name || !sn) return { result: -4, msg: "未注册" };
 
-		if (name || sn) {
-			utility.setSnInfo("", "");
-			alert("您好，为精简助手运行代码量，V1版序列号已经失效，请重新注册。给您带来的不便，作者表示非常抱歉。");
-			window.open("http://www.fishlee.net/apps/cn12306/getnormalregkey");
+		utility.setSnInfo(name, sn);
+
+		var args = sn.split(',');
+		if (!skipTimeVerify) {
+			if ((new Date() - args[0]) / 60000 > 5) {
+				return { result: -1, msg: "序列号注册已失效" };
+			}
 		}
+		var dec = [];
+		var encKey = args[0] + args[1];
+		var j = 0;
+		for (var i = 0; i < args[2].length; i += 4) {
+			dec.push(String.fromCharCode(parseInt(args[2].substr(i, 4), 16) ^ encKey.charCodeAt(j)));
+			j++;
+			if (j >= encKey.length) j = 0;
+		}
+		var data = dec.join("");
+		data = { result: null, type: data.substring(0, 4), name: data.substring(4) };
+		data.result = data.name == name ? 0 : -3;
+		data.msg = data.result == 0 ? "成功验证" : "注册无效"
+		data.typeDesc = data.type == "NRML" ? "正式版" : (data.type == "GROP" ? "内部版, <span style='color:blue;'>感谢您参与我们之中</span>!" : "<span style='color:red;'>捐助版, 非常感谢您的支持</span>!");
 
-		return { result: -1, msg: "注册码已失效， 请重新申请" };
+		return data;
 	},
 	verifySn2: function (skipTimeVerify, data) {
 		data = utility.trim(data);
