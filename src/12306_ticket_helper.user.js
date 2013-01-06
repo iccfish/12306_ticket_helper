@@ -1,4 +1,5 @@
-﻿// ==UserScript==
+﻿
+// ==UserScript==
 // @name 			12306.CN 订票助手 For Firefox&Chrome
 // @namespace		http://www.u-tide.com/fish/
 // @author			iFish@FishLee.net <ifish@fishlee.net> http://www.fishlle.net/
@@ -11,7 +12,7 @@
 // @require			http://lib.sinaapp.com/js/jquery/1.8.3/jquery.min.js
 // @icon			http://www.12306.cn/mormhweb/images/favicon.ico
 // @run-at			document-idle
-// @version 		3.8.2
+// @version 		3.8.5
 // @updateURL		http://www.fishlee.net/Service/Download.ashx/44/47/12306_ticket_helper.user.js
 // @supportURL		http://www.fishlee.net/soft/44/
 // @homepage		http://www.fishlee.net/soft/44/
@@ -19,10 +20,13 @@
 // @contributionAmount	￥5.00
 // ==/UserScript==
 
-var version = "3.8.4";
+var version = "3.8.5";
 var updates = [
 	"登录页面增加起售日期提示和查询",
-	"修正注册后无法刷新整页(框架时)"
+	"增加保持在线功能（即使不刷新只是挂着也会每隔一分钟提交一次请求防止掉线）",
+	"新增服务器时间显示以及本地时间和服务器差额时间显示",
+	"修正注册后无法刷新整页(框架时)",
+	"修正谷歌浏览器下安装脚本版本时显示版本号不正确"
 ];
 
 var faqUrl = "http://www.fishlee.net/soft/44/faq.html";
@@ -208,7 +212,7 @@ function injectDom() {
 		utility.setPref("helperVersion", window.helperVersion);
 		utility.showOptionDialog("tabVersion");
 
-		alert("【重要提示】\n========================\n自2013年1月4日起预售期改为20天，请提前做好买票准备。\n\n使用助手提供的各项功能前，请务必做好演练，以避免不熟悉给您带来损失。\n\n" +
+		alert("【重要提示】\n========================\n自2013年1月4日起预售期改为20天，请提前做好买票准备。\n\n使用助手提供的各项功能前，请务必做好演练，以避免不熟悉给您带来损失。助手只能帮你减轻一点劳动，请务必耐心哦。\n\n" +
 			"任何时候回家都是一种永恒的夙愿，祝大家都能安全快捷地回家 :-)"
 			);
 	}
@@ -477,6 +481,12 @@ var utility = {
 		var d = d.getDate();
 
 		return (mm > 9 ? mm : "0" + mm) + "-" + (d > 9 ? d : "0" + d);
+	},
+	formatTime: function (d) {
+		function padTo2Digit(digit) {
+			return digit < 10 ? '0' + digit : digit;
+		}
+		return utility.formatDate(d) + " " + padTo2Digit(d.getHours()) + ":" + padTo2Digit(d.getMinutes()) + ":" + padTo2Digit(d.getSeconds());
 	},
 	addTimeSpan: function (date, y, mm, d, h, m, s) {
 		/// <summary>对指定的日期进行偏移</summary>
@@ -1657,7 +1667,7 @@ function initTicketQuery() {
 
 	//#region 显示额外的功能区
 	var extrahtml = [];
-	extrahtml.push("<div class='outerbox' id='helperbox' style='width:auto;'><div class='box'><div class='title'>辅助工具 [<a href='#querySingleForm'>返回订票列表</a>]</div>\
+	extrahtml.push("<div class='outerbox' id='helperbox' style='width:auto;'><div class='box'><div class='title' style='position:relative;'>辅助工具 [<a href='#querySingleForm'>返回订票列表</a>] <div style='color:#066DFF;position:absolute;background-color: #eee;border: 1px solid purple;right:0px;top:0px;padding:2px;margin:2px;' title='时间依赖于本地时间保持在线刷新时间即时计算。受限于您的网速，并不十分准确（需要扣除网速的影响）' id='servertime'>服务器时间：<strong>----</strong>，本地时间：<strong>----</strong>，服务器比本地 <strong>----</strong></div></div>\
 <table id='helpertooltable' style='width:100%;'><colgroup><col style='width:100px;' /><col style='width:370px;' /><col style='width:100px;' /><col style='width:auto;' /></colgroup><tr class='caption'><td colspan='4'>以下是车次过滤以及自动预定列表。要将车次加入下列的列表，请在上面查询的结果中，将鼠标移动到车次链接上，并点击出现的提示框中的过滤或自动预定按钮。</td></tr>\
 		<tr class='fish_sep'><td><label><input type='checkbox' id='swBlackList' checked='checked' name='swBlackList' /><strong>车次黑名单</strong></label><br /><span style='color:gray;'>指定车次将会<br />被从列表中过<br />滤，不再出现</span></td><td><select id='blackList' style='width:200px;height:100px;' size='10' multiple='multiple'></select><input type='button' value='增加' class='btn_list_add' /><input type='button' value='删除' class='btn_list_delete' /><input type='button' class='btn_list_clear' value='清空' /></td>\
 		<td><label><input type='checkbox' id='swAutoBook' name='swAutoBook' checked='checked' /><strong>自动预定</strong></label><br /><span style='color:gray;'>指定车次可用<br />时，将会自动<br />进入预定页面</td><td><select id='autoBookList' size='10' style='width:200px;height:100px;' multiple='multiple'></select><input type='button' value='增加' class='btn_list_add' /><input type='button' class='btn_list_delete' value='删除' /><input type='button' class='btn_list_clear' value='清空' /></td></tr>\
@@ -2426,6 +2436,52 @@ function initTicketQuery() {
 
 	//#endregion
 
+	//#region 保持在线
+
+	var time_offset = null;
+
+	(function () {
+		$("#helpertooltable tr:last").before("<tr class='fish_sep'><td class='name'>保持在线</td><td colspan='3'>助手每隔一分钟会帮你刷新在线状态以避免长时间挂机导致掉线。最后刷新时间：<strong id='lastonlinetime'>无</strong></td></tr>");
+		var label = $("#lastonlinetime");
+
+		function online() {
+			var serverTime = null;
+			utility.post("/otsweb/main.jsp", null, "text", function (data, status, xhr) {
+				serverTime = new Date(xhr.getResponseHeader("Date"));
+				time_offset = new Date() - serverTime;
+
+				label.html(utility.formatTime(serverTime));
+			});
+		}
+
+		online();
+		setInterval(online, 60 * 1000);
+	})();
+
+	//显示本地时间和服务器时间
+	(function () {
+		var dom = $("#servertime strong");
+
+		function display() {
+			if (time_offset === null) return;
+
+			var now = new Date();
+			var server = new Date();
+			server.setTime(now.getTime() - time_offset);
+
+			dom.eq(0).html(utility.formatTime(server));
+			dom.eq(1).html(utility.formatTime(now));
+			dom.eq(2).html((time_offset < 0 ? "快" : "慢") + (time_offset / 1000) + "秒");
+		}
+
+		setInterval(display, 1000);
+		display();
+	})();
+
+	//#endregion
+
+
+
 	utility.reloadPrefs($("tr.append_row"), "ticket_query");
 }
 
@@ -2728,7 +2784,7 @@ function initLogin() {
 	html.push("<li style='list-style:disc inside;'><a href='https://dynamic.12306.cn/otsweb/' target='blank'>https://dynamic.12306.cn/otsweb/</a></li><li style='list-style:disc inside;'><a href='http://dynamic.12306.cn/otsweb/' target='blank'>http://dynamic.12306.cn/otsweb/</a></li>");
 	html.push("</ul></td><td><ol>");
 	$.each([
-		["http://www.fishlee.net/soft/44/12306faq.html", "订票和助手的常见问题"],
+		["http://www.fishlee.net/soft/44/12306faq.html", "订票的常见问题&指南"],
 		["http://www.fishlee.net/soft/44/faq.html", "助手运行的常见问题"]
 	], function (i, n) {
 		html.push("<li style='list-style:disc inside;'><a href='" + n[0] + "' target='blank'>" + (n[1] || n[0]) + "</a></li>");
@@ -2932,7 +2988,7 @@ function initLogin() {
 	function addDays(count) {
 		return new Date(this.getFullYear(), this.getMonth(), this.getDate() + count);
 	}
-	
+
 	var curDate = new Date();
 
 	var html = ["<li style='font-weight:bold; color:blue;'><u>助手提示</u>：网上和电话订票提前20天，本日起售【<u>"];
