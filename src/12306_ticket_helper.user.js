@@ -12,7 +12,7 @@
 // @require			http://lib.sinaapp.com/js/jquery/1.8.3/jquery.min.js
 // @icon			http://www.12306.cn/mormhweb/images/favicon.ico
 // @run-at			document-idle
-// @version 		3.8.5
+// @version 		3.8.6
 // @updateURL		http://www.fishlee.net/Service/Download.ashx/44/47/12306_ticket_helper.user.js
 // @supportURL		http://www.fishlee.net/soft/44/
 // @homepage		http://www.fishlee.net/soft/44/
@@ -20,13 +20,14 @@
 // @contributionAmount	￥5.00
 // ==/UserScript==
 
-var version = "3.8.5";
+var version = "3.8.6";
 var updates = [
 	"登录页面增加起售日期提示和查询",
 	"增加保持在线功能（即使不刷新只是挂着也会每隔一分钟提交一次请求防止掉线）",
 	"新增服务器时间显示以及本地时间和服务器差额时间显示",
 	"修正注册后无法刷新整页(框架时)",
-	"修正谷歌浏览器下安装脚本版本时显示版本号不正确"
+	"修正谷歌浏览器下安装脚本版本时显示版本号不正确",
+	"(3.8.6) 修正淘宝浏览器等专版中的反复弹注册失败的提示"
 ];
 
 var faqUrl = "http://www.fishlee.net/soft/44/faq.html";
@@ -666,9 +667,12 @@ var utility = {
 		sn = sn || utility.getPref("helper.regSn") || utility.getCookie("helper.regSn");
 		if (!name && sn) return utility.verifySn2(skipTimeVerify, sn);
 
-		utility.setSnInfo("", "");
-		alert("您好，为精简助手运行代码量，V1版序列号已经失效，请重新注册。给您带来的不便，作者表示非常抱歉。");
-		window.open("http://www.fishlee.net/apps/cn12306/getnormalregkey");
+		if (!name || !sn) {
+			utility.setSnInfo("", "");
+			alert("您好，为精简助手运行代码量，V1版序列号已经失效，请重新注册。给您带来的不便，作者表示非常抱歉。");
+			window.open("http://www.fishlee.net/apps/cn12306/getnormalregkey");
+		}
+
 		return { result: -1, msg: "注册码已失效， 请重新申请" };
 	},
 	verifySn2: function (skipTimeVerify, data) {
