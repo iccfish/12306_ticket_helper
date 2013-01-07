@@ -12,7 +12,7 @@
 // @require			http://lib.sinaapp.com/js/jquery/1.8.3/jquery.min.js
 // @icon			http://www.12306.cn/mormhweb/images/favicon.ico
 // @run-at			document-idle
-// @version 		3.8.6
+// @version 		3.9.0
 // @updateURL		http://www.fishlee.net/Service/Download.ashx/44/47/12306_ticket_helper.user.js
 // @supportURL		http://www.fishlee.net/soft/44/
 // @homepage		http://www.fishlee.net/soft/44/
@@ -20,14 +20,12 @@
 // @contributionAmount	￥5.00
 // ==/UserScript==
 
-var version = "3.8.6";
+var version = "3.9.0";
 var updates = [
-	"登录页面增加起售日期提示和查询",
-	"增加保持在线功能（即使不刷新只是挂着也会每隔一分钟提交一次请求防止掉线）",
-	"新增服务器时间显示以及本地时间和服务器差额时间显示",
-	"修正注册后无法刷新整页(框架时)",
-	"修正谷歌浏览器下安装脚本版本时显示版本号不正确",
-	"(3.8.6) 修正淘宝浏览器等专版中的反复弹注册失败的提示"
+	"优化自动预定流程，提供全新的席别优先判定，允许优先选择级别",
+	"为Firefox启用全新的自动更新流程，检测升级更及时准确方便",
+	"增强谷歌浏览器下的版本升级检测，提高稳定性",
+	"修正服务器时间和本地时间差的负数显示问题"
 ];
 
 var faqUrl = "http://www.fishlee.net/soft/44/faq.html";
@@ -93,7 +91,7 @@ function injectDom() {
 	html.push('<div id="fishOption" style="width: 600px; display:none; box-shadow: 7px 7px 10px #A67EBC;">');
 	html.push('<div class="innerTab">');
 	html.push('<ul class="tabNav" default="tabVersion">');
-	html.push('<li tab="tabLogin">登录设置</li>');
+	html.push('<li tab="tabLogin">常规设置</li>');
 	html.push('<li tab="tabReg">注册</li>');
 	html.push('<li tab="tabFaq">常见问题</li>');
 	html.push('<li tab="tabVersion">版本信息</li>');
@@ -108,7 +106,7 @@ function injectDom() {
 	html.push('<td><input type="text" name="login.retryLimit" size="6" value="2000" />');
 	html.push('(ms)</td>');
 	html.push('<td>');
-	html.push('<td>');
+	html.push('</td>');
 	html.push('<td></td>');
 	html.push('</tr>');
 	html.push('</table>');
@@ -120,11 +118,11 @@ function injectDom() {
 	html.push('<p class="registered" style="display:none;">您好，<strong>fishcn@foxmail.com</strong>，感谢您的使用。已注册版本：<strong>正式版</strong>【<a href="javascript:;" id="unReg">重新注册</a>】</p>');
 	html.push('<table class="regTable" style="display:none;width:98%;">');
 	html.push('<tr>');
-	html.push('<td>请黏贴注册信息 【<a href="http://www.fishlee.net/Apps/Cn12306/GetNormalRegKey?v=1" target="_blank" style="color:blue;text-decoration:underline;">点击这里免费申请序列号</a>】</td>');
+	html.push('<td>请粘贴注册码 【<a href="http://www.fishlee.net/Apps/Cn12306/GetNormalRegKey?v=1" target="_blank" style="color:blue;font-weight:bold;text-decoration:underline;">戳我直接申请注册码啊！为什么你们舍不得戳我啊 ╮(╯▽╰)╭</a>】</td>');
 	html.push('</tr><tr>');
 	html.push('<td style="text-align:center;"><textarea id="regContent" style="width:98%; height:50px;"></textarea></td>');
 	html.push('</tr><tr>');
-	html.push('<td><input type="button" id="regButton" value="确定完成" /></td>');
+	html.push('<td><input type="button" id="regButton" value="注册" /></td>');
 	html.push('</tr>');
 	html.push('</table>');
 	html.push('</div>');
@@ -134,6 +132,7 @@ function injectDom() {
 	html.push('<p style="color: red;"> <strong style="font-size:16px;">特别提醒！本助手免费发布且不作为独立的软件出售！</strong>淘宝等任何无法提供『<strong>合作版序列号</strong>』的出售均属『侵权出售』，请退款、并向淘宝和作者举报！联系方式请<a href="http://www.fishlee.net/about/" target="_blank">参见这里</a>。 </p>');
 	html.push('<p style="color:purple;"> 回家是一个单纯而简单的心愿，希望我们不会变得太复杂……</p>');
 	html.push('<p> 有很多朋友捐助，非常感谢你们的支持和鼓励。详细捐助名单和相关的捐助方式，请<a href="http://www.fishlee.net/soft/44/donate.html" target="_blank">参见这里</a>。 </p>');
+	html.push('<p style="color: blue;"> 喔对了，任何对本助手修改后的版本，希望IT同仁们自己使用就好，不要传播，知道你们很鄙视注册，我也鄙视，但是……有什么方法能阻止他们拿去卖钱呢 :-) </p>');
 	html.push('<p style="font-weight:bold;">当前版本更新内容</p>');
 	html.push('<ol>');
 	$.each(utility.getPref("updates").split('\t'), function (i, n) {
@@ -195,11 +194,20 @@ function injectDom() {
 		var value = window.localStorage.getItem(key);
 		if (!value) return;
 
-		el.val(value);
+		if (el.attr("type") == "checkbox") {
+			el.attr("checked", value == "1");
+		} else {
+			el.val(value);
+		}
 	}).change(function () {
 		var el = $(this);
 		var key = el.attr("name");
-		window.localStorage.setItem(key, el.val());
+
+		if (el.attr("type") == "checkbox") {
+			window.localStorage.setItem(key, el[0].checked ? 1 : 0);
+		} else {
+			window.localStorage.setItem(key, el.val());
+		}
 	});
 	$("#configLink, a.configLink").live("click", function () {
 		var el = $(this);
@@ -213,8 +221,8 @@ function injectDom() {
 		utility.setPref("helperVersion", window.helperVersion);
 		utility.showOptionDialog("tabVersion");
 
-		alert("【重要提示】\n========================\n自2013年1月4日起预售期改为20天，请提前做好买票准备。\n\n使用助手提供的各项功能前，请务必做好演练，以避免不熟悉给您带来损失。助手只能帮你减轻一点劳动，请务必耐心哦。\n\n" +
-			"任何时候回家都是一种永恒的夙愿，祝大家都能安全快捷地回家 :-)"
+		alert("【重要提示】\n========================\n自2013年1月4日起预售期改为20天，请提前做好买票准备。\n\n使用助手提供的各项功能前，请务必做好演练，以避免不熟悉给您带来损失。助手只能帮你减轻一点劳动，请务必耐心哦。如果票很难买，请尽量发动您的朋友一起帮您购买。\n\n" +
+			"任何时候回家都是一种永恒的夙愿，祝大家都能安全快捷地回家 :-)\n\n喔对了，任何对本助手修改后的版本，希望IT同仁们自己使用就好，不要传播 :-)"
 			);
 	}
 
@@ -231,6 +239,7 @@ function injectDom() {
 
 		if (location.pathname == "/otsweb/loginAction.do") {
 			alert("您好, 您的12306助手尚未注册, 为了防止有人未经作者授权直接出售获利, 请注册.\n注册是免费的, 但请不要从淘宝等渠道购买未注明【免费】的非捐助版本！");
+			window.open("http://www.fishlee.net/Apps/Cn12306/GetNormalRegKey");
 			utility.showOptionDialog("tabReg");
 		}
 	}
@@ -934,7 +943,6 @@ function entryPoint() {
 	if ((path == "/otsweb/loginAction.do" && location.search != '?method=initForMy12306') || path == "/otsweb/login.jsp") {
 		//登录页
 		unsafeInvoke(initLogin);
-		checkUpdate();
 	}
 	if (utility.regInfo.bindAcc && localStorage.getItem("_sessionuser") && utility.regInfo.bindAcc.length > 0 && utility.regInfo.bindAcc[0] && utility.regInfo.bindAcc[0] != "*") {
 		var user = localStorage.getItem("_sessionuser");
@@ -1003,6 +1011,7 @@ function entryPoint() {
 		}, 100);
 
 		unsafeInvoke(injectMainPageFunction);
+		checkUpdate();
 	}
 }
 
@@ -1500,7 +1509,7 @@ function initAutoCommitOrder() {
 	//#region 自动选择联系人、自动选择上次选择的人
 	function autoSelectPassenger() {
 		var pp = localStorage.getItem("preSelectPassenger") || "";
-		var pseat = localStorage.getItem("autoSelect_preSelectSeatType") || "";
+		var pseat = (localStorage.getItem("autoSelect_preSelectSeatType") || "").split('|')[0];
 		if (pp) {
 			pp = pp.split("|");
 
@@ -1586,6 +1595,10 @@ function autoCommitOrderInSandbox() {
 function initTicketQuery() {
 	//启用日志
 	utility.enableLog();
+
+	var initialized = false;
+	var seatLevelOrder = null;
+	var orderButtonClass = ".btn130_2";	//预定按钮的选择器
 
 	//#region 参数配置和常规工具界面
 
@@ -1942,7 +1955,7 @@ function initTicketQuery() {
 	//默认的行检测函数
 	checkTicketsQueue.push(function () {
 		var trainNo = getTrainNo(this);
-
+		var tr = this;
 		this.attr("tcode", trainNo);
 		//黑名单过滤
 		if (document.getElementById("swBlackList").checked) {
@@ -1963,15 +1976,19 @@ function initTicketQuery() {
 		$("td", this).each(function (i, e) {
 			var cellResult = 0;
 			e = $(e);
+			var opt = { code: trainNo, tr: tr, index: e.index(), seatType: seatOptionTypeMap[e.index() - 1] };
+			e.attr("scode", opt.seatType);
 			$.each(checkTicketCellsQueue, function () {
-				cellResult = this(i, e, cellResult) || cellResult;
+				cellResult = this(i, e, cellResult, opt) || cellResult;
 				return cellResult != 0;
 			});
+			e.attr("result", cellResult);
 			if (cellResult == 2) {
 				hasTicket = 2;
 				e.css("background-color", "#95AFFD");
 			}
 		});
+		tr.attr("result", hasTicket);
 
 		return hasTicket;
 	});
@@ -2023,21 +2040,48 @@ function initTicketQuery() {
 
 		//自动预定
 		if ($("#swAutoBook:checked").length > 0) {
-			$("#autoBookList option").each(function () {
-				var reg = utility.getRegCache(this.text);
-				var row = $.first(validRows, function (i, v) {
-					if (reg.test(i)) return v;
-				});
+			if (!seatLevelOrder || !seatLevelOrder.length) {
+				//没有席别优先级，那选第一个
+				$("#autoBookList option").each(function () {
+					var reg = utility.getRegCache(this.text);
+					var row = $.first(validRows, function (i, v) {
+						if (reg.test(i)) return v;
+					});
 
-				if (row) {
-					if (document.getElementById("autoBookTip").checked) {
-						window.localStorage["bookTip"] = 1;
+					if (row) {
+						if (document.getElementById("autoBookTip").checked) {
+							window.localStorage["bookTip"] = 1;
+						}
+						row.find("a[name=btn130_2]").click();
+
+						return false;
 					}
-					row.find("a[name=btn130_2]").click();
+				});
+			} else {
+				console.log("按席别优先选择-车次过滤");
+				var trainFilter = utility.preCompileReg($("#autoBookList option"));
+				var trains = $("#gridbox tr[result=2]");
+				var trainfiltered = [];
+				trains.each(function () {
+					var self = $(this);
+					if (trainFilter.test(self.attr("tcode"))) trainfiltered.push(self);
+				});
+				//gridbox
+				$.each(seatLevelOrder, function () {
+					var scode = this;
+					for (var i in trainfiltered) {
+						var t = trainfiltered[i];
+						if (t.find("td[scode=" + this + "][result=2]").length) {
+							window.localStorage.setItem("autoSelect_preSelectSeatType", scode);
+							$("#preSelectSeat").val(scode)
+							t.find(orderButtonClass).click();
 
-					return false;
-				}
-			})
+							return false;
+						}
+					}
+					return true;
+				});
+			}
 		}
 
 		if (ticketValid) {
@@ -2242,7 +2286,9 @@ function initTicketQuery() {
 		var html = [];
 		html.push("<tr class='caption'><td colspan='4'>自动添加乘客 （加入此列表的乘客将会自动在提交订单的页面中添加上，<strong>最多选五位</strong>）</td></tr>");
 		html.push("<tr class='fish_sep'><td id='passengerList' colspan='4'><span style='color:gray; font-style:italic;'>联系人列表正在加载中，请稍等...如果长时间无法加载成功，请尝试刷新页面  x_x</span></td></tr>");
-		html.push("<tr class='fish_sep'><td class='name'>自动选定席别</td><td><select id='preSelectSeat'></select><select id='preselectseatlevel'></select>(作者无法保证上下铺选择一定有效)</td><td class='name autoordertd'><label style='display:none;'><input type='checkbox' id='autoorder'/>自动提交订单</label></td><td class='autoordertd'><p style='display:none;'><img id='randCode' src='https://dynamic.12306.cn/otsweb/passCodeAction.do?rand=randp' /> <input size='4' maxlength='4' type='text' id='randCodeTxt' /></p></td></tr>");
+		html.push("<tr class='fish_sep caption'><td>席别优先选择</td><td><input type='hidden' id='preSelectSeat' /><select id='preSelectSeatList'></select> (选中添加，点击按钮删除；按添加顺序优选)</td><td>卧铺优选</td><td><select id='preselectseatlevel'></select>(作者无法保证上下铺选择一定有效)</td></tr>");
+		html.push("<tr class='fish_sep'><td colspan='4' id='preseatlist'><div id='preseatlist_empty' style='padding:5px; border: 1px dashed gray; background-color:#eee;display:inline-block;'>(尚未指定，请从上面的下拉框中选定)</div></td></tr>");
+		html.push("<tr class='caption fish_sep'><td class='name autoordertd'><label style='display:none;'><input type='checkbox' id='autoorder'/>自动提交订单</label></td><td class='autoordertd' colspan='3'><p style='display:none;'><img id='randCode' src='https://dynamic.12306.cn/otsweb/passCodeAction.do?rand=randp' /> <input size='4' maxlength='4' type='text' id='randCodeTxt' /></p></td></tr>");
 		html.push("<tr style='display:none;' id='autoordertip' class='fish_sep'><td class='name' style='color:red;'>警告</td><td colspan='3' style='color:red;'>");
 		html.push("<p style='font-weight:bold; color:purple;'>自动提交订单使用流程：勾选要订票的联系人 -&gt; 设置需要的席别 -&gt; 将你需要订票的车次按优先级别加入自动预定列表 -&gt; 勾选自动提交订单 -&gt; 输入验证码 -&gt; 开始查票。信息填写不完整将会导致助手忽略自动提交订单，请务必注意。进入自动订票模式后，席别选择和自动预定都将被锁定而无法手动切换。如果查询的是学生票，那么提交的将会是学生票订单。</p>");
 		html.push("<p>1. 自动提交订单使用的是自动预定的列表顺序，取第一个有效的车次自动提交订单！请确认设置正确（<b style='color:blue;'>强烈要求仅选择你要的席别，不要都选！</b>）；</p><p>2. 自动提交的席别和联系人请在上方选择，和预设的是一致的，暂不支持不同的联系人选择不同的席别；</p><p>3. 请务必输入验证码！</p><p>4. 作者无法保证自动提交是否会因为铁老大的修改失效，因此请务必同时使用<b>其它浏览器</b>手动提交订单！否则可能会造成您不必要的损失！</p>");
@@ -2252,7 +2298,7 @@ function initTicketQuery() {
 		$("#helpertooltable tr:first").addClass("fish_sep").before(html.join(""));
 
 		var seatlist = [
-			["", "<无设置>"],
+			["", "<--请选择-->"],
 			["9", "商务座"],
 			["P", "特等座"],
 			["6", "高级软卧"],
@@ -2264,7 +2310,7 @@ function initTicketQuery() {
 			["O", "二等座"]
 		];
 		var level = [[0, '随机'], [3, "上铺"], [2, '中铺'], [1, '下铺']];
-		var seatDom = document.getElementById("preSelectSeat");
+		var seatDom = document.getElementById("preSelectSeatList");
 		var seatLevelDom = document.getElementById("preselectseatlevel");
 		$.each(seatlist, function () {
 			seatDom.options[seatDom.options.length] = new Option(this[1], this[0]);
@@ -2272,13 +2318,60 @@ function initTicketQuery() {
 		$.each(level, function () {
 			seatLevelDom.options[seatLevelDom.options.length] = new Option(this[1], this[0]);
 		});
-		$(seatDom).val(window.localStorage.getItem("autoSelect_preSelectSeatType") || "").change(function () {
-			var code = $(this).val();
-			window.localStorage.setItem("autoSelect_preSelectSeatType", code);
-			$(":checkbox[name=seatoption]").attr("checked", false).change();
-			$("#seatoption_" + code).attr("checked", true).change();
-			utility.notifyOnTop("已经根据您选择的席别自动切换了席别过滤选项，请注意，并作出需要的调整。");
+		//刷新优选列表
+		function refreshSeatTypeOrder() {
+			var list = $("#preseatlist input");
+			if (initialized) $(":checkbox[name=seatoption]").attr("checked", false).change();
+			seatLevelOrder = [];
+			list.each(function () {
+				var code = $(this).attr("code");
+				seatLevelOrder.push(code);
+				if (initialized) $("#seatoption_" + code).attr("checked", true).change();
+			});
+			if (!list.length) {
+				$("#preseatlist_empty").show();
+			} else {
+				$("#preseatlist_empty").hide();
+				if (initialized) utility.notifyOnTop("已经根据您选择的席别自动切换了席别过滤选项，请注意，并作出需要的调整。");
+			}
+			window.localStorage.setItem("preSelectSeatType", seatLevelOrder.join('|'));
+		}
+		//选中后添加到列表中
+		$("#preSelectSeatList").change(function () {
+			var index = seatDom.selectedIndex;
+			if (index == 0) return;
+
+			//添加
+			var opt = seatDom.options[index];
+			var html = "<input type='button' title='点击删除' class='seatTypeButton lineButton' value='" + opt.text + "' code='" + opt.value + "' />";
+			$("#preseatlist").append(html);
+			$("#preseatlist_empty").hide();
+			//当前选项移除
+			seatDom.options[index] = null;
+			seatDom.selectedIndex = 0;
+			refreshSeatTypeOrder();
 		});
+		//席别的按钮点击后自动删除
+		$("input.seatTypeButton").live("click", function () {
+			var btn = $(this);
+			btn.remove();
+
+			//加回列表
+			var code = btn.attr("code");
+			var name = btn.val();
+			seatDom.options[seatDom.options.length] = new Option(name, code);
+
+			//刷新列表
+			refreshSeatTypeOrder();
+		});
+		(function () {
+			var preseattype = window.localStorage.getItem("preSelectSeatType") || "";
+			if (!preseattype) return;
+
+			preseattype = preseattype.split('|');
+			var el = $(seatDom);
+			$.each(preseattype, function () { el.val(this); el.change(); });
+		})();
 		$(seatLevelDom).val(window.localStorage.getItem("preselectseatlevel") || "").change(function () {
 			window.localStorage.setItem("preselectseatlevel", $(this).val());
 		});
@@ -2291,7 +2384,7 @@ function initTicketQuery() {
 			if (this.checked) {
 				$("#autoordertip").show();
 				$(":checkbox[name=seatoption]").attr("disabled", true);
-				$("#preSelectSeat").change();
+				refreshSeatTypeOrder();
 			}
 			else {
 				$("#autoordertip").hide();
@@ -2476,7 +2569,7 @@ function initTicketQuery() {
 		}
 
 		online();
-		setInterval(online, 60 * 1000);
+		setInterval(online, 600 * 1000);
 	})();
 
 	//显示本地时间和服务器时间
@@ -2492,7 +2585,7 @@ function initTicketQuery() {
 
 			dom.eq(0).html(utility.formatTime(server));
 			dom.eq(1).html(utility.formatTime(now));
-			dom.eq(2).html((time_offset < 0 ? "快" : "慢") + (time_offset / 1000) + "秒");
+			dom.eq(2).html((time_offset < 0 ? "快" : "慢") + (Math.abs(time_offset) / 1000) + "秒");
 		}
 
 		setInterval(display, 1000);
@@ -2501,9 +2594,10 @@ function initTicketQuery() {
 
 	//#endregion
 
-
-
 	utility.reloadPrefs($("tr.append_row"), "ticket_query");
+
+	//完成初始化
+	initialized = true;
 }
 
 //#endregion
@@ -2572,7 +2666,7 @@ function initDirectSubmitOrder() {
 	}
 
 	function isCanAutoSubmitOrder() {
-		return getVcCode().length == 4 && $("#preSelectSeat").val() && $("input:checkbox[name=preSelectPassenger]:checked").length > 0;
+		return getVcCode().length == 4 && $("#preseatlist input").length && $("input:checkbox[name=preSelectPassenger]:checked").length > 0;
 	}
 
 	function redirectToNotCompleteQuery() {
@@ -2580,7 +2674,7 @@ function initDirectSubmitOrder() {
 	}
 
 	$("#orderForm").submit(function () {
-		if (!document.getElementById("autoorder").checked || !isCanAutoSubmitOrder()) return true;
+		if (!document.getElementById("autoorder").checked || !isCanAutoSubmitOrder() || !($("#preSelectSeat").val())) return true;
 		showStatus();
 		utility.notifyOnTop("开始自动提交预定订单！");
 		setCurOperationInfo(true, "正在自动提交订单");
@@ -2792,7 +2886,6 @@ function initLogin() {
 		"<li style='color:green;'><strong>操作信息</strong>：<span>休息中</span></li>" +
 		"<li style='color:green;'><strong>最后操作时间</strong>：<span>--</span></li>" +
 		"<li> <a href='javascript:;' class='configLink' tab='tabLogin'>登录设置</a> | <a href='http://t.qq.com/ccfish/' target='_blank' style='color:blue;'>腾讯微博</a> | <a href='http://www.fishlee.net/soft/44/' style='color:blue;' target='_blank'>助手主页</a></li><li><a href='http://www.fishlee.net/Discussion/Index/44' target='_blank'>反馈BUG</a> | <a style='font-weight:bold;color:red;' href='http://www.fishlee.net/honor/index.html' target='_blank'>捐助作者</a></li>" +
-		"<li id='updateFound' style='display:none;'><a style='font-weight:bold; color:red;' href='http://www.fishlee.net/soft/44/download.html' target='_blank'>发现新版本！点此更新</a></li>" +
 		'<li id="enableNotification"><input type="button" id="enableNotify" onclick="$(this).parent().hide();window.webkitNotifications.requestPermission();" value="点击启用桌面通知" style="line-height:25px;padding:5px;" /></li><li style="padding-top:10px;line-height:normal;color:gray;">请<strong style="color: red;">最后输验证码</strong>，输入完成后系统将自动帮你提交。登录过程中，请勿离开当前页。如系统繁忙，会自动重新刷新验证码，请直接输入验证码，输入完成后助手将自动帮你提交。</li>' +
 		"</ul>" +
 		"</div>" +
@@ -3082,7 +3175,7 @@ function initPayOrder() {
 //#region 检查更新
 
 function checkUpdate() {
-	//谷歌的依然有跨站问题。所以用传统的方法，委屈Firefox下Scriptish的新特性了。。
+	//仅谷歌浏览器使用此方法检测更新
 	var updateScriptVersion = document.createElement("script");
 	updateScriptVersion.type = "text/javascript";
 	updateScriptVersion.textContent = "var version='" + version + "'; " + compareVersion + "; (" + updateScriptContentForChrome + ")();";
@@ -3090,24 +3183,20 @@ function checkUpdate() {
 }
 
 function updateScriptContentForChrome() {
-	var updateScipt = document.createElement('script');
-	updateScipt.src = 'https://github.com/iccfish/12306_ticket_helper/raw/master/version.js';
-	updateScipt.type = 'text/javascript';
-	updateScipt.addEventListener('load', function () {
-		if (compareVersion(version, version_12306_helper) < 0) {
+	var src = "https://raw.github.com/iccfish/12306_ticket_helper/master/version.js";
+	var downloadPage = "http://www.fishlee.net/soft/44/download.html";
+
+	function callback() {
+		if (utility.isWebKit() && compareVersion(version, version_12306_helper)) {
 			if (utility.getPref("diableUpdateVersion") == version_12306_helper) return;
 
-			$("#updateFound").show();
-			var info = '订票助手已经发布了最新版 ' + version_12306_helper + '，请在登录页面上点击更新链接更新，更新后请刷新当前页面！\n\n更新内容如下：\n\n';
-			if (typeof (version_updater) != 'undefined' && version_updater) {
-				info += "* " + version_updater.join(";\n* ");
-			} else {
-				info += "(暂时没有相关更新内容)";
-			}
+			$(".menu_r ul").prepend("<li><a href='" + downloadPage + "' target='_blank' style='color:red;font-weight:bold;' class='n_on'><cite>更新助手！</cite></a></li>");
+			var info = '订票助手已发布新版 ' + version_12306_helper + '，为了您的正常使用，请及时更新！\n\n如果您安装的CRX版本或商店版，请尝试到扩展管理中点击『全部更新』并稍等片刻，应该会自动更新。\n如果没有，下载页面随后自动打开，请在下载页面中选择正确的下载点下载安装（手动安装的助手请安装CRX版本，淘宝或猎豹浏览器专版请下载专版的扩展）。如果弹窗被拦截，您也可以点击『我的12306』后面红色链接更新！';
 			info += "\n\n如果此次不更新，点击『是』下次依然提醒；点击『否』永久屏蔽此版本更新提示！";
 			if (!confirm(info)) {
 				utility.setPref("diableUpdateVersion", version_12306_helper);
 			}
+			window.open(downloadPage);
 		}
 
 		if (typeof (fishlee12306_msgid) != 'undefined') {
@@ -3117,8 +3206,26 @@ function updateScriptContentForChrome() {
 				if (fishlee12306_msg) alert(fishlee12306_msg);
 			}
 		}
-	});
-	document.head.appendChild(updateScipt);
+	}
+
+	function reloadScript() {
+		if (document.getElementById("helper12306checkupdate")) {
+			$("helper12306checkupdate").remove();
+		}
+		var updateScipt = document.createElement('script');
+		updateScipt.type = 'text/javascript';
+		updateScipt.id = "helper12306checkupdate";
+		updateScipt.src = src;
+		updateScipt.addEventListener('load', callback);
+		updateScipt.addEventListener("error", function () {
+			console.log("[ERROR] 更新信息加载失败，5S后重试！");
+			setTimeout(reloadScript, 5000);
+		});
+		document.head.appendChild(updateScipt);
+	}
+
+
+	reloadScript();
 }
 
 function compareVersion(v1, v2) {
@@ -3135,6 +3242,25 @@ function compareVersion(v1, v2) {
 	}
 
 	return vv1.length > vv2.length ? 1 : vv1.length < vv2.length ? -1 : 0;
+}
+
+//#endregion
+
+//#region firefox专用检测代码
+
+if (isFirefox && (location.pathname == "/otsweb/" || location.pathname == "/otsweb/main.jsp")) {
+	//firefox 专用检测代码
+	GM_xmlhttpRequest({
+		method: "GET",
+		url: "http://www.fishlee.net/service/update/44/updateinfo.xml",
+		onload: function (o) {
+			if (!/version=['"]([\d\.]+)['"]/.exec(o.responseText)) return;
+			if (compareVersion(version, RegExp.$1) < 0 && confirm("订票助手已发布新版 【" + RegExp.$1 + "】，为了您的正常使用，请及时更新!\n\n是否立刻更新？")) {
+				GM_openInTab("http://www.fishlee.net/Service/Download.ashx/44/47/12306_ticket_helper.user.js", true, true);
+			}
+		}
+	});
+
 }
 
 //#endregion
