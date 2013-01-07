@@ -20,12 +20,15 @@
 // @contributionAmount	￥5.00
 // ==/UserScript==
 
+//=======START=======
+
 var version = "3.9.0";
 var updates = [
 	"优化自动预定流程，提供全新的席别优先判定，允许优先选择级别",
 	"为Firefox启用全新的自动更新流程，检测升级更及时准确方便",
 	"增强谷歌浏览器下的版本升级检测，提高稳定性",
-	"修正服务器时间和本地时间差的负数显示问题"
+	"修正服务器时间和本地时间差的负数显示问题",
+	"修改部分废话，精简文字量，捎带卖卖萌（卖萌无罪……）"
 ];
 
 var faqUrl = "http://www.fishlee.net/soft/44/faq.html";
@@ -112,10 +115,11 @@ function injectDom() {
 	html.push('</table>');
 	html.push('</div>');
 	html.push('<div class="tabContent tabReg" style="text-indent: 20px">');
-	html.push('<p>您好，为了避免未经授权便将作者免费发布的软件作为商品出售，请注册。<strong>注册码免费发布</strong>，<span style="color:red;">如果您从相关渠道购买捐助版本，请向卖家索取序列号（切记为合作版序列号，非合作版序列号一律为未授权出售，请向作者举报！）</span></p>');
-	html.push('<p style="color: red;"> <strong style="font-size:16px;">特别提醒！本助手免费发布且不作为独立的软件出售！</strong>如果您在淘宝上购买本软件，请务必确认您购买的不是本助手且已经经过作者授权！如果相关宝贝页上没有说明本助手本身免费，请向作者举报，联系方式请<a href="http://www.fishlee.net/about/" target="_blank">参见这里</a>。 </p>');
-	html.push('<p>任何版本之间，功能上没有任何区别，请各位谅解作者为防有卖家未经授权进行销售而加入的措施。</p>');
-	html.push('<p class="registered" style="display:none;">您好，<strong>fishcn@foxmail.com</strong>，感谢您的使用。已注册版本：<strong>正式版</strong>【<a href="javascript:;" id="unReg">重新注册</a>】</p>');
+	html.push('<p>为了阻止地球人他喵地拿作者无偿奉献的助手去卖钱钱，请注册唷。<strong>完全免费申请</strong>。</p>');
+	html.push('<p style="color: red;"> <strong style="font-size:16px;">啊嘞……看这里！本助手完全免费啊诸位大人！</strong>任何在第三方网站上出售的软件全他喵的是侵权出售啊！！看到的时候请亲务必记得退款退货打差评向青天大老爷举报啊！！</p>');
+	html.push('<p style="color:purple;"> 回家是一个单纯而简单的心愿，希望我们不会变得太复杂……</p>');
+	html.push('<p>任何版本之间，功能上没有任何区别，So……不要问作者万一资助的话会有神马新功能，木有的说…… (=￣ω￣=) </p>');
+	html.push('<p class="registered" style="display:none;">很高兴认识你，，<strong>fishcn@foxmail.com</strong>，谢谢你的出现~~~~已注册版本：<strong>正式版</strong>【<a href="javascript:;" id="unReg">重新注册</a>】</p>');
 	html.push('<table class="regTable" style="display:none;width:98%;">');
 	html.push('<tr>');
 	html.push('<td>请粘贴注册码 【<a href="http://www.fishlee.net/Apps/Cn12306/GetNormalRegKey?v=1" target="_blank" style="color:blue;font-weight:bold;text-decoration:underline;">戳我直接申请注册码啊！为什么你们舍不得戳我啊 ╮(╯▽╰)╭</a>】</td>');
@@ -128,11 +132,11 @@ function injectDom() {
 	html.push('</div>');
 	html.push('<div class="tabContent tabVersion" style="text-indent: 20px">');
 	html.push('<h4 style="font-size:18px; font-weight:bold; margin: 0px; line-height: 26px; border-bottom: 1px dotted #ccc;">12306 订票助手 <small>ver ' + window.helperVersion + '</small></h4>');
-	html.push('<p> 12306 订票助手是一款基于12306.CN订票网站、并运行在各浏览器平台基础之上的助手软件，支持的浏览器为Firefox/谷歌浏览器/遨游3，以及相关衍生浏览器。<strong>本软件免费开源，无需付费使用，仅接受捐助。</strong> </p>');
-	html.push('<p style="color: red;"> <strong style="font-size:16px;">特别提醒！本助手免费发布且不作为独立的软件出售！</strong>淘宝等任何无法提供『<strong>合作版序列号</strong>』的出售均属『侵权出售』，请退款、并向淘宝和作者举报！联系方式请<a href="http://www.fishlee.net/about/" target="_blank">参见这里</a>。 </p>');
+	html.push('<p> 12306 订票助手是一款用于订票的助手软件，嗯……看到这里相信你已经知道它支持神马浏览器了 =。=<strong>完全免费，无需付费使用，仅接受捐助。</strong> </p>');
+	html.push('<p style="color: red;"> <strong style="font-size:16px;">啊嘞……看这里！本助手完全免费啊诸位大人！</strong>任何在第三方网站上出售的软件全他喵的是侵权出售啊！！看到的时候请亲务必记得退款退货打差评向青天大老爷举报啊！！</p>');
 	html.push('<p style="color:purple;"> 回家是一个单纯而简单的心愿，希望我们不会变得太复杂……</p>');
-	html.push('<p> 有很多朋友捐助，非常感谢你们的支持和鼓励。详细捐助名单和相关的捐助方式，请<a href="http://www.fishlee.net/soft/44/donate.html" target="_blank">参见这里</a>。 </p>');
-	html.push('<p style="color: blue;"> 喔对了，任何对本助手修改后的版本，希望IT同仁们自己使用就好，不要传播，知道你们很鄙视注册，我也鄙视，但是……有什么方法能阻止他们拿去卖钱呢 :-) </p>');
+	html.push('<p> 有很多朋友资助作者，正在木有暖气的南方饱受煎熬的作者感激涕零 ≥ω≤。<a href="http://www.fishlee.net/soft/44/donate.html" target="_blank">戳这里了解捐助详情</a>。 </p>');
+	html.push('<p style="color: blue;"> 喔对了，任何对本助手修改后的版本，希望IT同仁们自己使用就好，不要传播，知道你们很鄙视注册，老衲也很鄙视的说，但是……有什么方法能阻止地球人趁火打劫呢……连贫僧都不忍心拿来卖钱的说  ╮(╯▽╰)╭  </p>');
 	html.push('<p style="font-weight:bold;">当前版本更新内容</p>');
 	html.push('<ol>');
 	$.each(utility.getPref("updates").split('\t'), function (i, n) {
@@ -143,14 +147,14 @@ function injectDom() {
 	html.push('<div class="tabContent tabFaq">');
 	html.push('<table>');
 	html.push('<tr>');
-	html.push('<td colspan="4"> 您好，你在订票过程中可能会遇到各种问题，由于12306网站本身没有任何介绍，所以作者整理了相关问题，供您参考。如果还有不明白的问题，请加群讨论。 </td>');
+	html.push('<td colspan="4"> 你在订票过程中可能……会遇到各种问题，由于介个12306网站本身呢……木有没有任何介绍 ╮(╯▽╰)╭ ，所以老衲整理了相关问题，供客官参考。如果还有不明白的问题，加群讨论呗  (=￣ω￣=) 。 </td>');
 	html.push('</tr>');
 	html.push('<tr style="display:none;">');
 	html.push('<td><a href="http://www.fishlee.net/soft/44/12306faq.html" target="_blank">订票常见问题</a></td>');
 	html.push('<td><a href="http://www.fishlee.net/soft/44/faq.html" target="_blank">助手运行常见问题</a></td>');
 	html.push('</tr>');
 	html.push('</table>');
-	html.push('</div><div class="tabLog tabContent"><div>下面是当前页面的记录。如果您的助手遇到功能上的问题，请全部复制后发成邮件给作者：ifish@fishlee.net 以便于我们解决问题。<span style="color:red;font-weight:bold;">请在发送前务必剔除记录中包含的个人隐私如密码等信息。</span></div><textarea id="runningLog" style="width:100%;height:200px;"></textarea></div>');
+	html.push('</div><div class="tabLog tabContent"><div>下面是当前页面的记录。如果您的助手遇到功能上的问题，请全部复制后发成邮件给作者：ifish@fishlee.net 以便于老衲解决问题。<span style="color:red;font-weight:bold;">请在发送前务必剔除记录中包含的个人隐私如密码等信息。</span></div><textarea id="runningLog" style="width:100%;height:200px;"></textarea></div>');
 	//获取登录到IE的代码 Add By XPHelper
 	html.push('<div class="tabLoginIE tabContent"><div><strong>先在IE中打开 https://dynamic.12306.cn/otsweb，</strong>再将以下代码复制到IE浏览器的地址栏。确认地址栏最前面有“javascript:”字样，没有请手动加上（IE10会自动删除这样的代码），然后敲回车，等待页面刷新后，即可自动登录。</div><textarea id="LoginIECode" style="width:100%;height:200px;"></textarea></div>');
 	html.push('<div class="control">');
@@ -238,7 +242,7 @@ function injectDom() {
 		opt.find(".regTable").show();
 
 		if (location.pathname == "/otsweb/loginAction.do") {
-			alert("您好, 您的12306助手尚未注册, 为了防止有人未经作者授权直接出售获利, 请注册.\n注册是免费的, 但请不要从淘宝等渠道购买未注明【免费】的非捐助版本！");
+			alert("为了阻止地球人趁火打劫然后拿着老衲免费奉献的东东去卖钱，贫僧斗胆麻烦客官……啊不，施主注册下下，一下子就好了啦！");
 			window.open("http://www.fishlee.net/Apps/Cn12306/GetNormalRegKey");
 			utility.showOptionDialog("tabReg");
 		}
@@ -344,7 +348,7 @@ var utility = {
 				utility.notifyObj.show();
 				if (!timeout || timeout != 0) utility.timerObj = setTimeout(utility.closeNotify, timeout || 5000);
 			} else {
-				alert("【警告：桌面通知尚未开启！请点击界面中的『点击启用桌面通知』来开启！】\n\n" + msg);
+				alert("【啊喂！！桌面通知还木有开启！请戳界面中的『点击启用桌面通知』按钮来开启！】\n\n" + msg);
 			}
 		} else {
 			if (typeof (GM_notification) != 'undefined') {
@@ -855,7 +859,7 @@ function unsafeInvoke(callback) {
 function buildCallback(callback) {
 	var content = "";
 	if (!utility_emabed) {
-		content += "if(typeof(window.utility)!='undefined' && navigator.userAgent.indexOf('Maxthon')==-1){ alert('警告! 检测到您似乎同时运行了两个12306购票脚本! 请转到『附加组件管理『（Firefox）或『扩展管理』（Chrome）中卸载老版本的助手！');}; \r\nwindow.utility=" + buildObjectJavascriptCode(utility) + "; window.utility.init();window.helperVersion='" + version + "';\r\n";
+		content += "if(typeof(window.utility)!='undefined' && navigator.userAgent.indexOf('Maxthon')==-1){ alert('我勒个去! 检测到您似乎同时运行了两只助手! 请转到『附加组件管理『（Firefox）或『扩展管理』（Chrome）中卸载老版本的助手！');}; \r\nwindow.utility=" + buildObjectJavascriptCode(utility) + "; window.utility.init();window.helperVersion='" + version + "';\r\n";
 		utility_emabed = true;
 	}
 	content += "window.__cb=" + buildObjectJavascriptCode(callback) + ";\r\n\
@@ -1128,7 +1132,7 @@ function injectMainPageFunction() {
 	}
 
 	if (window.webkitNotifications && window.webkitNotifications.checkPermission() != 0) {
-		if (confirm("请点击『点击启用桌面通知』，不然提示会阻碍您的操作，导致运行变慢！\n\n如果您是第一次看到此提示，请点击『取消』并按提示操作。如果反复遇到此提示，请点击『确定』以打开助手主页的常见问题并查找解决办法。\n\n搜狗高速浏览器暂不支持保存此权限，每次访问时可能都需要您的授权。")) {
+		if (confirm("喂！快戳『点击启用桌面通知』，不然提示会阻碍操作，导致运行变慢，然后就没票了！\n\n如果是第一次看到介句话，点击『取消』并按提示操作。如果反复邂逅这个对话框，就戳『确定』以打开助手主页的常见问题并查找解决办法。\n\n搜狗高速浏览器暂不支持保存此权限，每次访问时可能都会邂逅这个对话框……")) {
 			window.open("http://www.fishlee.net/soft/44/faq.html");
 		}
 	}
@@ -1623,7 +1627,7 @@ function initTicketQuery() {
 		"<span style='font-weight:bold;margin-left:10px;color:red;'><label><input type='checkbox' id='chkFilterNonNeeded' />过滤不需要的席别</label></span>" +
 		"<span style='font-weight:bold;margin-left:10px;color:blue;display: none;'><label><input disabled='disabled' type='checkbox' id='chkFilterByTrain' />开启按车次过滤</label></span>" +
 		"</td></tr>" +
-		"<tr><td colspan='9' id='opFunctionRow'><input style='line-height:25px;padding:5px;' disabled='disabled' type='button' value='停止声音' id='btnStopSound' /><input style='line-height:25px;padding:5px;' disabled='disabled'  type='button' value='停止刷新' id='btnStopRefresh' /><input style='line-height:25px;padding:5px;' type='button' value='设置' id='configLink' /><span style='margin-left:20px;color:purple;font-weight:bold;' id='serverMsg'></span></td> </tr>"
+		"<tr><td colspan='9' id='opFunctionRow'><input style='line-height:25px;padding:5px;' disabled='disabled' type='button' value='停止声音' id='btnStopSound' /><input style='line-height:25px;padding:5px;' disabled='disabled'  type='button' value='停止刷新' id='btnStopRefresh' /><input style='line-height:25px;padding:5px;' type='button' value='设置' id='configLink' /> 【<a href='http://www.fishlee.net/soft/44/tour.html' style='color:purple;font-weight:bold;' target='_blank'>啊嘞……遇到不明白的啦？戳这里看教程呗</a>】<span style='margin-left:20px;color:purple;font-weight:bold;' id='serverMsg'></span></td> </tr>"
 	);
 
 	if (!window.Audio) {
@@ -2451,7 +2455,7 @@ function initTicketQuery() {
 		var html = [];
 		html.push("<tr class='caption'><td colspan='4'>票数限制</strong></td></tr>");
 		html.push("<tr class='fish_sep'><td><strong>最小票数</strong><td colspan='3'><select id='ticketLimition'></select>");
-		html.push("当剩余票数小于这里设置的值时，将不会看作有票。</td></tr>");
+		html.push("介个就是说……如果票票数小于这里的数字的话……就无视的啦 =。=</td></tr>");
 
 		$("#helpertooltable tr:first").addClass("fish_sep").before(html.join(""));
 		var dom = $("#ticketLimition").val($("#passengerList :checkbox:checked").length)[0];
@@ -2555,7 +2559,7 @@ function initTicketQuery() {
 	var time_offset = null;
 
 	(function () {
-		$("#helpertooltable tr:last").before("<tr class='fish_sep'><td class='name'>保持在线</td><td colspan='3'>助手每隔一分钟会帮你刷新在线状态以避免长时间挂机导致掉线。最后刷新时间：<strong id='lastonlinetime'>无</strong></td></tr>");
+		$("#helpertooltable tr:last").before("<tr class='fish_sep'><td class='name'>保持在线</td><td colspan='3'>助手每隔十分钟会帮你刷新存在感防止挂机而掉线的啦。。。。。最后刷新时间：<strong id='lastonlinetime'>无</strong></td></tr>");
 		var label = $("#lastonlinetime");
 
 		function online() {
@@ -2841,7 +2845,7 @@ function initDirectSubmitOrder() {
 	}, 30 * 1000);
 
 	//最后显示界面，防止初始化失败却显示了界面
-	$("td.autoordertd *").show();
+	//$("td.autoordertd *").show();
 }
 
 //#endregion
@@ -3187,7 +3191,7 @@ function updateScriptContentForChrome() {
 	var downloadPage = "http://www.fishlee.net/soft/44/download.html";
 
 	function callback() {
-		if (utility.isWebKit() && compareVersion(version, version_12306_helper)) {
+		if (utility.isWebKit() && compareVersion(version, version_12306_helper) < 0) {
 			if (utility.getPref("diableUpdateVersion") == version_12306_helper) return;
 
 			$(".menu_r ul").prepend("<li><a href='" + downloadPage + "' target='_blank' style='color:red;font-weight:bold;' class='n_on'><cite>更新助手！</cite></a></li>");
