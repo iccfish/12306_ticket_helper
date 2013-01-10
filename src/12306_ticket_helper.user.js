@@ -12,7 +12,7 @@
 // @require			http://lib.sinaapp.com/js/jquery/1.8.3/jquery.min.js
 // @icon			http://www.12306.cn/mormhweb/images/favicon.ico
 // @run-at			document-idle
-// @version 		4.0.1
+// @version 		4.0.2
 // @updateURL		http://www.fishlee.net/Service/Download.ashx/44/47/12306_ticket_helper.user.js
 // @supportURL		http://www.fishlee.net/soft/44/
 // @homepage		http://www.fishlee.net/soft/44/
@@ -22,7 +22,7 @@
 
 //=======START=======
 
-var version = "4.0.1";
+var version = "4.0.2";
 var updates = [
 	"(4.0.1) 解决预定页只能提交一次的限制，出现后台错误时自动刷新预定；其它细节修改；",
 	"<span style='color:red;font-weight:bold;'>全新的自动提交订单功能，允许你在查询界面预先填写验证码并全自动提交</span>",
@@ -76,7 +76,7 @@ function injectStyle() {
 	.box input[type=button],.fish_button {padding:5px;}\
 	.box .name ,.box .caption,.box .caption td { background-color:#EAE3F7; font-weight:bold;-webkit-transition:all linear 0.2s;-moz-transition:all linear 0.2s;}\
 	.fish_sep td {border-top:1px solid #A688DD;}\
-	.lineButton { cursor:pointer; border: 1px solid green; border-radius:3px; line-height: 16px; padding:3px; backround-color: lightgreen; color: green;-webkit-transition:all linear 0.2s;-moz-transition:all linear 0.2s;}\
+	.lineButton { cursor:pointer; border: 1px solid green; border-radius:3px; font-size:12px; line-height: 16px; padding:3px; backround-color: lightgreen; color: green;-webkit-transition:all linear 0.2s;-moz-transition:all linear 0.2s;}\
 	.lineButton:hover { color: white; background-color: green;-webkit-transition:all linear 0.1s;-moz-transition:all linear 0.1s; }\
 .fishTab {border: 5px solid #E5D9EC;font-size: 12px;}\
 .fishTab .innerTab {border-width: 1px;border-style: solid;border-color: #C7AED5;background-color: #fff;}\
@@ -90,7 +90,7 @@ function injectStyle() {
 .fishTab div.control {text-align:center;line-height:25px;background-color:#F0EAF4;}\
 .fishTab input[type=button] { padding: 5px; }\
 .hide {display:none;}\
-.fish_button {background-color:#7077DA; color:#fff; border: 1px solid #7077DA;margin-left:5px;margin-right:5px;-webkit-transition:all linear 0.2s;-moz-transition:all linear 0.2s;border-radius:3px;font-size:12px;}\
+.fish_button {background-color:#7077DA;font-size:12px; font-family:微软雅黑; color:#fff; border: 1px solid #7077DA;margin-left:5px;margin-right:5px;-webkit-transition:all linear 0.2s;-moz-transition:all linear 0.2s;border-radius:3px;font-size:12px;}\
 .fish_button:hover{background:#fff;color:#7077DA;-webkit-transition:all linear 0.1s;-moz-transition:all linear 0.1s;cursor:pointer;}\
 tr.steps td{background-color:#E8B7C2!important;-webkit-transition:all linear 0.1s;-moz-transition:all linear 0.1s;}\
 tr.steps span.indicator {display:inline-block!important;}\
@@ -233,11 +233,12 @@ function injectDom() {
 			window.localStorage.setItem(key, el.val());
 		}
 	});
-	$("#configLink, a.configLink").live("click", function () {
+	$("#configLink, .configLink").live("click", function () {
 		var el = $(this);
 		var dp = el.attr("tab");
-		if (dp) utility.configTab.showTab(dp);
-		utility.getTopWindow().utility.showOptionDialog();
+
+		utility.getTopWindow().utility.showLoginIE();
+		utility.getTopWindow().utility.showOptionDialog(dp || "");
 	});
 	//新版本更新显示提示
 	if (utility.getPref("helperVersion") != window.helperVersion) {
@@ -358,7 +359,6 @@ var utility = {
 		IECode += cookie.join("");
 		IECode += "self.location.reload();";
 		$("#LoginIECode").val(IECode);
-		utility.showOptionDialog("tabLoginIE");
 	},
 	formatData: function (data) {
 		if (!data) return "(null)";
@@ -839,7 +839,7 @@ var utility = {
 	},
 	//获取登录到IE的代码 Add By XPHelper
 	enableLoginIE: function () {
-		$("body").append('<button style="width:150px;position:fixed;right:0px;top:0px;height:35px;" onclick="utility.showLoginIE();">获取登录到IE的代码</button>');
+		$("body").append('<button style="width:150px;position:fixed;right:0px;top:0px;height:35px;" class="configLink" tab="tabLoginIE">获取登录到IE的代码</button>');
 	},
 	analyzeForm: function (html) {
 		var data = {};
@@ -1779,7 +1779,7 @@ function initTicketQuery() {
 		"<span style='font-weight:bold;margin-left:10px;color:red;'><label title='有时候虽然整趟车可以预定，但是有票的席别都是你不要的，如果勾选此选项，也将会过滤掉'><input type='checkbox' id='chkFilterNonNeeded' />过滤不需要的席别</label></span>" +
 		"<span style='font-weight:bold;margin-left:10px;color:blue;display: none;'><label><input disabled='disabled' type='checkbox' id='chkFilterByTrain' />开启按车次过滤</label></span>" +
 		"</td></tr>" +
-		"<tr><td colspan='9' id='opFunctionRow'><input type='button' class='fish_button' disabled='disabled' value='停止声音' id='btnStopSound' /><input  type='button' class='fish_button' disabled='disabled'  value='停止刷新' id='btnStopRefresh' /><input  type='button' class='fish_button' type='button' value='设置' id='configLink' /> <input type='button' class='fish_button' id='resetSettings' value='清空助手设置' /> 【<a href='http://www.fishlee.net/soft/44/tour.html' style='color:purple;font-weight:bold;' target='_blank'>啊嘞……遇到不明白的啦？戳这里看教程呗</a>】<span style='margin-left:20px;color:purple;font-weight:bold;' id='serverMsg'></span></td> </tr>"
+		"<tr><td colspan='9' id='opFunctionRow'><input type='button' class='fish_button' disabled='disabled' value='停止声音' id='btnStopSound' /><input  type='button' class='fish_button' disabled='disabled'  value='停止刷新' id='btnStopRefresh' /><input  type='button' class='fish_button' type='button' value='设置' id='configLink' /> <input type='button' class='fish_button' id='resetSettings' value='清空助手设置' /> <input type='button' class='fish_button configLink' value='IE登录' /> 【<a href='http://www.fishlee.net/soft/44/tour.html' style='color:purple;font-weight:bold;' target='_blank'>啊嘞……遇到不明白的啦？戳这里看教程呗</a>】<span style='margin-left:20px;color:purple;font-weight:bold;' id='serverMsg'></span></td> </tr>"
 	);
 
 	if (!window.Audio) {
@@ -2418,11 +2418,11 @@ function initTicketQuery() {
 
 	(function () {
 		var html = "\
-<tr class='fish_sep caption'><td><label><input type='checkbox' id='swWhiteList' checked='checked' /> 车次白名单</label></td><td style='font-weight:normal;' colspan='2'>加入白名单的车次，将不会被过滤</td><td style='text-align:rigth;'><button class='fish_button' id='btnAddWhite'>添加</button><button class='fish_button' id='btnClearWhite'>清空</button></td></tr>\
+<tr class='fish_sep caption'><td><label><input type='checkbox' id='swWhiteList' checked='checked' /> 车次白名单</label></td><td style='font-weight:normal;' colspan='2'>加入白名单的车次，将不会被过滤(仅为搭配黑名单)</td><td style='text-align:rigth;'><button class='fish_button' id='btnAddWhite'>添加</button><button class='fish_button' id='btnClearWhite'>清空</button></td></tr>\
 <tr class='fish_sep'><td colspan='4' id='whiteListTd'></td></tr>\
 <tr class='fish_sep caption'><td><label><input type='checkbox' id='swBlackList' checked='checked' name='swBlackList' />车次黑名单</label></td><td style='font-weight:normal;' colspan='2'>加入黑名单的车次，除非在白名单中，否则会被直接过滤而不会显示</td><td style='text-align:rigth;'><button class='fish_button' id='btnAddBlack'>添加</button><button class='fish_button' id='btnClearBlack'>清空</button></td></tr>\
 <tr class='fish_sep'><td colspan='4' id='blackListTd'></td></tr>\
-<tr class='caption autoorder_steps fish_sep'><td colspan='4'><span class='hide indicator'>① </span>自动添加乘客 （加入此列表的乘客将会自动在提交订单的页面中添加上，<strong>最多选五位</strong>）</td></tr>\
+<tr class='caption autoorder_steps fish_sep'><td colspan='3'><span class='hide indicator'>① </span>自动添加乘客 （加入此列表的乘客将会自动在提交订单的页面中添加上，<strong>最多选五位</strong>）</td><td><input type='button' class='fish_button' onclick=\"self.location='/otsweb/passengerAction.do?method=initAddPassenger&';\" value='添加联系人' /> (提示：新加的联系人五分钟之内无法订票)</td></tr>\
 <tr class='fish_sep'><td id='passengerList' colspan='4'><span style='color:gray; font-style:italic;'>联系人列表正在加载中，请稍等...如果长时间无法加载成功，请尝试刷新页面  x_x</span></td></tr>\
 <tr class='fish_sep autoorder_steps caption'><td><span class='hide indicator'>② </span>席别优先选择</td><td><input type='hidden' id='preSelectSeat' /><select id='preSelectSeatList'></select> (选中添加，点击按钮删除；<a href='http://www.fishlee.net/soft/44/tour.html' target='_blank'>更多帮助</a>)</td><td style='text-align:right;'>卧铺优选</td><td><select id='preselectseatlevel'></select>(不一定有用的啦……呵呵呵呵呵呵……)</td></tr>\
 <tr class='fish_sep'><td colspan='4' id='preseatlist'><span id='preseatlist_empty' style='padding:5px; border: 1px dashed gray; background-color:#eee;display:inline-block;'>(尚未指定，请从上面的下拉框中选定)</span></td></tr>\
@@ -2431,7 +2431,7 @@ function initTicketQuery() {
 <tr class='fish_sep'><td colspan='4'><label><input type='checkbox' id='autoBookTip' checked='checked' /> 如果自动预定成功，进入预定页面后播放提示音乐并弹窗提示</label></td></tr>\
 <tr class='caption autoorder_steps fish_sep highlightrow'><td class='name autoordertd'><label style='display:none;color:red;'><input type='checkbox' id='autoorder'/>自动提交订单</label></td><td class='autoordertd' colspan='3'><p style='display:none;'><img id='randCode' src='https://dynamic.12306.cn/otsweb/passCodeAction.do?rand=randp' /> <input size='4' maxlength='4' type='text' id='randCodeTxt' /> (验证码可在放票前填写，临近放票时建议点击图片刷新并重新填写，以策安全。请务必控制好阁下的眼神……)</p></td></tr>\
 <tr style='display:none;' id='autoordertip' class='fish_sep'><td class='name' style='color:red;'>警告</td><td colspan='3' style='color:darkblue;'>\
-<p style='font-weight:bold; color:purple;'>自动提交订单使用流程：勾选要订票的联系人 -&gt; 设置需要的席别 -&gt; 将你需要订票的车次按优先级别加入自动预定列表 -&gt; 勾选自动提交订单 -&gt; 输入验证码 -&gt; 开始查票。信息填写不完整将会导致助手忽略自动提交订单，请务必注意。进入自动订票模式后，席别选择和自动预定都将被锁定而无法手动切换。如果查询的是学生票，那么提交的将会是学生票订单。</p>\
+<p style='font-weight:bold; color:purple;'>自动提交订单使用流程：勾选要订票的联系人 -&gt; 设置需要的席别 -&gt; 将你需要订票的车次按优先级别加入自动预定列表 -&gt; 勾选自动提交订单 -&gt; 输入验证码 -&gt; 开始查票。信息填写不完整将会导致助手忽略自动提交订单，请务必注意。进入自动订票模式后，席别选择和自动预定都将被锁定而无法手动切换。如果查询的是学生票，那么提交的将会是学生票订单。<u style='color:red;'>一切都设置完成后，请点击查询开始查票。一旦有票将会自动提交。</u></p>\
 <p>1. 自动提交订单使用的是自动预定的列表顺序，取第一个有效的车次自动提交订单！请确认设置正确！！</p>\
 <p>2. 自动提交的席别和联系人请在上方选择，和预设的是一致的，暂不支持不同的联系人选择不同的席别；</p>\
 <p>3. 作者无法保证自动提交是否会因为铁老大的修改失效，因此请务必同时使用<b>其它浏览器</b>手动提交订单！否则可能会造成您不必要的损失！</p>\
@@ -2570,10 +2570,10 @@ function initTicketQuery() {
 		var pre_autoorder_book_status;
 		$("#autoorder").click(function () {
 			if (this.checked) {
+				pre_autoorder_book_status = document.getElementById("swAutoBook").checked;
 				document.getElementById("swAutoBook").checked = true;
 				//alert("警告！选中将会启用自动下单功能，并取代自动预定功能，请输入验证码，当指定的车次中的指定席别可用时，助手将会为您全自动下单。\n\n请确认您设置了正确的车次和席别！\n\n但是，作者无法保证是否会因为铁道部的修改导致失效，请使用此功能的同时务必使用传统的手动下单以保证不会导致您的损失！");
 			}
-			pre_autoorder_book_status = document.getElementById("swAutoBook").checked;
 			document.getElementById("swAutoBook").disabled = this.checked;
 			if (this.checked) {
 				$("#autoordertip").show();
@@ -3069,7 +3069,11 @@ function initLogin() {
 
 	}
 	if (!isTop) {
-		$("#loginForm table tr:first td:last").append("<a href='https://dynamic.12306.cn/otsweb/' target='_blank' style='font-weight:bold;color:red;'>点击这里全屏订票，否则有些消息看不到！</a>");
+		$("#loginForm table tr:first td:last").append("<a href='https://dynamic.12306.cn/otsweb/' target='_blank' style='font-weight:bold;color:red;'>点击全屏订票</a>");
+		if (!utility.getPref("login.fullscreenAlert")) {
+			utility.setPref("login.fullscreenAlert", 1);
+			utility.notifyOnTop("强烈建议你点击界面中的『点击全屏订票』来全屏购票，否则助手有些提示消息您将无法看到！");
+		}
 	}
 
 
@@ -3401,7 +3405,9 @@ function updateScriptContentForChrome() {
 			if (utility.getPref("helperlastmsgid") != fishlee12306_msgid) {
 				utility.setPref("helperlastmsgid", fishlee12306_msgid);
 
-				if (fishlee12306_msg) alert(fishlee12306_msg);
+				if (!fishlee12306_msgver || compareVersion(version_12306_helper, fishlee12306_msgver) < 0) {
+					if (fishlee12306_msg) alert(fishlee12306_msg);
+				}
 			}
 		}
 	}

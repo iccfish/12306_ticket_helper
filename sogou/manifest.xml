@@ -4,7 +4,7 @@
 	<name>12306订票助手</name>
 	<show_icon>true</show_icon>
 	<description>帮您在极速模式下订票的助手</description>
-	<version>4.0.1</version>
+	<version>4.0.2</version>
 	<request_api_version>1</request_api_version>
 	<author>木鱼(www.fishlee.net)</author>
 	<background page="background.html" />
