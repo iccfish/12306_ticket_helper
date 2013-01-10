@@ -12,7 +12,7 @@
 // @require			http://lib.sinaapp.com/js/jquery/1.8.3/jquery.min.js
 // @icon			http://www.12306.cn/mormhweb/images/favicon.ico
 // @run-at			document-idle
-// @version 		4.0.0
+// @version 		4.0.1
 // @updateURL		http://www.fishlee.net/Service/Download.ashx/44/47/12306_ticket_helper.user.js
 // @supportURL		http://www.fishlee.net/soft/44/
 // @homepage		http://www.fishlee.net/soft/44/
@@ -22,8 +22,9 @@
 
 //=======START=======
 
-var version = "4.0.0";
+var version = "4.0.1";
 var updates = [
+	"(4.0.1) 解决预定页只能提交一次的限制，出现后台错误时自动刷新预定；其它细节修改；",
 	"<span style='color:red;font-weight:bold;'>全新的自动提交订单功能，允许你在查询界面预先填写验证码并全自动提交</span>",
 	"添加车次过滤白名单，在白名单中的车次将不会被过滤",
 	"修改黑名单和自动预定列表为席别优先级一样的选择模式",
@@ -32,9 +33,7 @@ var updates = [
 	"重新加入被铁道部移除的上下铺选择下拉框，当然，加着玩儿，有效果更好，没效果……咱大肚能容那啥……",
 	"席别优先选择中加入硬座的无座",
 	"添加对在支付页面点击取消订单后跳回的查询页面的功能支持",
-	"增加清除已保存配置的功能按键",
-	"更新部分页面展示内容及效果, 增加部分选项提示，调整页面高度尽量避免太多滚动条",
-	"修正预定界面上的『显示帮助』的配置保存问题(真是个古老的BUG……)。",
+	"(....and more .....)",
 	"<span style='color:blue;font-weight:bold;'>有童鞋提醒我一周年了……一看记录果然2012年1月9日发布的1.0版……一周年之际发布4.0版，感谢各位的支持和鼓励，希望每一位同学都能顺利地回家，2013都能收获自己想要的，不管是高雅的爱情还是庸俗的钱财 :-)</span>"
 ];
 
@@ -876,7 +875,7 @@ var utility = {
 	selectionArea: function (opt) {
 		var self = this;
 		this.options = $.extend({ onAdd: function () { }, onRemove: function () { }, onClear: function () { }, onRemoveConfirm: function () { return true; }, syncToStorageKey: "", defaultList: null, preloadList: null }, opt);
-		this.append('<div style="padding: 5px; border: 1px dashed gray; background-color: rgb(238, 238, 238); display: inline-block;">(还没有添加任何项)</div>');
+		this.append('<span style="padding: 5px; border: 1px dashed gray; display:inline-block; background-color: rgb(238, 238, 238); ">(还没有添加任何项)</span>');
 		this.datalist = [];
 
 		this.add = function (data) {
@@ -938,9 +937,9 @@ var utility = {
 
 		this.checkEmpty = function () {
 			if (self.find("input").length) {
-				self.find("div").hide();
+				self.find("span").hide();
 			} else {
-				self.find("div").show();
+				self.find("span").show();
 			}
 		};
 
@@ -1037,7 +1036,7 @@ if (location.host == "dynamic.12306.cn" || (location.host == "www.12306.cn" && l
 
 		//新版本更新显示提示
 		if (utility.getPref("helperVersion") != version) {
-			if (utility.getPref("helperVersion")) {
+			if (utility.getPref("helperVersion") && compareVersion(utility.getPref("helperVersion"), "4.0.0") < 0) {
 				utility.notify("您好，由于助手4.0更改比较大，为了防止您的助手出现异常问题，所有已保存的设置将会被完全清空，请重新设置。给您带来的不便，老衲很是抱歉……");
 				window.localStorage.clear();
 			}
@@ -1381,8 +1380,18 @@ function initAutoCommitOrder() {
 									return;
 								}
 								if (errmsg.indexOf("重复提交") != -1) {
-									console.log("TOKEN失效，刷新Token中....");
+									stop("重复提交错误，已刷新TOKEN，请重新输入验证码提交");
 									reloadToken();
+									reloadCode();
+									return;
+								}
+								if (errmsg.indexOf("后台处理异常") != -1 || errmsg.indexOf("非法请求") != -1) {
+									if (lastform) {
+										utility.notifyOnTop("后台处理异常，已自动重新提交表单，请填写验证码并提交！");
+										lastform.submit();
+									} else {
+										stop("后台处理异常，请返回查询页重新预定！");
+									}
 									return;
 								}
 								if (errmsg.indexOf("包含排队中") != -1) {
@@ -1390,6 +1399,7 @@ function initAutoCommitOrder() {
 									waitingForQueueComplete();
 									return;
 								}
+
 
 								setCurOperationInfo(false, errmsg);
 								stop(errmsg);
@@ -1413,7 +1423,7 @@ function initAutoCommitOrder() {
 		});
 	}
 
-	function reloadToken() {
+	function reloadToken(submit) {
 		setCurOperationInfo(true, "正在刷新TOKEN....");
 		utility.post("/otsweb/order/confirmPassengerAction.do?method=init", null, "text", function (text) {
 			if (!/TOKEN"\s*value="([a-f\d]+)"/i.test(text)) {
@@ -1424,7 +1434,6 @@ function initAutoCommitOrder() {
 				setCurOperationInfo(false, "已获得TOKEN - " + token);
 				console.log("已刷新TOKEN=" + token);
 				$("input[name=org.apache.struts.taglib.html.TOKEN]").val(token);
-				submitForm();
 			}
 		}, function () { utility.delayInvoke("#countEle", reloadToken, 1000); });
 	}
@@ -1506,8 +1515,9 @@ function initAutoCommitOrder() {
 	});
 
 	//清除上次保存的预定信息
+	var lastform = null;
 	if (parent) {
-		parent.$("#orderForm").remove();
+		lastform = parent.$("#orderForm");
 	}
 
 	//进度提示框
@@ -2415,7 +2425,7 @@ function initTicketQuery() {
 <tr class='caption autoorder_steps fish_sep'><td colspan='4'><span class='hide indicator'>① </span>自动添加乘客 （加入此列表的乘客将会自动在提交订单的页面中添加上，<strong>最多选五位</strong>）</td></tr>\
 <tr class='fish_sep'><td id='passengerList' colspan='4'><span style='color:gray; font-style:italic;'>联系人列表正在加载中，请稍等...如果长时间无法加载成功，请尝试刷新页面  x_x</span></td></tr>\
 <tr class='fish_sep autoorder_steps caption'><td><span class='hide indicator'>② </span>席别优先选择</td><td><input type='hidden' id='preSelectSeat' /><select id='preSelectSeatList'></select> (选中添加，点击按钮删除；<a href='http://www.fishlee.net/soft/44/tour.html' target='_blank'>更多帮助</a>)</td><td style='text-align:right;'>卧铺优选</td><td><select id='preselectseatlevel'></select>(不一定有用的啦……呵呵呵呵呵呵……)</td></tr>\
-<tr class='fish_sep'><td colspan='4' id='preseatlist'><div id='preseatlist_empty' style='padding:5px; border: 1px dashed gray; background-color:#eee;display:inline-block;'>(尚未指定，请从上面的下拉框中选定)</div></td></tr>\
+<tr class='fish_sep'><td colspan='4' id='preseatlist'><span id='preseatlist_empty' style='padding:5px; border: 1px dashed gray; background-color:#eee;display:inline-block;'>(尚未指定，请从上面的下拉框中选定)</span></td></tr>\
 <tr class='fish_sep autoorder_steps caption'><td><label><input type='checkbox' id='swAutoBook' name='swAutoBook' checked='checked' /><span class='hide indicator'>③</span> 自动预定</label></td><td colspan='2' style='font-weight:normal;'>如果启用，符合规则的车次的特定席别有效时，将会进入预定页面</td><td style='text-align:rigth;'><button id='btnAddAutoBook' class='fish_button'>添加</button><button id='btnClearAutoBook' class='fish_button'>清空</button></td></tr>\
 <tr class='fish_sep'><td colspan='4' id='autobookListTd'></td></tr>\
 <tr class='fish_sep'><td colspan='4'><label><input type='checkbox' id='autoBookTip' checked='checked' /> 如果自动预定成功，进入预定页面后播放提示音乐并弹窗提示</label></td></tr>\
@@ -3379,7 +3389,7 @@ function updateScriptContentForChrome() {
 			if (utility.getPref("diableUpdateVersion") == version_12306_helper) return;
 
 			$(".menu_r ul").prepend("<li><a href='" + downloadPage + "' target='_blank' style='color:red;font-weight:bold;' class='n_on'><cite>更新助手！</cite></a></li>");
-			var info = '订票助手已发布新版 ' + version_12306_helper + '，为了您的正常使用，请及时更新！\n\n如果您安装的CRX版本或商店版，请尝试到扩展管理中点击『全部更新』并稍等片刻，应该会自动更新。\n如果没有，下载页面随后自动打开，请在下载页面中选择正确的下载点下载安装（手动安装的助手请安装CRX版本，淘宝或猎豹浏览器专版请下载专版的扩展）。如果弹窗被拦截，您也可以点击『我的12306』后面红色链接更新！';
+			var info = '订票助手已发布新版 ' + version_12306_helper + '，为了您的正常使用，请及时更新！\n\n如果您安装的CRX版本或商店版，请尝试到扩展管理中点击『全部更新』并稍等片刻，应该会自动更新。\n如果没有，下载页面随后自动打开，请在下载页面中选择正确的下载点下载安装（已安装CRX版本的请在『扩展设置』中点击全部更新，淘宝或猎豹浏览器专版请下载专版的扩展）。如果弹窗被拦截，您也可以点击『我的12306』后面红色链接更新！';
 			info += "\n\n如果此次不更新，点击『是』下次依然提醒；点击『否』永久屏蔽此版本更新提示！";
 			if (!confirm(info)) {
 				utility.setPref("diableUpdateVersion", version_12306_helper);
