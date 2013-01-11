@@ -12,7 +12,7 @@
 // @require			http://lib.sinaapp.com/js/jquery/1.8.3/jquery.min.js
 // @icon			http://www.12306.cn/mormhweb/images/favicon.ico
 // @run-at			document-idle
-// @version 		4.0.2
+// @version 		4.0.3
 // @updateURL		http://www.fishlee.net/Service/Download.ashx/44/47/12306_ticket_helper.user.js
 // @supportURL		http://www.fishlee.net/soft/44/
 // @homepage		http://www.fishlee.net/soft/44/
@@ -22,10 +22,12 @@
 
 //=======START=======
 
-var version = "4.0.2";
+var version = "4.0.3";
 var updates = [
-	"(4.0.1) 解决预定页只能提交一次的限制，出现后台错误时自动刷新预定；其它细节修改；",
 	"<span style='color:red;font-weight:bold;'>全新的自动提交订单功能，允许你在查询界面预先填写验证码并全自动提交</span>",
+	"(4.0.1) 解决预定页只能提交一次的限制，出现后台错误时自动刷新预定；其它细节修改；",
+	"(4.0.2) 查询界面增加IE登录按钮，修正IE登录相关部分的细节；其它细节修改；",
+	"(4.0.3) 修改有席别优选存在时的优选顺序，调整为先席别再车次优选；",
 	"添加车次过滤白名单，在白名单中的车次将不会被过滤",
 	"修改黑名单和自动预定列表为席别优先级一样的选择模式",
 	"修改添加名单逻辑，现在自动预定和黑名单直接点击车次即可，不需要弹出层",
@@ -147,7 +149,7 @@ function injectDom() {
 	html.push('<p style="color: red;"> <strong style="font-size:16px;">啊嘞……看这里！本助手完全免费啊诸位大人！</strong>任何在第三方网站上出售的软件全他喵的是侵权出售啊！！看到的时候请亲务必记得退款退货打差评向青天大老爷举报啊！！</p>');
 	html.push('<p style="color:purple;"> 回家是一个单纯而简单的心愿，希望我们不会变得太复杂……</p>');
 	html.push('<p> 有很多朋友资助作者，正在木有暖气的南方饱受煎熬的作者感激涕零 ≥ω≤。<a href="http://www.fishlee.net/soft/44/donate.html" target="_blank">戳这里了解捐助详情</a>。 </p>');
-	html.push('<p style="color: blue;"> 喔对了，任何对本助手修改后的版本，希望IT同仁们自己使用就好，不要传播，知道你们很鄙视注册，老衲也很鄙视的说，但是……有什么方法能阻止地球人趁火打劫呢……连贫僧都不忍心拿来卖钱的说  ╮(╯▽╰)╭  </p>');
+	html.push('<p style="color: blue;"> <strong style="font-size:16px;">那个，诸位票贩子们，放过本助手吧！！不要害作者啊！！！你们都去用什么自动识别验证码的好啦！离贫道远点！！</strong>  ╮(╯▽╰)╭  </p>');
 	html.push('<p style="font-weight:bold;">当前版本更新内容</p>');
 	html.push('<ol>');
 	$.each(utility.getPref("updates").split('\t'), function (i, n) {
@@ -862,15 +864,6 @@ var utility = {
 		if (m) data.tourFlag = RegExp.$1;
 
 		return data;
-	},
-	appendScript: function (url, content, callback) {
-		var s = document.createElement('script');
-		if (url) s.src = 'https://github.com/iccfish/12306_ticket_helper/raw/master/version.js';
-		if (content) s.textContent = content;
-		s.type = 'text/javascript';
-		if (callback) s.addEventListener('load', callback);
-
-		document.head.appendChild(s);
 	},
 	selectionArea: function (opt) {
 		var self = this;
@@ -2168,13 +2161,24 @@ function initTicketQuery() {
 				};
 			} else {
 				console.log("按席别优先选择-车次过滤");
-				var trains = $("#gridbox tr[result=2]");
+				var trains = $.makeArray($("#gridbox tr[result=2]"));
+				
 				var trainfiltered = [];
-				trains.each(function () {
-					var self = $(this);
-					if (list_autoorder.isInRegList(self.attr("tcode"))) trainfiltered.push(self);
-				});
-				//gridbox
+				for (var idx in list_autoorder.datalist) {
+					//对车次进行过滤并按优先级排序
+					var rule = list_autoorder.datalist[idx];
+					var ruleTester = utility.getRegCache(rule);
+					for (var i = trains.length - 1; i >= 0; i--) {
+						var self = $(trains[i]);
+						var code = self.attr("tcode");
+
+						if (ruleTester.test(code)) {
+							trainfiltered.push(self);
+							trains.splice(i, 1);
+						}
+					}
+				}
+								//gridbox
 				$.each(seatLevelOrder, function () {
 					var scode = this;
 					for (var i in trainfiltered) {
