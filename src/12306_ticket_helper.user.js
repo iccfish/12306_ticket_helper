@@ -12,7 +12,7 @@
 // @require			http://lib.sinaapp.com/js/jquery/1.8.3/jquery.min.js
 // @icon			http://www.12306.cn/mormhweb/images/favicon.ico
 // @run-at			document-idle
-// @version 		4.1.0
+// @version 		4.1.1
 // @updateURL		http://www.fishlee.net/Service/Download.ashx/44/47/12306_ticket_helper.user.js
 // @supportURL		http://www.fishlee.net/soft/44/
 // @homepage		http://www.fishlee.net/soft/44/
@@ -22,10 +22,11 @@
 
 //=======START=======
 
-var version = "4.1.0";
+var version = "4.1.1";
 var updates = [
 	"<span style='color:red;font-weight:bold;'>全新的自动提交订单功能，允许你在查询界面预先填写验证码并全自动提交</span>",
 	"增加出行模式功能，能快速保存黑白名单及自动预定等设置，快速恢复；",
+	"(4.1.1) 修正提示验证码必须输入的错误(紧急)",
 	"(4.1.0) 启用全新的检查更新方式，检查更加稳定可靠",
 	"(4.1.0) 修正针对部分提交时，针对无座不会缩减乘客的BUG",
 	"(4.1.0) 对自动提交提示颜色启用全新的颜色提示，红色显示需要填写区域，绿色显示已填写区域",
@@ -1314,7 +1315,7 @@ function initAutoCommitOrder() {
 
 	var reloadCode = function () {
 		$("#img_rrand_code").click();
-		$("#rand").val("").attr("disabled", false)[0].select();
+		$("#rand").val("")[0].select();
 	};
 
 	var getSleepTime = function () {
@@ -1325,7 +1326,7 @@ function initAutoCommitOrder() {
 	var waitTimeTooLong_alert = false;
 
 	function submitForm() {
-		randEl.attr("disabled", true)[0].blur();
+		randEl[0].blur();
 		stopCheckCount();
 		if (!window.submit_form_check || !submit_form_check("confirmPassenger")) {
 			setCurOperationInfo(false, "您的表单没有填写完整!");
