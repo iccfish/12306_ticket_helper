@@ -12,7 +12,7 @@
 // @require			http://lib.sinaapp.com/js/jquery/1.8.3/jquery.min.js
 // @icon			http://www.12306.cn/mormhweb/images/favicon.ico
 // @run-at			document-idle
-// @version 		4.1.1
+// @version 		4.2.4
 // @updateURL		http://www.fishlee.net/Service/Download.ashx/44/47/12306_ticket_helper.user.js
 // @supportURL		http://www.fishlee.net/soft/44/
 // @homepage		http://www.fishlee.net/soft/44/
@@ -22,18 +22,12 @@
 
 //=======START=======
 
-var version = "4.1.1";
+var version = "4.2.4";
 var updates = [
-	"<span style='color:red;font-weight:bold;'>全新的自动提交订单功能，允许你在查询界面预先填写验证码并全自动提交</span>",
-	"增加出行模式功能，能快速保存黑白名单及自动预定等设置，快速恢复；",
-	"(4.1.1) 修正提示验证码必须输入的错误(紧急)",
-	"(4.1.0) 启用全新的检查更新方式，检查更加稳定可靠",
-	"(4.1.0) 修正针对部分提交时，针对无座不会缩减乘客的BUG",
-	"(4.1.0) 对自动提交提示颜色启用全新的颜色提示，红色显示需要填写区域，绿色显示已填写区域",
-	"(4.1.0) 修复自动预订时可能导致重复提交的潜在BUG",
-	"(4.1.0) 手动输入车次时，尝试对输入错误的内容进行自动修正（如含逗号时自动转换为正则）",
-	"添加车次过滤白名单，在白名单中的车次将不会被过滤",
-	"<span style='color:blue;font-weight:bold;'>有童鞋提醒我一周年了……一看记录果然2012年1月9日发布的1.0版……一周年之际发布4.0版，感谢各位的支持和鼓励，希望每一位同学都能顺利地回家，2013都能收获自己想要的，不管是高雅的爱情还是庸俗的钱财 :-)</span>"
+	"修改自动预定和自动提交逻辑，提示排队人数过多时自动重试 (不过此类情况成功率不高，建议多做打算)",
+	"修改自动提交的重试过程可以通过取消勾选『自动提交』来取消",
+	"修正改签的自动提交会生成一个新的订单",
+	"修正自动提交在出现网络错误时，可能会卡住的BUG"
 ];
 
 var faqUrl = "http://www.fishlee.net/soft/44/faq.html";
@@ -243,8 +237,13 @@ function injectDom() {
 	});
 	//新版本更新显示提示
 	if (utility.getPref("helperVersion") != window.helperVersion) {
-		utility.setPref("helperVersion", window.helperVersion);
 
+		//检测老版本设置
+		if (utility.getAudioUrl().indexOf("github") != -1 || utility.getAudioUrl().indexOf("https://") != -1) {
+			utility.resetAudioUrl();
+		}
+
+		utility.setPref("helperVersion", window.helperVersion);
 		//仅顶层页面显示
 		try {
 			if (parent == self)
@@ -499,10 +498,10 @@ var utility = {
 	},
 	getAudioUrl: function () {
 		/// <summary>获得音乐地址</summary>
-		return window.localStorage["audioUrl"] || (navigator.userAgent.indexOf("Firefox") != -1 ? "https://github.com/iccfish/12306_ticket_helper/raw/master/res/song.ogg" : "http://www.w3school.com.cn/i/song.ogg");
+		return window.localStorage["audioUrl"] || (navigator.userAgent.indexOf("Firefox") != -1 ? "http://www.w3school.com.cn/i/song.ogg" : "http://www.w3school.com.cn/i/song.ogg");
 	},
 	getFailAudioUrl: function () {
-		return (utility.isWebKit() ? "http://resbak.fishlee.net/res/" : "https://github.com/iccfish/12306_ticket_helper/raw/master/res/") + "music3.ogg";
+		return (utility.isWebKit() ? "http://resbak.fishlee.net/res/" : "http://resbak.fishlee.net/res/") + "music3.ogg";
 	},
 	playFailAudio: function () {
 		if (!window.Audio) return;
@@ -800,7 +799,7 @@ var utility = {
 		var pageIndex = 0;
 
 		function loadPage() {
-			utility.post("/otsweb/passengerAction.do?method=queryPagePassenger", { pageSize: 10, pageIndex: pageIndex }, "json", function (json) {
+			utility.post("/otsweb/passengerAction.do?method=getPagePassenger", { pageSize: 10, pageIndex: pageIndex }, "json", function (json) {
 				$.each(json.rows, function () { utility.allPassengers.push(this); });
 
 				if (utility.allPassengers.length >= json.recordCount) {
@@ -1026,16 +1025,6 @@ if (location.host == "dynamic.12306.cn" || (location.host == "www.12306.cn" && l
 	} else if (!window.localStorage) {
 		alert("警告! localStorage 为 null, 助手无法运行. 请查看浏览器是否已经禁用 localStorage!\nFirefox请设置 about:config 中的 dom.storage.enabled 为 true .");
 	} else {
-
-		//新版本更新显示提示
-		if (utility.getPref("helperVersion") != version) {
-			if (utility.getPref("helperVersion") && compareVersion(utility.getPref("helperVersion"), "4.0.0") < 0) {
-				utility.notify("您好，由于助手4.0更改比较大，为了防止您的助手出现异常问题，所有已保存的设置将会被完全清空，请重新设置。给您带来的不便，老衲很是抱歉……");
-				window.localStorage.clear();
-			}
-			//还原NotifyObj。。。
-			utility.notifyObj = null;
-		}
 
 		//记录更新
 		utility.setPref("updates", updates.join("\t"));
@@ -1357,57 +1346,88 @@ function initAutoCommitOrder() {
 					reloadCode();
 				}
 				else {
-					jQuery.ajax({
-						url: '/otsweb/order/confirmPassengerAction.do?method=confirmSingleForQueueOrder',
-						data: $('#confirmPassenger').serialize(),
-						type: "POST",
-						timeout: 10000,
-						dataType: 'json',
-						success: function (msg) {
-							console.log(msg);
+					queryQueueCount();
+				}
+			},
+			error: function (msg) {
+				setCurOperationInfo(false, "当前请求发生错误");
+				utility.delayInvoke(null, submitForm, 1000);
+			}
+		});
+	}
 
-							var errmsg = msg.errMsg;
-							if (errmsg != 'Y') {
-								if (errmsg.indexOf("包含未付款订单") != -1) {
-									alert("您有未支付订单! 等啥呢, 赶紧点确定支付去.");
-									window.location.replace("/otsweb/order/myOrderAction.do?method=queryMyOrderNotComplete&leftmenu=Y");
-									return;
-								}
-								if (errmsg.indexOf("重复提交") != -1) {
-									stop("重复提交错误，已刷新TOKEN，请重新输入验证码提交");
-									reloadToken();
-									reloadCode();
-									return;
-								}
-								if (errmsg.indexOf("后台处理异常") != -1 || errmsg.indexOf("非法请求") != -1) {
-									if (lastform) {
-										utility.notifyOnTop("后台处理异常，已自动重新提交表单，请填写验证码并提交！");
-										lastform.submit();
-									} else {
-										stop("后台处理异常，请返回查询页重新预定！");
-									}
-									return;
-								}
-								if (errmsg.indexOf("包含排队中") != -1) {
-									console.log("惊现排队中的订单， 进入轮询状态");
-									waitingForQueueComplete();
-									return;
-								}
+	function queryQueueCount() {
+		var queryLeftData = {
+			train_date: $("#start_date").val(),
+			train_no: $("#train_no").val(),
+			station: $("#station_train_code").val(),
+			seat: $("#passenger_1_seat").val(),
+			from: $("#from_station_telecode").val(),
+			to: $("#to_station_telecode").val(),
+			ticket: $("#left_ticket").val()
+		};
+		utility.get("/otsweb/order/confirmPassengerAction.do?method=getQueueCount", queryLeftData, "json", function (data) {
+			console.log(data);
+			if (data.op_2) {
+				var errmsg = "排队人数过多，系统禁止排队，稍等自动重试 (排队人数=" + data.count + ")";
+				setCurOperationInfo(true, errmsg);
+				stop(errmsg);
+
+				utility.delayInvoke(null, queryQueueCount, 1000);
 
 
-								setCurOperationInfo(false, errmsg);
-								stop(errmsg);
-								reloadCode();
-							} else {
-								utility.notifyOnTop("订单提交成功, 正在等待队列完成操作，请及时注意订单状态");
-								waitingForQueueComplete();
-							}
-						},
-						error: function (msg) {
-							setCurOperationInfo(false, "当前请求发生错误");
-							utility.delayInvoke(null, submitForm, 3000);
+				return;
+			}
+
+			submitConfirmOrder();
+		}, function () { utility.delayInvoke(null, queryLeftTickets, 2000); });
+	}
+
+	function submitConfirmOrder() {
+		jQuery.ajax({
+			url: '/otsweb/order/confirmPassengerAction.do?method=confirmSingleForQueueOrder',
+			data: $('#confirmPassenger').serialize(),
+			type: "POST",
+			timeout: 10000,
+			dataType: 'json',
+			success: function (msg) {
+				console.log(msg);
+
+				var errmsg = msg.errMsg;
+				if (errmsg != 'Y') {
+					if (errmsg.indexOf("包含未付款订单") != -1) {
+						alert("您有未支付订单! 等啥呢, 赶紧点确定支付去.");
+						window.location.replace("/otsweb/order/myOrderAction.do?method=queryMyOrderNotComplete&leftmenu=Y");
+						return;
+					}
+					if (errmsg.indexOf("重复提交") != -1) {
+						stop("重复提交错误，已刷新TOKEN，请重新输入验证码提交");
+						reloadToken();
+						reloadCode();
+						return;
+					}
+					if (errmsg.indexOf("后台处理异常") != -1 || errmsg.indexOf("非法请求") != -1) {
+						if (lastform) {
+							utility.notifyOnTop("后台处理异常，已自动重新提交表单，请填写验证码并提交！");
+							lastform.submit();
+						} else {
+							stop("后台处理异常，请返回查询页重新预定！");
 						}
-					});
+						return;
+					}
+					if (errmsg.indexOf("包含排队中") != -1) {
+						console.log("惊现排队中的订单， 进入轮询状态");
+						waitingForQueueComplete();
+						return;
+					}
+
+
+					setCurOperationInfo(false, errmsg);
+					stop(errmsg);
+					reloadCode();
+				} else {
+					utility.notifyOnTop("订单提交成功, 正在等待队列完成操作，请及时注意订单状态");
+					waitingForQueueComplete();
 				}
 			},
 			error: function (msg) {
@@ -1457,6 +1477,7 @@ function initAutoCommitOrder() {
 					reloadCode();
 				} else if (json.waitTime == -2) {
 					var msg = "很抱歉, 铁道部说您占座失败 : " + json.msg + ', 赶紧重新来过!';
+					reloadToken();
 					utility.notify(msg);
 					setCurOperationInfo(false, msg);
 					stop(msg);
@@ -1869,11 +1890,11 @@ function initTicketQuery() {
 <tr class='fish_sep musicFunc'><td class='name'>可用音乐地址</td><td colspan='3'>");
 
 	var host1 = "http://resbak.fishlee.net/res/";
-	var host2 = "https://github.com/iccfish/12306_ticket_helper/raw/master/res/";
+	//var host2 = "https://github.com/iccfish/12306_ticket_helper/raw/master/res/";
 	var musics = [["music1.ogg", "超级玛丽"], ["music2.ogg", "蓝精灵"]];
 	$.each(musics, function () {
 		extrahtml.push("<a href='javascript:;' url='" + host1 + this[0] + "' class='murl'>" + this[1] + "</a>&nbsp;&nbsp;&nbsp;&nbsp;");
-		extrahtml.push("<a href='javascript:;' url='" + host2 + this[0] + "' class='murl'>" + this[1] + "</a>(HTTPS)&nbsp;&nbsp;&nbsp;&nbsp;");
+		//extrahtml.push("<a href='javascript:;' url='" + host2 + this[0] + "' class='murl'>" + this[1] + "</a>(HTTPS)&nbsp;&nbsp;&nbsp;&nbsp;");
 	});
 
 	extrahtml.push("</td></tr><tr class='fish_sep'><td colspan='4'><input type='button' value='添加自定义车票时间段' id='btnDefineTimeRange' />\
@@ -2456,6 +2477,7 @@ function initTicketQuery() {
 <tr class='fish_sep autoorder_steps caption'><td><label><input type='checkbox' id='swAutoBook' name='swAutoBook' checked='checked' /><span class='hide indicator'>③</span> 自动预定</label></td><td colspan='2' style='font-weight:normal;'><select id='autoorder_method'><option value='0'>席别优先</option><option value='1'>车次优先</option></select>如果启用，符合规则的车次的特定席别有效时，将会进入预定页面</td><td style='text-align:rigth;'><button id='btnAddAutoBook' class='fish_button'>添加</button><button id='btnClearAutoBook' class='fish_button'>清空</button></td></tr>\
 <tr class='fish_sep'><td colspan='4' id='autobookListTd'></td></tr>\
 <tr class='fish_sep'><td colspan='4'><label><input type='checkbox' id='autoBookTip' checked='checked' /> 如果自动预定成功，进入预定页面后播放提示音乐并弹窗提示</label></td></tr>\
+<tr class='fish_sep autoordertip' style='display:none;'><td class='name'>自动回滚</td><td><label><input type='checkbox' id='autoorder_autocancel' /> 自动提交失败时，自动取消自动提交并再次预定</label></td></tr>\
 <tr class='caption autoorder_steps fish_sep highlightrow'><td class='name autoordertd'><label style='display:none;color:red;'><input type='checkbox' id='autoorder'/>自动提交订单</label></td><td class='autoordertd' colspan='3'><p style='display:none;'><img id='randCode' src='/otsweb/passCodeAction.do?rand=randp' /> <input size='4' maxlength='4' type='text' id='randCodeTxt' /> (验证码可在放票前填写，临近放票时建议点击图片刷新并重新填写，以策安全。请务必控制好阁下的眼神……)</p></td></tr>\
 <tr style='display:none;' class='autoordertip fish_sep'><td class='name' style='color:red;'>警告</td><td colspan='3' style='color:darkblue;'>\
 <p style='font-weight:bold; color:purple;'>自动提交订单使用流程：勾选要订票的联系人 -&gt; 设置需要的席别 -&gt; 将你需要订票的车次按优先级别加入自动预定列表 -&gt; 勾选自动提交订单 -&gt; 输入验证码 -&gt; 开始查票。信息填写不完整将会导致助手忽略自动提交订单，请务必注意。进入自动订票模式后，席别选择和自动预定都将被锁定而无法手动切换。如果查询的是学生票，那么提交的将会是学生票订单。<u style='color:red;'>一切都设置完成后，请点击查询开始查票。一旦有票将会自动提交。</u></p>\
@@ -2470,6 +2492,7 @@ function initTicketQuery() {
 
 		//优选逻辑
 		$("#autoorder_method").val(window.localStorage["autoorder_method"] || "0").change(function () { window.localStorage.setItem("autoorder_method", $(this).val()); });
+		$("#autoorder_autocancel").attr("checked", (window.localStorage["autoorder_autocancel"] || "1") == "1").change(function () { window.localStorage.setItem("autoorder_autocancel", this.checked ? "1" : "0"); });
 
 		//自动预定列表
 		list_autoorder = utility.selectionArea.call($("#autobookListTd"), { syncToStorageKey: "list_autoBookList", onAdd: onAutoOrderRowStyle, onRemove: onAutoOrderRowStyle, onClear: onAutoOrderRowStyle });
@@ -3037,6 +3060,7 @@ function initDirectSubmitOrder() {
 	var status = parent.window.$("#fishSubmitFormStatus");
 	var formData = null;
 	var tourFlag;
+	var data = null;
 	$("#autoorder")[0].disabled = false;
 
 	function setCurOperationInfo(running, msg) {
@@ -3142,7 +3166,7 @@ function initDirectSubmitOrder() {
 
 	function getOrderFormInfo(html) {
 		if (typeof (html) != 'undefined' && html) {
-			var data = utility.analyzeForm(html);
+			data = utility.analyzeForm(html);
 			data.fields["orderRequest.reserve_flag"] = "A";	//网上支付
 			tourFlag = data.tourFlag;
 
@@ -3193,6 +3217,7 @@ function initDirectSubmitOrder() {
 	function checkOrderInfo() {
 		setCurOperationInfo(true, "正在检测订单状态....");
 		utility.notifyOnTop("开始自动提交订单！");
+		console.log(data);
 
 		utility.post("confirmPassengerAction.do?method=checkOrderInfo&rand=" + getVcCode(), formData.join("&") + "&randCode=" + getVcCode(), "json", function (data) {
 			console.log(data);
@@ -3209,18 +3234,64 @@ function initDirectSubmitOrder() {
 				return;
 			}
 
-			submitOrder();
+			queryQueueInfo();
 		}, function () {
 			setCurOperationInfo(false, "网络出现错误，稍等重试");
-			utility.delayInvoke(counter, checkOrderInfo, 2000);
+			utility.delayInvoke(counter, checkOrderInfo, 500);
 		});
 	}
 
+	function queryQueueInfo() {
+		if (!document.getElementById("autoorder").checked) {
+			hideStatus();
+			return;
+		}
+		setCurOperationInfo(true, "正在提交订单");
+		setTipMessage("正在检查队列。");
+
+		var queryLeftData = {
+			train_date: data.fields["orderRequest.train_date"],
+			station: data.fields["orderRequest.station_train_code"],
+			train_no: data.fields["orderRequest.train_no"],
+			seat: $("#preSelectSeat").val(),
+			from: data.fields["orderRequest.from_station_telecode"],
+			to: data.fields["orderRequest.to_station_telecode"],
+			ticket: data.fields["leftTicketStr"]
+		};
+		utility.get("/otsweb/order/confirmPassengerAction.do?method=getQueueCount", queryLeftData, "json", function (data) {
+			if (data.op_2) {
+				//utility.notifyOnTop("排队人数过多，系统禁止排队，稍等重试。要重新查询，请刷新页面！");
+				setTipMessage("排队人数过多 (人数=" + data.count + ")");
+				setCurOperationInfo(true, "排队人数过多");
+				utility.delayInvoke(counter, queryQueueInfo, 500);
+			} else {
+				submitOrder();
+			}
+		}, function () { utility.delayInvoke(counter, queryQueueInfo, 500); });
+
+	}
+
 	function submitOrder() {
+		if (!document.getElementById("autoorder").checked) {
+			hideStatus();
+			return;
+		}
 		setCurOperationInfo(true, "正在提交订单");
 		setTipMessage("已检测状态。");
 
-		utility.post("/otsweb/order/confirmPassengerAction.do?method=confirmSingleForQueueOrder",
+		var order_type = 'confirmSingleForQueueOrder'; //'dc' 单程
+		if (tourFlag == 'wc') {
+			// 异步下单-往程
+			order_type = 'confirmPassengerInfoGoForQueue';
+		} else if (tourFlag == 'fc') {
+			// 异步下单-返程
+			order_type = 'confirmPassengerInfoBackForQueue';
+		} else if (tourFlag == 'gc') {
+			// 异步下单-改签
+			order_type = 'confirmPassengerInfoResignForQueue';
+		}
+
+		utility.post('/otsweb/order/confirmPassengerAction.do?method=' + order_type,
 			formData.join("&") + "&randCode=" + getVcCode(), "json", function (data) {
 				var msg = data.errMsg;
 
@@ -3253,6 +3324,8 @@ function initDirectSubmitOrder() {
 						//排队人数超过余票数，那么必须重新提交
 						document.getElementById("autoorder").checked = false;
 						setTipMessage(msg);
+						reloadCode();
+
 						setCurOperationInfo(false, "警告：" + msg + "，自动回滚为手动提交，请切换车次或席别，请尽快重试！");
 						sendQueryFunc.call(clickBuyStudentTicket == "Y" ? document.getElementById("stu_submitQuery") : document.getElementById("submitQuery"));
 
@@ -3261,12 +3334,14 @@ function initDirectSubmitOrder() {
 					}
 
 					setTipMessage(msg);
-					setCurOperationInfo(false, "未知错误：" + msg + "，请告知作者。自动回滚为手动提交。");
-					utility.notifyOnTop("未知错误：" + msg + "，请告知作者。自动回滚为手动提交。");
+					setCurOperationInfo(false, "未知错误：" + msg + "，请告知作者。");
+					utility.notifyOnTop("未知错误：" + msg + "，请告知作者。");
 
-					document.getElementById("autoorder").checked = false;
-					$("#autoorder").change();
-					$("#orderForm").submit();
+					if (document.getElementById("autoorder_autocancel").checked) {
+						document.getElementById("autoorder").checked = false;
+						$("#autoorder").change();
+						$("#orderForm").submit();
+					}
 				}
 			}, function () {
 				setCurOperationInfo(false, "网络出现错误，稍等重试");
@@ -3643,7 +3718,7 @@ if (location.pathname == "/otsweb/" || location.pathname == "/otsweb/main.jsp") 
 				}
 
 				console.log("[INFO] 更新检查：当前助手版本=" + version + "，新版本=" + version_12306_helper);
-				if (compareVersion(version, version_12306_helper) < 0 && confirm("订票助手已发布新版 【" + version_12306_helper + "】，为了您的正常使用，请及时更新!\n\n是否立刻更新？")) {
+				if (compareVersion(version, version_12306_helper) < 0 && confirm("订票助手已发布新版 【" + version_12306_helper + "】，为了您的正常使用，请及时更新!是否立刻更新？\n\n本次更新内容如下：\n" + version_updater.join("\n"))) {
 					GM_openInTab("http://www.fishlee.net/Service/Download.ashx/44/47/12306_ticket_helper.user.js", true, true);
 				}
 			}
