@@ -12,7 +12,7 @@
 // @require			http://lib.sinaapp.com/js/jquery/1.8.3/jquery.min.js
 // @icon			http://www.12306.cn/mormhweb/images/favicon.ico
 // @run-at			document-idle
-// @version 		4.3.2
+// @version 		4.3.3
 // @updateURL		http://static.liebao.cn/_softdownload/12306_ticket_helper.user.js
 // @supportURL		http://www.fishlee.net/soft/44/
 // @homepage		http://www.fishlee.net/soft/44/
@@ -22,7 +22,7 @@
 
 //=======START=======
 
-var version = "4.3.2";
+var version = "4.3.3";
 var updates = [
 	"为了保证大家订票安全，临时和谐了所有和提交订单有关系的功能",
 	"其它更新了什么？你懂的"
@@ -800,9 +800,8 @@ var utility = {
 			return;
 		}
 
-		if (location.search.indexOf("?method=initUsualPassenger") == -1) {
-			return [];
-		}
+		var tw = utility.getTopWindow();
+		if (tw != self) return tw.utility.getAllPassengers(callback, ignoreLocalCache);
 
 		//开始加载所有乘客
 		utility.allPassengers = [];
@@ -2501,10 +2500,6 @@ function initTicketQuery() {
 			} else _bakAlert(msg);
 		}
 	})();
-	//#endregion
-
-	//#region 默认加入拦截Ajax缓存
-	(function () { $.ajaxSetup({ cache: false }); })();
 	//#endregion
 
 	//#region 显示所有的乘客
