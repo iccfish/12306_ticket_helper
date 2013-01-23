@@ -1,7 +1,6 @@
-var version_12306_helper = "4.3.3";
+var version_12306_helper = "4.4.0";
 var version_updater = [
-	"为了保证大家订票安全，临时和谐了所有和提交订单有关系的功能",
-	"其它更新了什么？你懂的"
+	"想知道更新了什么？打死我也不告诉你~"
 ];
 var fishlee12306_msgid=16;
 var fishlee12306_msgver="4.3.2";
