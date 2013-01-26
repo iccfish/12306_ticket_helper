@@ -1,4 +1,4 @@
-var version_12306_helper = "4.4.2";
+var version_12306_helper = "4.5.0";
 var version_updater = [
 	"想知道更新了什么？打死我也不告诉你~"
 ];
