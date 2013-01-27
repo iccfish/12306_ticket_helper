@@ -12,7 +12,7 @@
 // @require			http://lib.sinaapp.com/js/jquery/1.8.3/jquery.min.js
 // @icon			http://www.12306.cn/mormhweb/images/favicon.ico
 // @run-at			document-idle
-// @version 		4.5.0
+// @version 		4.5.3
 // @updateURL		http://static.liebao.cn/_softdownload/12306_ticket_helper.user.js
 // @supportURL		http://www.fishlee.net/soft/44/
 // @homepage		http://www.fishlee.net/soft/44/
@@ -22,7 +22,7 @@
 
 //=======START=======
 
-var version = "4.5.0";
+var version = "4.5.3";
 var updates = [
 	"自4.5版本开始，建议使用谷歌浏览器以及类似的浏览器（支持CRX扩展的浏览器）进行订票，Firefox或其它一些浏览器因运行机制有限制，部分高级功能将暂时无法使用",
 	"想知道更新了什么？打死我也不告诉你~"
@@ -31,7 +31,7 @@ var updates = [
 var faqUrl = "http://www.fishlee.net/soft/44/faq.html";
 //标记
 var utility_emabed = false;
-var compVersion = "5.67";
+var compVersion = "5.68";
 
 
 //#region -----------------UI界面--------------------------
@@ -100,7 +100,7 @@ div.gridbox_light .odd_light,div.gridbox_light .ev_light{background:-webkit-line
 .validRow{background:-webkit-linear-gradient(#ffe0e5, #ffc7d0)!important;background:-moz-linear-gradient(#ffe0e5, #ffc7d0)!important;color:#700012;}\
 .unValidRow{opacity:0.8;}\
 .unValidCell{opacity:0.8;}\
-.btn130_2 {text-shadow:nonw;}\
+.btn130_2 {text-shadow:none;}\
 ";
 
 	document.head.appendChild(s);
@@ -400,7 +400,7 @@ var utility = {
 				return result;
 			}
 		});
-		
+
 
 		if (utility.isWebKit) {
 			$(document).ajaxSend(function (e, xhr, obj) { if (obj.refer) xhr.setRequestHeader("TRefer", obj.refer); });
@@ -911,8 +911,8 @@ var utility = {
 			return;
 		}
 
-		//var tw = utility.getTopWindow();
-		//if (tw != self) return tw.utility.getAllPassengers(callback, ignoreLocalCache);
+		var tw = utility.getTopWindow();
+		if (tw != self) return tw.utility.getAllPassengers(callback, ignoreLocalCache);
 		if (utility.isfeatureDisabled("pasload"))
 			return [];
 
@@ -1738,7 +1738,10 @@ function initAutoCommitOrder() {
 	}
 
 	//提交频率差别
-	$(".table_qr tr:last").before("<tr><td colspan='9'><div style='display:;'>自动提交失败时休息时间：<input type='text' size='4' class='input_20txt' style='text-align:center;' value='3' id='pauseTime' />秒 (不得低于1)  </div><div><label><input type='checkbox' id='autoStartCommit' /> 验证码戳完自动提交，不选就是你自己戳『提交订单』按钮咯——发生异常（提交不了订单等）的请取消勾选此选项唷</label></div><label><input type='checkbox' id='autoDelayInvoke' /> 启用安全模式——进入本页10秒钟内的自动提交的自动提交会自动推迟到10秒之后。如果你愿意一次又一次地面对验证码错误的话，请取消勾选并反复重试提交，可能会更快一点</label></div><div><label><input type='checkbox' id='showHelp' /> 显示帮助</label></div></td></tr>");
+	$(".table_qr tr:last").before("<tr><td colspan='9'><div style='display:;'>\
+失败时休息时间：<input type='text' size='4' class='input_20txt' style='text-align:center;' value='3' id='pauseTime' />秒 (设置自动重新提交时的时间间隔不得低于1)  </div>\
+安全期时间长度：<input type='text' size='4' class='input_20txt' style='text-align:center;' value='3' id='safeModeTime' />秒 (默认为 <span class='defaultSafeModeTime'></span>秒，可以更改试试，过短可能会导致提交时你被铁道部踹出去……如果发现验证码突然不能显示了，可能需要尝试改大这里的数字喔)  \
+<div><label><input type='checkbox' id='autoStartCommit' /> 验证码戳完自动提交，不选就是你自己戳『提交订单』按钮咯——发生异常（提交不了订单等）的请取消勾选此选项唷</label></div><label><input type='checkbox' id='autoDelayInvoke' /> 启用安全模式——进入本页10秒钟内的自动提交的自动提交会自动推迟到<span class='defaultSafeModeTime'></span>秒之后。如果你希望自己掐表，请取消勾选并重试提交，注意的是……一旦时间果断小心被铁道部踹出门哦。</label></div><div><label><input type='checkbox' id='showHelp' /> 显示帮助</label></div></td></tr>");
 	document.getElementById("autoStartCommit").checked = typeof (window.localStorage["disableAutoStartCommit"]) == 'undefined';
 	document.getElementById("showHelp").checked = typeof (window.localStorage["showHelp"]) != 'undefined';
 	document.getElementById("autoDelayInvoke").checked = typeof (window.localStorage["autoDelayInvoke"]) == 'undefined';
@@ -1944,6 +1947,15 @@ function initAutoCommitOrder() {
 		var saveModeInfo = safeModeTip.find("span:eq(0)");
 		var saveModeTimeInfo = safeModeTip.find("span:eq(1)");
 		var funSw = document.getElementById("autoDelayInvoke");
+		var defaultWaitTime = 6;
+		var waitTime = parseFloat(utility.getPref("safeModeWaitTime")) || defaultWaitTime;
+
+		$("span.defaultSafeModeTime").html(defaultWaitTime);
+		$("#safeModeTime").val(waitTime).change(function () {
+			waitTime = parseFloat(this.value) || defaultWaitTime;
+			utility.setPref("safeModeWaitTime", waitTime);
+		});
+
 		window.isSafeMobeBlocked = funSw.checked;
 
 		function checkSubmitForm() {
@@ -1958,11 +1970,11 @@ function initAutoCommitOrder() {
 			saveModeTimeInfo.html(Math.round(diff) / 10);
 
 			if (funSw.checked) {
-				if (diff >= 100) {
+				if (diff >= waitTime * 10) {
 					saveModeInfo.html("已达安全期，你可以试着提交订单鸟……不过说不定还是会中枪……");
 					checkSubmitForm();
 				} else {
-					saveModeInfo.html("注入怨念中，等待10秒钟，建议稍等再提交订单");
+					saveModeInfo.html("注入怨念中，等待" + waitTime + "秒钟，建议稍等再提交订单");
 					window.isSafeMobeBlocked = true;
 				}
 			}
@@ -1979,11 +1991,11 @@ function initAutoCommitOrder() {
 		function checkSafeModeTime() {
 			var diff = (new Date() - entryTime) / 1000;
 
-			if (diff >= 10) {
+			if (diff >= waitTime) {
 				saveModeInfo.html("保护期已过，你可以安全地提交订单鸟");
 				checkSubmitForm();
 			} else {
-				saveModeInfo.html("注入怨念中，等待10秒钟，建议稍等再提交订单");
+				saveModeInfo.html("注入怨念中，等待" + waitTime + "秒钟，建议稍等再提交订单");
 				window.isSafeMobeBlocked = true;
 			}
 		}
@@ -3832,7 +3844,7 @@ function initLogin() {
 					stopLogin();
 				} else if (html.indexOf("欢迎您登录") != -1) {
 					utility.notifyOnTop('登录成功，开始查询车票吧！');
-					window.location.href = "https://dynamic.12306.cn/otsweb/order/querySingleAction.do?method=init";
+					setTimeout(function () { parent.window.$("#menu_left li:eq(0) a")[0].click(); }, 2000);
 				} else {
 					setTipMessage(msg);
 					utility.delayInvoke("#countEle", getLoginRandCode, utility.getLoginRetryTime());

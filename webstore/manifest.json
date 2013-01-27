@@ -15,9 +15,8 @@
 		"default_title":"12306订票助手"
 	},
 	"description": "帮您订票的小助手 by 木鱼 :-)",
-	"key": "7k6gnXVACvUPU2DfslJgSrWJTHqIg5uwd+Kgl/5zSg==",
 	"name": "12306 订票助手 for Chrome",
-	"version": "4.5.0",
+	"version": "4.5.3",
 	"manifest_version": 2,
 	"icons": {
 		"16": "icons/icon_16.png",
@@ -28,7 +27,6 @@
 	"homepage_url": "http://www.fishlee.net/",
 	"permissions": [ "http://www.12306.cn/", "https://*.12306.cn/*", "notifications", "webRequest","webRequestBlocking"],
    "background": {
-	"page": "background.html",
-	"persistent": true
+	"page": "background.html"
   }
 }
