@@ -12,7 +12,7 @@
 // @require			http://lib.sinaapp.com/js/jquery/1.8.3/jquery.min.js
 // @icon			http://www.12306.cn/mormhweb/images/favicon.ico
 // @run-at			document-idle
-// @version 		4.5.3
+// @version 		4.5.6
 // @updateURL		http://static.liebao.cn/_softdownload/12306_ticket_helper.user.js
 // @supportURL		http://www.fishlee.net/soft/44/
 // @homepage		http://www.fishlee.net/soft/44/
@@ -22,10 +22,10 @@
 
 //=======START=======
 
-var version = "4.5.3";
+var version = "4.5.6";
 var updates = [
-	"自4.5版本开始，建议使用谷歌浏览器以及类似的浏览器（支持CRX扩展的浏览器）进行订票，Firefox或其它一些浏览器因运行机制有限制，部分高级功能将暂时无法使用",
-	"想知道更新了什么？打死我也不告诉你~"
+	"<span style='color:purple; font-weight:bold; '>亲，这可能是节前助手最后一次更新了。在这一年不短却也不长的一年中，感谢你的陪伴。如果助手帮你买到票了，作者也会很高兴。如果没有帮到你，作者也会很遗憾，但你不是一个人没有买到票，请不要难过气馁。作者无法变出更多的票出来，这成为永恒的遗憾。</span>",
+	"<span style='color:red; font-weight: bold;'>亲爱的们，春节快乐，囧途顺利，会被逼婚的同学记得阅读防逼婚指南喔 :-)</span>"
 ];
 
 var faqUrl = "http://www.fishlee.net/soft/44/faq.html";
@@ -101,6 +101,7 @@ div.gridbox_light .odd_light,div.gridbox_light .ev_light{background:-webkit-line
 .unValidRow{opacity:0.8;}\
 .unValidCell{opacity:0.8;}\
 .btn130_2 {text-shadow:none;}\
+.warning{color:red;}\
 ";
 
 	document.head.appendChild(s);
@@ -153,7 +154,6 @@ function injectDom() {
 	html.push('<p style="color: red;"> <strong style="font-size:16px;">啊嘞……看这里！本助手完全免费啊诸位大人！</strong>任何在第三方网站上出售的软件全他喵的是侵权出售啊！！看到的时候请亲务必记得退款退货打差评向青天大老爷举报啊！！</p>');
 	html.push('<p style="color:purple;"> 回家是一个单纯而简单的心愿，希望我们不会变得太复杂……</p>');
 	html.push('<p> 有很多朋友资助作者，正在木有暖气的南方饱受煎熬的作者感激涕零 ≥ω≤。<a href="http://www.fishlee.net/soft/44/donate.html" target="_blank">戳这里了解捐助详情</a>。 </p>');
-	html.push('<p style="color: blue;"> <strong style="">那个，诸位票贩子们，放过本助手吧！！你们都去用什么自动识别验证码的好啦！还有铁道部的爷爷们，拜托你们改进下的用户体验吧！你们的订票足够好用的话虽还来用脚本啊！！！！</strong></p>');
 	html.push('<p style="font-weight:bold;">当前版本更新内容</p>');
 	html.push('<ol>');
 	$.each(utility.getPref("updates").split('\t'), function (i, n) {
@@ -311,7 +311,7 @@ var utility = {
 	regInfo: null,
 	disabledFeaturesCache: null,
 	isWebKit: function () {
-		return window.webkitNotifications || true;
+		return window.webkitNotifications || false;
 	},
 	isFirefox: function () {
 		return !utility.isWebKit();
@@ -343,7 +343,7 @@ var utility = {
 	},
 	getScriptVersion: function () {
 		/// <summary>获得12306的网站脚本版本</summary>
-		return /=([\d\.]+)$/i.exec($("script[src]:eq(0)").attr("src") + "")[1];
+		return /=([\d\.]+)$/i.exec($("script[src*=/otsweb/]:eq(0)").attr("src") + "")[1];
 	},
 	checkCompatible: function () {
 		var sv = utility.getScriptVersion();
@@ -2063,13 +2063,14 @@ function initTicketQuery() {
 		"<span style='font-weight:bold;margin-left:10px;color:#0f7edb;' title='点击预定按钮时，有时候等待一会儿系统会提示服务器忙；勾选此选项后，如果出现这种情况，助手将会进行自动重新预定'><label><input type='checkbox' id='chkAutoResumitOrder' checked='checked' />预定失败时自动重试</label></span>" +
 		"<span style='font-weight:bold;margin-left:10px;color:#0f7edb;' title='有时候系统忙，查询会提示查询失败；勾选此选项后，如果出现这种情况，助手将会进行自动刷新查询'><label><input type='checkbox' id='chkAutoRequery' checked='checked' />查询失败时自动重试</label></span>" +
 		"<span style='font-weight:bold;margin-left:10px;color:#ff2020;' title='以服务器时间为准，未获得服务器时间之前，此选项不可用。启用智能加速模式时，在非正点附近时（大于0小于59分）按照正常速度刷新；当在正点附近时（大于等于59分时），暂停刷新并等到正点即刻刷新。'><label><input disabled='disabled' type='checkbox' id='chkSmartSpeed' />智能正点刷新模式</label></span>" +
+		"<span style='font-weight:bold;margin-left:10px;color:purple;' title='以服务器时间为准，未获得服务器时间之前，此选项不可用。此模式用于正点买票，启用后，在正点之前，助手不刷新，等到整点过5秒时，助手将会开始刷新。推荐您需要正点抢票的时候使用，此模式可以较好地避免频繁刷新带来的缓存问题……'><label><input disabled='disabled' type='checkbox' id='chkWaitMode' class='needServerTime' />等待整点刷新</label><select id='waitHour'></select></span>" +
 		"</td></tr>" +
 		"<tr class='append_row'><td id='filterFunctionRow' colspan='9'>" +
 		"<span style='font-weight:bold;color:#ff2020;'><label title='不可以预定的车次过滤掉的选项（隐藏起来不显示，无票的车次）'><input type='checkbox' id='chkFilterNonBookable' />过滤不可预订的车次</label></span>" +
 		"<span style='font-weight:bold;margin-left:10px;color:#ff2020;'><label title='有时候虽然整趟车可以预定，但是有票的席别都是你不要的，如果勾选此选项，也将会过滤掉'><input type='checkbox' id='chkFilterNonNeeded' />过滤不需要的席别</label></span>" +
 		"<span style='font-weight:bold;margin-left:10px;color:blue;display: none;'><label><input disabled='disabled' type='checkbox' id='chkFilterByTrain' />开启按车次过滤</label></span>" +
 		"</td></tr>" +
-		"<tr class='append_row'><td colspan='9' id='opFunctionRow' style='padding-left:31px;'><input type='button' class='fish_button' disabled='disabled' value='停止声音' id='btnStopSound' /><input type='button' class='fish_button' disabled='disabled'  value='停止刷新' id='btnStopRefresh' /><input  type='button' class='fish_button' type='button' value='设置' id='configLink' /> <input type='button' class='fish_button' id='resetSettings' value='清空助手设置' /> <input type='button' class='fish_button configLink' value='IE登录' /> 【 <a href='http://www.fishlee.net/soft/44/tour.html' style='color:#0abaff;font-weight:bold;' target='_blank'>啊嘞……遇到不明白的啦？戳这里看教程呗</a>】<span style='margin-left:20px;color:purple;font-weight:bold;' id='serverMsg'></span></td></tr>"
+		"<tr class='append_row'><td colspan='9' id='opFunctionRow' style='padding-left:31px;'><input type='button' class='fish_button' disabled='disabled' value='停止声音' id='btnStopSound' /><input type='button' class='fish_button' disabled='disabled'  value='停止刷新' id='btnStopRefresh' /><input  type='button' class='fish_button' type='button' value='设置' id='configLink' /> <input type='button' class='fish_button' id='resetSettings' value='清空助手设置' /> <input type='button' class='fish_button configLink' value='IE登录' /> 【设置完毕后记得戳『查询』开始运行哈。<a href='http://www.fishlee.net/soft/44/tour.html' style='color:#0abaff;font-weight:bold;' target='_blank'>戳这里看教程哦</a>。】<span style='margin-left:20px;color:purple;font-weight:bold;' id='serverMsg'></span></td></tr>"
 	);
 
 	if (!window.Audio) {
@@ -2094,6 +2095,11 @@ function initTicketQuery() {
 	$("#btnStopRefresh").click(function () { resetTimer(); });
 	$("#chkSmartSpeed").change(function () {
 	});
+	var waitHour = $("#waitHour");
+	var waitHourEle = waitHour[0];
+	for (var i = 6; i < 24; i++) {
+		waitHourEle.options[i - 6] = new Option(i + ":00", i);
+	}
 
 	//#endregion
 
@@ -2295,9 +2301,26 @@ function initTicketQuery() {
 		if (timer) return;
 
 		var d = new Date().getMinutes();
-		isSmartOn = document.getElementById("chkSmartSpeed").checked && time_server && time_server.getMinutes() >= 59;
+		//chkWaitMode
+		if (document.getElementById("chkSmartSpeed").checked && time_server && time_server.getMinutes() >= 59) {
+			isSmartOn = true;
+			timerCountDown = 60 - time_server.getSeconds() + 2;
+		} else if (document.getElementById("chkWaitMode").checked && new Date().getHours() < parseInt(waitHour.val()) && time_server) {
+			var wait = new Date();
+			wait.setFullYear(time_server.getFullYear());
+			wait.setMonth(time_server.getMonth());
+			wait.setDate(time_server.getDate());
+			wait.setHours(parseInt(waitHour.val()));
+			wait.setMinutes(0);
+			wait.setSeconds(5);
 
-		timerCountDown = isSmartOn ? 60 - time_server.getSeconds() + 2 : timeCount + 2 * Math.random();
+			timerCountDown = (wait - time_server) / 1000;
+			isSmartOn = true;
+		} else {
+			timerCountDown = timeCount + 2 * Math.random();
+			isSmartOn = false;
+		}
+
 		var str = (Math.round(timerCountDown * 10) / 10) + "";
 		$("#refreshtimer").html("[" + (isSmartOn ? "等待正点," : "") + str + (str.indexOf('.') == -1 ? ".0" : "") + "秒后查询...]");
 		//没有定时器的时候，开启定时器准备刷新
@@ -2544,9 +2567,10 @@ function initTicketQuery() {
 	$("body").ajaxComplete(function (e, r, s) {
 		if (!$("#chkAutoRequery")[0].checked) return;
 		if (s.url.indexOf("/otsweb/order/querySingleAction.do") != -1 && r.responseText == "-1") {
-			//invalidQueryButton();
-			//delayButton();
-			//startTimer();
+			$("#cctypex").remove();
+			invalidQueryButton();
+			delayButton();
+			startTimer();
 		} else {
 			$("#serverMsg").html("");
 		}
@@ -3159,7 +3183,7 @@ function initTicketQuery() {
 			var now = new Date();
 			time_server = new Date();
 			time_server.setTime(now.getTime() - time_offset);
-			document.getElementById("chkSmartSpeed").disabled = time_server.getFullYear() < 2000;
+			$("#chkSmartSpeed, .needServerTime").attr("disabled", time_server.getFullYear() < 2000);
 
 			dom.eq(0).html(utility.formatTime(time_server));
 			dom.eq(1).html(utility.formatTime(now));
@@ -3313,6 +3337,42 @@ function initTicketQuery() {
 
 	})();
 
+
+	//#endregion
+
+	//#region 查询的时间记录
+
+	(function () {
+		var lastTime = null;
+		var title = $(".cx_titler");
+
+		//测试
+		$("body").append("<input type='checkbox' style='display:none' id='cctypex' name='trainClassArr' value='XP' checked='checked' />");
+
+		$(document).ajaxComplete(function (e, xhr, o) {
+			if (o.url.indexOf("method=queryLeftTicket") == -1 || xhr.reponseText == "-1") return;
+
+			var age = xhr.getResponseHeader("Age");
+			var xcache = xhr.getResponseHeader("X-Cache");
+			var date = xhr.getResponseHeader("Date") || "<未知>";
+			var dateStr = "<未知>";
+
+			if (date) {
+				date = new Date(date);
+				dateStr = utility.formatTime(date);
+			}
+
+			var isCache = (age == 1 || date == lastTime || xcache.indexOf("HIT") != -1);
+			var html = "数据时间：" + dateStr;
+			title.html((isCache ? "<strong>我勒个去</strong>！这可能是TDB在拿缓存的数据忽悠你！" : "") + html);
+			if (isCache) {
+				title.addClass("warning");
+			} else {
+				title.removeClass("warning");
+			}
+			$("#cctypex").val(Math.round(Math.random() * 10000) * (new Date().getMinutes < 2 ? (new Date().getMinutes() + 1) * 10 : 1));
+		});
+	})();
 
 	//#endregion
 
