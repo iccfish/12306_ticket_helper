@@ -1,6 +1,8 @@
-var version_12306_helper = "4.6.1";
+var version_12306_helper = "4.6.2";
 var version_updater = [
-	"常规性修改。祝你春节快乐……"
+	"恢复预定页的余票查询",
+	"其它细节修改",
+	"亲, 欢迎回来工作, 您辛苦了 :-)"
 ];
 var fishlee12306_msgid=17;
 var fishlee12306_msgver="4.6.2";
