@@ -1,8 +1,7 @@
-var version_12306_helper = "4.6.2";
+var version_12306_helper = "4.6.3";
 var version_updater = [
-	"恢复预定页的余票查询",
-	"其它细节修改",
-	"亲, 欢迎回来工作, 您辛苦了 :-)"
+	"修改余票显示为实际张数",
+	"修复在个别浏览器上功能的异常"
 ];
 var fishlee12306_msgid=17;
 var fishlee12306_msgver="4.6.2";

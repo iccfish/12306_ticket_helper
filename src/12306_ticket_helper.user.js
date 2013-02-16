@@ -12,7 +12,7 @@
 // @require			http://lib.sinaapp.com/js/jquery/1.8.3/jquery.min.js
 // @icon			http://www.12306.cn/mormhweb/images/favicon.ico
 // @run-at			document-idle
-// @version 		4.6.2
+// @version 		4.6.3
 // @updateURL		http://static.fishlee.net/_softdownload/12306_ticket_helper.user.js
 // @supportURL		http://www.fishlee.net/soft/44/
 // @homepage		http://www.fishlee.net/soft/44/
@@ -22,11 +22,10 @@
 
 //=======START=======
 
-var version = "4.6.2";
+var version = "4.6.3";
 var updates = [
-	"恢复预定页的余票查询",
-	"其它细节修改",
-	"<span style='color:red; font-weight: bold;'>亲, 欢迎回来工作, 您辛苦了 :-)</span>"
+	"修改余票显示为实际张数",
+	"修复在个别浏览器上功能的异常"
 ];
 
 var faqUrl = "http://www.fishlee.net/soft/44/faq.html";
@@ -97,7 +96,7 @@ tr.append_row td{padding-left:37px;}\
 tr.append_row td label{padding-right:4px;}\
 #acathur{color:#fcfcfc;font-weight:bold;font-family:Segoe UI,Lucida Grande,Arial,Helvetica,Sans-serif;text-decoration:underline;text-shadow:0 0 1px #000,0px 0px 6px rgba(0,0,0,0.8);}\
 div.gridbox_light .odd_light,div.gridbox_light .ev_light{background:-webkit-linear-gradient(#fff,#f6f6f6);background:-moz-linear-gradient(#fff,#f6f6f6);text-shadow:.0em .1em .1em rgba(255,255,255,0.8);}\
-.validCell{ background:-webkit-linear-gradient(#e0ebff, #c7d9ff)!important; background:-moz-linear-gradient(#e0ebff, #c7d9ff)!important; }\
+.validCell{ background:-webkit-linear-gradient(#e0ebff, #c7d9ff)!important; background:-moz-linear-gradient(#e0ebff, #c7d9ff)!important; color:green; }\
 .validRow{background:-webkit-linear-gradient(#ffe0e5, #ffc7d0)!important;background:-moz-linear-gradient(#ffe0e5, #ffc7d0)!important;color:#700012;}\
 .unValidRow{opacity:0.8;}\
 .unValidCell{opacity:0.8;}\
@@ -259,7 +258,9 @@ function injectDom() {
 		//清空禁止标记位
 		utility.clearFeatrueDisabled();
 		//加入已知的不可用的功能标记
-		utility.setPref("disabled", ['ontimequeuecount'].join("|"));
+		var preDisabled = ['ontimequeuecount'];
+		if (!utility.isAdvancedSupport()) preDisabled.push("ontimeleftticket");
+		utility.setPref("disabled", preDisabled.join("|"));
 		utility.disabledFeaturesCache = null;
 		//删除Cookies，反检测。
 		(function () { var p = new Date(); p.setTime(p.getTime() - 1000); for (var i = 0; i < arguments.length; i++) document.cookie = (arguments[i] + "=; path=/; domain=.12306.cn; expires=" + p.toGMTString()); })("helper.regUser", "helper.regSn");
@@ -662,18 +663,19 @@ var utility = {
 	},
 	post: function (url, data, dataType, succCallback, errorCallback, featureFlag, refer) {
 		var onError = function (xhr) {
-			var text = xhr.responseText;
-			if (text == "-1" || !text || text.indexOf("<title>登录</title>") != -1) {
-				//被强退
-				alert("警告：系统已强制退出登录，可能是系统已升级。" +
-					(featureFlag ? "\n为了保证您的安全，功能【" + featureFlag + "】已被自动禁用，请重新登录。\n在助手升级后，功能将会被自动重新开启。" : ""));
-				var list = utility.disabledFeatures();
-				list.push(featureFlag);
-				utility.disabledFeatures = list;
-				utility.setPref("disabled", list.join("|"));
-			}
+			var code = utility.checkResponse(xhr);
+			if (code < 1) {
+				alert("警告：" + (code == 0 ? "操作失败" : "系统已强制退出登录") + "，可能是系统已升级。" +
+					(featureFlag ? "\n为了保证您的安全，功能【" + featureFlag + "】已被自动禁用，请重新登录。\n在助手升级后，功能将会被自动重新开启。\n\n请重新登录。" : ""));
+				utility.disableFeature(featureFlag);
 
-			if (errorCallback) errorCallback.apply(this, arguments);
+				if (code == -1) {
+					//被强退
+					self.location = "/otsweb/loginAction.do?method=init";
+				}
+			} else {
+				if (errorCallback) errorCallback.apply(this, arguments);
+			}
 		}
 		$.ajax({
 			url: url,
@@ -681,8 +683,7 @@ var utility = {
 			timeout: 10000,
 			type: "POST",
 			success: function (data, state, xhr) {
-				var text = xhr.responseText;
-				if (!text || text == -1) onError(xhr);
+				if (utility.checkResponse(xhr) < 1) onError(xhr);
 				else {
 					if (succCallback) succCallback.apply(this, arguments);
 				}
@@ -692,22 +693,27 @@ var utility = {
 			refer: utility.getFullUrl(refer)
 		});
 	},
+	checkResponse: function (xhr) {
+		var text = xhr.responseText;
+		if (!text || text.indexOf("<title>登录</title>") != -1) return -1;
+		if (text == "-1") return 0;
+		return 1;
+	},
 	get: function (url, data, dataType, succCallback, errorCallback, featureFlag, refer) {
 		var onError = function (xhr) {
-			var text = xhr.responseText;
-			if (text == "-1" || !text || text.indexOf("<title>登录</title>") != -1) {
-				//被强退
-				alert("警告：系统已强制退出登录，可能是系统已升级。" +
+			var code = utility.checkResponse(xhr);
+			if (code < 1) {
+				alert("警告：" + (code == 0 ? "操作失败" : "系统已强制退出登录") + "，可能是系统已升级。" +
 					(featureFlag ? "\n为了保证您的安全，功能【" + featureFlag + "】已被自动禁用，请重新登录。\n在助手升级后，功能将会被自动重新开启。\n\n请重新登录。" : ""));
-				var list = utility.disabledFeatures();
-				list.push(featureFlag);
-				utility.disabledFeatures = list;
-				utility.setPref("disabled", list.join("|"));
+				utility.disableFeature(featureFlag);
 
-				self.location = "/otsweb/loginAction.do?method=init";
+				if (code == -1) {
+					//被强退
+					self.location = "/otsweb/loginAction.do?method=init";
+				}
+			} else {
+				if (errorCallback) errorCallback.apply(this, arguments);
 			}
-
-			if (errorCallback) errorCallback.apply(this, arguments);
 		}
 		$.ajax({
 			url: url,
@@ -715,8 +721,7 @@ var utility = {
 			timeout: 10000,
 			type: "GET",
 			success: function (data, state, xhr) {
-				var text = xhr.responseText;
-				if (!text || text == -1) onError(xhr);
+				if (utility.checkResponse(xhr) < 1) onError(xhr);
 				else {
 					if (succCallback) succCallback.apply(this, arguments);
 				}
@@ -1100,10 +1105,26 @@ var utility = {
 		if (ua.indexOf(" SE ") > 0) return "http://static.fishlee.net/_softdownload/32c8a36d-18f5-4600-9913-c7b83f484ee2.sext";
 		else if (ua.indexOf("Maxthon") > 0) return "http://static.fishlee.net/_softdownload/12306_ticket_assistant_for_maxthon3.mxaddon";
 		else if (ua.indexOf("LBBROWSER") > 0) return "http://static.fishlee.net/_softdownload/9d0d790e-d78f-43b3-8e4a-34f7ec57e851.crx";
-		//else if (ua.indexOf("TaoBrowser") > 0) return "http://static.fishlee.net/_softdownload/12306_ticket_helper_for_taobrowser.crx";
+			//else if (ua.indexOf("TaoBrowser") > 0) return "http://static.fishlee.net/_softdownload/12306_ticket_helper_for_taobrowser.crx";
 		else if (ua.indexOf("Firefox") > 0) return "http://static.fishlee.net/_softdownload/12306_ticket_helper.user.js";
 		else return "http://static.fishlee.net/_softdownload/12306_ticket_helper.crx";
+	},
+	isAdvancedSupport: function () {
+		if (!utility.isWebKit()) return false;
 
+		var ua = navigator.userAgent;
+		return ua.indexOf(" SE ") == -1 && ua.indexOf("Maxthon") == -1;
+	},
+	getTicketInfo: function (v) {
+		var data = {}, match = v.match(/([\dA-Za-z])\*{5}(\d{4})/gi);
+		for (var i in match) {
+			var cls = match[i][0];
+			var ct = parseInt(/\*0*?(\d+)/.exec(match[i])[1]);
+			if (ct < 3000) { data[cls] = ct; }
+			else {
+				data['empty'] = ct - 3000;
+			}
+		}; return data;
 	}
 }
 
@@ -2080,6 +2101,7 @@ function initTicketQuery() {
 	var initialized = false;
 	var seatLevelOrder = null;
 	var orderButtonClass = ".btn130_2";	//预定按钮的选择器
+	var de = $(document);
 
 	//#region 参数配置和常规工具界面
 
@@ -2396,55 +2418,64 @@ function initTicketQuery() {
 		}
 	}
 	//检查是否可以订票
-	var checkTicketsQueue = [];
-	var checkTicketCellsQueue = [];
-
 	function getTrainNo(row) {
 		/// <summary>获得行的车次号</summary>
 		return $.trim($("td:eq(0)", row).text());
 	}
 	//默认的单元格检测函数
+	$("table.obj tr td").live("checkingTicketSeat", function (e) {
+		if (!ticketType[e.i - 1]) {
+			e.result = 0;
+		} else {
+			var el = e.e;
+			var info = $.trim(el.text());
 
-	checkTicketCellsQueue.push(function (i, e) {
-		if (!ticketType[i - 1]) return 0;
-
-		var el = $(e);
-		var info = $.trim(el.text()); //Firefox不支持 innerText
-
-		if (info == "*" || info == "--" || info == "无") {
-			return 0;
+			if (info == "*" || info == "--" || info == "无") {
+				e.result = 0;
+			} else {
+				e.result = 2;
+			}
 		}
-		return 2;
+
+		return e.result;
 	});
 	//默认的行检测函数
-	checkTicketsQueue.push(function () {
-		var trainNo = getTrainNo(this);
-		var tr = this;
-		this.attr("tcode", trainNo);
+	$("table.obj tr").live("checkTicketRow", function (evt) {
+		var trainNo = evt.trainCode;
+		var tr = evt.row;
+
 		//黑名单过滤
 		if (isTrainInBlackList(trainNo)) {
-			this.hide();
-			return 0;
+			tr.hide();
+			evt.result = 0;
+			return evt.result;
+		}
+		if ($("a.btn130", tr).length > 0) {
+			evt.result = 0;
+			return evt.result;
 		}
 
 
 		var hasTicket = 1;
-		if ($("a.btn130", this).length > 0) return 0;
-
-		$("td", this).each(function (i, e) {
+		$("td", tr).each(function (i, e) {
 			//跳过非车次结果行
 			if (i < 4 || i > 14) return;
 
-			var cellResult = 0;
 			e = $(e);
-			var opt = { code: trainNo, tr: tr, index: e.index(), seatType: seatOptionTypeMap[e.index() - 1] };
+			var opt = $.extend(new $.Event("checkTicketSeat"), { i: i, e: e, code: trainNo, tr: tr, index: e.index(), seatType: seatOptionTypeMap[e.index() - 1] });
+			opt.result = null;
 			e.attr("scode", opt.seatType);
-			$.each(checkTicketCellsQueue, function () {
-				cellResult = this(i, e, cellResult, opt) || cellResult;
-				return cellResult != 0;
-			});
-			e.attr("result", cellResult);
-			if (cellResult == 2) {
+			e.trigger(opt);
+			if (opt.result == null) {
+				opt.type = "checkingTicketSeat";
+				e.trigger(opt);
+			}
+			if (!opt.result == null) {
+				e.type = "checkedTicketSeat";
+				e.trigger(opt);
+			}
+			e.attr("result", opt.result);
+			if (opt.result == 2) {
 				hasTicket = 2;
 				e.addClass("validCell");
 			} else {
@@ -2452,22 +2483,10 @@ function initTicketQuery() {
 			}
 		});
 		tr.attr("result", hasTicket);
+		evt.result = hasTicket;
 
 		return hasTicket;
 	});
-
-	//检测是否有余票的函数
-	var checkTickets = function () {
-		var result = 0;
-		var row = this;
-		$.each(checkTicketsQueue, function () {
-			result = this.call(row, result);
-
-			return true;
-		});
-
-		return result;
-	}
 
 	//目标表格，当ajax完成时检测是否有票
 	$("body").ajaxComplete(function (e, r, s) {
@@ -2477,17 +2496,25 @@ function initTicketQuery() {
 		if (s.url.indexOf("queryLeftTicket") == -1)
 			return;
 
+		de.trigger("checkingTicket");
+
 		//验证有票
 		var rows = $("table.obj tr:gt(0)");
 		var ticketValid = false;
 		var validRows = {};
 		rows.each(function () {
 			var row = $(this);
-			var valid = checkTickets.call(row);
 			var code = getTrainNo(row);
 
 			row.attr("tcode", code);
 			row.find("td:eq(0)").click(putTrainCodeToList);
+
+			var evt = new $.Event("checkTicketRow");
+			evt.trainCode = code;
+			evt.row = row;
+			row.trigger(evt);
+
+			var valid = evt.result;
 
 			console.log("[INFO][车票可用性校验] " + code + " 校验结果=" + valid);
 
@@ -2588,6 +2615,8 @@ function initTicketQuery() {
 				}
 			}
 		}
+		de.trigger("checkedTicket");
+
 
 		if (ticketValid) {
 			onticketAvailable();
@@ -3078,14 +3107,14 @@ function initTicketQuery() {
 		}
 
 		//注册检测函数
-		checkTicketCellsQueue.push(function (i, e, prevValue) {
+		$("table.obj tr td").live("checkingTicketSeat", function (evt) {
 			var limit = parseInt(dom.value);
-			if (!prevValue || !(limit > 0) || $("#autoorder_part:visible:checked").length) return null;
+			if (!evt.result || !(limit > 0) || $("#autoorder_part:visible:checked").length) return 0;
 
-			var text = $.trim(e.text());
+			var text = $.trim(evt.e.text());
 			if (text == "有") return 2;
-
-			return parseInt(text) >= limit ? 2 : 1;
+			evt.result = parseInt(text) >= limit ? 2 : 1;
+			return evt.result;
 		});
 	})();
 
@@ -3146,23 +3175,25 @@ function initTicketQuery() {
 			return txt[0];
 		}
 
-		checkTicketsQueue.push(function (result) {
+		$("table.obj tr").live("checkTicketRow", function (evt) {
 			if (document.getElementById("closeFuseSearch").checked) {
-				var fs = getStationName.call(this.find("td:eq(1)"));
+				var fs = getStationName.call(evt.row.find("td:eq(1)"));
 				if (fs != fromText.val()) {
-					this.hide();
-					return 0;
+					evt.row.hide();
+					evt.result = 0;
+					return false;
 				}
 			}
 			if (document.getElementById("closeFuseSearch1").checked) {
-				var fs = getStationName.call(this.find("td:eq(2)"));
+				var fs = getStationName.call(evt.row.find("td:eq(2)"));
 				if (fs != toText.val()) {
-					this.hide();
-					return 0;
+					evt.row.hide();
+					evt.result = 0;
+					return false;
 				}
 			}
 
-			return result;
+			return true;
 		});
 	})();
 
@@ -3386,6 +3417,29 @@ function initTicketQuery() {
 				title.removeClass("warning");
 			}
 		});
+	})();
+
+	//#endregion
+
+	//#region 显示实际票数
+
+	(function () {
+		function displayRealTicket(evt) {
+			var rows = $("table.obj tr[result]:visible");
+
+			rows.each(function () {
+				var r = $(this);
+				if (r.attr("result") == 0) return true;
+				var data = r.find(orderButtonClass)[0].onclick + '';
+				var ticketInfo = utility.getTicketInfo(data);
+
+				$.each(ticketInfo, function (i,v) {
+					r.find("td[scode=" + i + "]").html(v);
+				});
+			});
+		}
+
+		$(document).bind("checkedTicket", displayRealTicket);
 	})();
 
 	//#endregion
