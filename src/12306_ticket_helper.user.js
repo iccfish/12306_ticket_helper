@@ -12,7 +12,7 @@
 // @require			http://lib.sinaapp.com/js/jquery/1.8.3/jquery.min.js
 // @icon			http://www.12306.cn/mormhweb/images/favicon.ico
 // @run-at			document-idle
-// @version 		4.6.3
+// @version 		4.6.4
 // @updateURL		http://static.fishlee.net/_softdownload/12306_ticket_helper.user.js
 // @supportURL		http://www.fishlee.net/soft/44/
 // @homepage		http://www.fishlee.net/soft/44/
@@ -22,10 +22,10 @@
 
 //=======START=======
 
-var version = "4.6.3";
+var version = "4.6.4";
 var updates = [
-	"修改余票显示为实际张数",
-	"修复在个别浏览器上功能的异常"
+	"修正部分情况下余票数显示不正常",
+	"其它细节修改"
 ];
 
 var faqUrl = "http://www.fishlee.net/soft/44/faq.html";
@@ -53,9 +53,9 @@ function injectStyle() {
 .fish_clock{background-image:url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABGdBTUEAAK/INwWK6QAAABl0RVh0U29mdHdhcmUAQWRvYmUgSW1hZ2VSZWFkeXHJZTwAAAG/SURBVHjapJM/S8NQFMVvpaVfoEKojWL9U3DLIqjoooJDu/sFmnQoiIujQz+Aix3a1FUQXIR2UFA6+WeRUhBprERroGTopg6lSeo7iY1pq4sNHPpy3+8c7n0v9XW7XRrl8SFAlmVvbYFpmynOJHzXKkwlphOmxx4oiiL5sbAsi1KpFOVyuWQwGMzEYjEuGo0Sx3E2qOu6oKqqoChKst1u7zO2wNifDrLZLNbJUCgkLy2vEM/zv7araRrd3lxTq9US2WshnU7TGDZM01zwBwKZxaVlCkd4MtmxQDXlyVbvHXtgwMIDrx3Q6XS2Z2bnufDEJJkWuWIt2/LWwICFxw0wDCM+PTPXB0K4IGiwDhYeeP3fHQjjXIQMq3/mev3J/l0fqIOFxxtAxi+fg/rsBOztSE7QVpwpQT2PN6Dy1mgIYX7KNZcvipQ5yA+Fosum1rA93jMo1R6q7oxX50Va20wMzd4TWHi8t3BSvb/T1bpz4qsbf5vBgIXHDWB3+vj58b5fPj9jc9fcex8U9sCAhcc7Au1mDgtN7VU8Oz7SL0un9PbyTBYzQVijhj0wYOFxP2VJkv71Z8rn807AKM+XAAMArp1CsEFrDIIAAAAASUVORK5CYII=); color: blue;}\
 .fish_error{background-image:url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABGdBTUEAAK/INwWK6QAAABl0RVh0U29mdHdhcmUAQWRvYmUgSW1hZ2VSZWFkeXHJZTwAAAJFSURBVHjapJO/T1pRFMe/Dx7ypEXri4lUGUhsHF40hODSpQ61cTH+2HSoZaF1dHSxpU7+Ca04NE7dyuBiapcuLFokTdD4A01awNdBSkAf8ut5zhUoxq3e5OS+nPv5nnvuyfdJpmniPksSBd68aM1pFDMU4xS+ei5GsUHxmSLRJD9+hcx7rVqFZWwMtc3NIGy2Zam31yX19ABdXTdgNuszdd1nptNBlMtviQ0TC0ujg1LgGWNByelctQ4M4G8qhfN4HLmDA6HvpJzq9eJRXx+qlDPz+deUDrd9+i6KoFouazVg2erx4M/uLn5FItGLk5NX/qUliYO+I2o2C4vLBWaYZQ1rRYFyqTQDVXXl02mcb29HbXb7S+/CwjqKRSAaDXlHRqYwOoqdxUUww6zQNApUSqVxuaMDF8kk2hTlgxYIHMMwaHSxEB2/a4g7u7sjzDDLmn8dXF35ZJsNVWrzycTEOtxuYH//lpjWezqbZoZZ1rQ+AXyj3eEQO7a27oj9s7OhVkZoWjqIFXUdD1QVub29L3fEk5MhXF7y2RwzzLKmdQYb+UwGiqLwO6duiVdWxM2GrvfTfOaZYZY1TScmvE7NKsvf3B6PyzE8jB9ra6DJR2TTnBYXSNIcbfN021Mjl8Pv09OzaqXyXIvnE6LAT00RRlLa21cfk1kesgNpULBab5xITiUHokADzJDJioYhjDSUKNafUKlgaHAwXCCHJQ8Pz1JHRyhQm2RhEfzNOT5jhlnWNJ+w0y/918/kPzbrf+M91rUAAwCuQDz94e2kLwAAAABJRU5ErkJggg==); color: blue;}\
 .fish_ok{background-image:url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABGdBTUEAAK/INwWK6QAAABl0RVh0U29mdHdhcmUAQWRvYmUgSW1hZ2VSZWFkeXHJZTwAAAHsSURBVHjapFNBSBtBFH2xgoqmKipEC6XkYqhUWXOxUAQhpyJ4Wgi0l0rNsdBbL/WgF2/eV8hNSBF68uhFkOrFhCAGS8mWgmYjG9lCKVGTuP1vsrvuIac68HZm/n/vz5/9fyKu6+IhI8IA5k4kbHsuSAsWBZpnKwh2BTlBySfGdTmcAX7kOJc5r5hfhyw7/86t21/EVVbgmjb6yPG4SqsyONtWGaz0Dk8aYzMf0R+b65ju3+oR7OImrp3vGdluJd646KKj1ZK0H0XXRqfeo390Emg6HUEfOeQqjQwVoNFAOvpkPjYw8kw2NRgfFtQchm8jh1xqggDNJhYHY3Jy41IhmXodrDvZyKWG2m4vA23gcR9wa6m7Jue1YO2PsI1casIB5GPBWM8ilZLyvFzu+BPNwyz29oDM5+W2JhSg8NsqaRSTMHycxfg4MDHRJlUqgCWHO/IvyRGu0gQB5D671Z+mlpiZFXEejjSInrw/OS4wjiWwNFx8ehZnRVNpwlXI/SrXqvbFOfS3TxWRAtNpwxfTRw651AQZSE1Lrfrd6mmhZky96IGejuJgX5rL9HpbrvBKbHbFxunJDa6F67e0X0YsLWHr6uouc/StXi3m/yCRkNTjbXBNG33kkEtN8Jh2Pv3fY9I3vLfwkPFPgAEApRUigcIVl3AAAAAASUVORK5CYII=); color: purple;}\
-.outerbox{font-family:'Microsoft Yahei','Apple LiGothic Medium',Arial,Helvetica,Sans-serif;color:#4c4c4c}\
-.box{margin:20px auto 0 9px;width:933px;border:1px solid #c6c6c6;}\
-.box .title{padding:5px;line-height:23px;color:#fff;background:-webkit-linear-gradient(#707070,#2c2c2c 90%);background:-moz-linear-gradient(#707070,#2c2c2c 90%);background-color:#707070;}\
+.outerbox{font-family:'Microsoft Yahei','Apple LiGothic Medium',Arial,Helvetica,Sans-serif;color:#4c4c4c;width:100%;margin: 10px auto;}\
+.box{border:1px solid #c6c6c6;}\
+.box .title{padding:5px;line-height:23px;color:#fff;background:-webkit-linear-gradient(#707070,#2c2c2c 90%);background:-moz-linear-gradient(#707070,#2c2c2c 90%);background-color:#707070; position: relative;}\
 .box .title a{color:#fff;}\
 .box .time-comp{color:#fff;position:absolute;margin:2px;right:2px;top:2px;padding:1px 12px;border-radius:12px;text-shadow:0px 1px 2px rgba(0,0,0,0.6);box-shadow:0px 1px 1px rgba(255,255,255,0.2),inset 0px 0px 8px rgba(0,0,0,0.8);}\
 .box .content{padding:5px;background-color:#fff}\
@@ -104,6 +104,9 @@ div.gridbox_light .odd_light,div.gridbox_light .ev_light{background:-webkit-line
 .warning{color:red;}\
 input[type=checkbox].current{color:red;font-weight:bold;}\
 span.leftTicketStatusSpan{color:green; font-weight:bold;}\
+.gridtb { width:100%!important; }\
+.gridtb th {text-align:center;padding: 5px; border-right: 1px solid #ccc; font-weight:bold;-webkit-transition:all linear 0.2s;-moz-transition:all linear 0.2s;background:-webkit-linear-gradient(#fafafa,#f0f0f0 90%);background:-moz-linear-gradient(#fafafa,#f0f0f0 90%);background-color:#fafafa;}\
+.gridtb .last {border-right:none;}\
 ";
 
 	document.head.appendChild(s);
@@ -294,11 +297,11 @@ function injectDom() {
 	} else {
 		opt.find(".regTable").show();
 
-		//if (location.pathname == "/otsweb/" || location.pathname == "/otsweb/main.jsp") {
-		//	alert("为了阻止地球人趁火打劫然后拿着老衲免费奉献的东东去卖钱，贫僧斗胆麻烦客官……啊不，施主注册下下，一下子就好了啦！");
-		//	window.open("http://www.fishlee.net/Apps/Cn12306/GetNormalRegKey");
-		//	utility.showOptionDialog("tabReg");
-		//}
+		if (location.pathname == "/otsweb/" || location.pathname == "/otsweb/main.jsp") {
+			alert("为了阻止地球人趁火打劫然后拿着老衲免费奉献的东东去卖钱，贫僧斗胆麻烦客官……啊不，施主注册下下，一下子就好了啦！");
+			window.open("http://www.fishlee.net/Apps/Cn12306/GetNormalRegKey");
+			utility.showOptionDialog("tabReg");
+		}
 	}
 	utility.regInfo = result;
 }
@@ -851,7 +854,7 @@ var utility = {
 		name = name || utility.getPref("helper.regUser") || utility.getCookie("helper.regUser");
 		sn = sn || utility.getPref("helper.regSn") || utility.getCookie("helper.regSn");
 		if (!name && sn) return utility.verifySn2(skipTimeVerify, sn);
-		if (!name || !sn) return { result: -4, msg: "未注册", name: "订票助手用户", typeDesc: "正式版" };
+		if (!name || !sn) return { result: -4, msg: "未注册", name: "基本用户", typeDesc: "基本版", type: "DEMO" };
 
 		utility.setSnInfo(name, sn);
 
@@ -1119,12 +1122,15 @@ var utility = {
 		var data = {}, match = v.match(/([\dA-Za-z])\*{5}(\d{4})/gi);
 		for (var i in match) {
 			var cls = match[i][0];
-			var ct = parseInt(/\*0*?(\d+)/.exec(match[i])[1]);
+			var ct = parseInt(/\*0*(\d+)/.exec(match[i])[1]);
 			if (ct < 3000) { data[cls] = ct; }
 			else {
 				data['empty'] = ct - 3000;
 			}
 		}; return data;
+	},
+	isDemoUser: function () {
+		return utility.regInfo == null || utility.regInfo.type == "DEMO";
 	}
 }
 
@@ -1142,14 +1148,7 @@ function buildCallback(callback) {
 		content += "window.helperVersion='" + version + "'; window.compVersion='" + compVersion + "'; if(typeof(window.utility)!='undefined' && navigator.userAgent.indexOf('Maxthon')==-1){ alert('我勒个去! 检测到您似乎同时运行了两只助手! 请转到『附加组件管理『（Firefox）或『扩展管理』（Chrome）中卸载老版本的助手！');}; \r\nwindow.utility=" + buildObjectJavascriptCode(utility) + "; window.utility.init();\r\n";
 		utility_emabed = true;
 	}
-	content += "window.__cb=" + buildObjectJavascriptCode(callback) + ";\r\n\
-	if(typeof(jQuery)!='undefined')window.__cb();\r\n\
-	else{\
-		var script=document.createElement('script');\r\nscript.src='https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js';\r\n\
-		script.type='text/javascript';\r\n\
-		script.addEventListener('load', window.__cb);\r\n\
-		document.head.appendChild(script);\r\n\
-	}";
+	content += "(" + buildObjectJavascriptCode(callback) + ")();";
 
 	return content;
 }
@@ -1242,6 +1241,7 @@ function entryPoint() {
 	if (path == "/otsweb/order/querySingleAction.do") {
 		if (location.search == "?method=init" && document.getElementById("submitQuery")) {
 			unsafeInvoke(initTicketQuery);
+			unsafeInvoke(initAdvancedTicketQuery);
 			unsafeInvoke(initDirectSubmitOrder);
 		}
 		if (location.search == "?method=submutOrderRequest") {
@@ -1251,18 +1251,21 @@ function entryPoint() {
 	if (path == "/otsweb/order/orderAction.do") {
 		if (location.search.indexOf("method=cancelMyOrderNotComplete") != -1 && document.getElementById("submitQuery")) {
 			unsafeInvoke(initTicketQuery);
+			unsafeInvoke(initAdvancedTicketQuery);
 			unsafeInvoke(initDirectSubmitOrder);
 		}
 	}
 	if (path == "/otsweb/order/payConfirmOnlineSingleAction.do") {
 		if (location.search.indexOf("method=cancelOrder") != -1 && document.getElementById("submitQuery")) {
 			unsafeInvoke(initTicketQuery);
+			unsafeInvoke(initAdvancedTicketQuery);
 			unsafeInvoke(initDirectSubmitOrder);
 		}
 	}
 	if (path == "/otsweb/order/myOrderAction.do") {
 		if (location.search.indexOf("method=resign") != -1 && document.getElementById("submitQuery")) {
 			unsafeInvoke(initTicketQuery);
+			unsafeInvoke(initAdvancedTicketQuery);
 			unsafeInvoke(initDirectSubmitOrder);
 		}
 	}
@@ -1273,7 +1276,6 @@ function entryPoint() {
 		}
 		if (location.search.indexOf("?method=payOrder") != -1) {
 			unsafeInvoke(initPagePayOrder);
-			//获取登录到IE的代码 Add By XPHelper
 			unsafeInvoke(utility.enableLoginIE);
 		}
 	}
@@ -1281,7 +1283,6 @@ function entryPoint() {
 		if (location.search.indexOf("?method=laterEpay") != -1 || location.search.indexOf("?method=queryMyOrderNotComplete") != -1) {
 			unsafeInvoke(initNotCompleteOrderPage);
 			unsafeInvoke(initPayOrder);
-			//获取登录到IE的代码 Add By XPHelper
 			unsafeInvoke(utility.enableLoginIE);
 		}
 	}
@@ -1307,23 +1308,6 @@ function entryPoint() {
 
 		unsafeInvoke(injectMainPageFunction);
 	}
-}
-
-//#endregion
-
-//#region 保存联系人
-
-function storePasToLocal() {
-	//var isNew = !window.localStorage["pas"];
-
-	//utility.getAllPassengers(function (list) {
-	//	window.localStorage.setItem("pas", $.toJSON(list));
-
-	//	if (isNew) {
-	//		alert("恭喜，联系人已经缓存到本地，现在可以去查票咯！");
-	//		self.location = "/otsweb/order/querySingleAction.do?method=init";
-	//	}
-	//}, true);
 }
 
 //#endregion
@@ -2102,6 +2086,7 @@ function initTicketQuery() {
 	var seatLevelOrder = null;
 	var orderButtonClass = ".btn130_2";	//预定按钮的选择器
 	var de = $(document);
+	var grid = $('#gridbox');
 
 	//#region 参数配置和常规工具界面
 
@@ -2198,6 +2183,11 @@ function initTicketQuery() {
 				ticketType[this.ticketTypeId] = this.checked;
 				window.localStorage["typefilter_" + this.ticketTypeId] = this.checked;
 			}).appendTo(obj);
+		var $xhdr = grid.find('.xhdr');
+		if ($xhdr.length) {
+			$xhdr.parent().height($xhdr.height());
+		}
+		grid.find('.objbox').css('top', '');
 	});
 
 	//座级选择
@@ -2222,7 +2212,7 @@ function initTicketQuery() {
 
 	//#region 显示额外的功能区
 	var extrahtml = [];
-	extrahtml.push("<div class='outerbox' id='helperbox' style='width:auto;'><div class='box'><div class='title' style='position:relative;'><big>12306订票助手 - 辅助工具</big> [<a href='#querySingleForm'>返回订票列表</a>] <div class='time-comp' title='时间依赖于本地时间保持在线刷新时间即时计算。受限于您的网速，并不十分准确（需要扣除网速的影响）' id='servertime'>服务器时间：<strong>----</strong>，本地时间：<strong>----</strong>，服务器比本地 <strong>----</strong></div></div>\
+	extrahtml.push("<div class='outerbox' id='helperbox'><div class='box'><div class='title' style='position:relative;'><big>12306订票助手 - 辅助工具</big> [<a href='#querySingleForm'>返回订票列表</a>] <div class='time-comp' title='时间依赖于本地时间保持在线刷新时间即时计算。受限于您的网速，并不十分准确（需要扣除网速的影响）' id='servertime'>服务器时间：<strong>----</strong>，本地时间：<strong>----</strong>，服务器比本地 <strong>----</strong></div></div>\
 <div style='color:#8A0023;line-height: 20px;background: -webkit-linear-gradient(#FFE4EA, #FFC3D1);background: -moz-linear-gradient(#FFE4EA, #FFC3D1);padding: 5px;'>亲，订单提交可能需要延迟很多很多秒喔，所以强烈建议你先随便找个虾米车进去订订看会不会出现验证码错误哈，必要时自己掐表喔……反正那个页面有计时嘛！<br /><strong>严重提醒！请务必多个浏览器一起刷票啊！因为尼玛每个浏览器出现票的结果都是不一样的啊！！！！</strong></div>\
 <table id='helpertooltable' style='width:100%;'><colgroup><col style='width:110px;' /><col style='width:370px;' /><col style='width:110px;' /><col style='width:auto;' /></colgroup>\
 <tr class='fish_sep musicFunc' id='helperbox_bottom'><td class='name'>自定义音乐地址</td><td colspan='3'><input type='text' id='txtMusicUrl' value='" + utility.getAudioUrl() + "' onfocus='this.select();' style='width:420px;' /> <input class='fish_button' type='button' onclick='new Audio(document.getElementById(\"txtMusicUrl\").value).play();' value='测试'/><input class='fish_button' type='button' onclick='utility.resetAudioUrl(); document.getElementById(\"txtMusicUrl\").value=utility.getAudioUrl();' value='恢复默认'/> (地址第一次使用可能会需要等待一会儿)</td></tr>\
@@ -3433,8 +3423,9 @@ function initTicketQuery() {
 				var data = r.find(orderButtonClass)[0].onclick + '';
 				var ticketInfo = utility.getTicketInfo(data);
 
-				$.each(ticketInfo, function (i,v) {
-					r.find("td[scode=" + i + "]").html(v);
+				$.each(ticketInfo, function (i, v) {
+					var td = r.find("td[scode=" + i + "]");
+					if ($.trim(td.text()) == "有") td.html(v);
 				});
 			});
 		}
@@ -4119,6 +4110,49 @@ function initPayOrder() {
 
 //#endregion
 
+//#region 高级查询
+
+function initAdvancedTicketQuery() {
+	//return;
+	$("div.cx_title_w").before("<div class='outerbox' style='width:99%;'><div class='box' id='advQuery'><div class='title'><big>12306订票助手 高级查询</big><div class='time-comp'><label><input type='checkbox' name='' id='' value='1' /> 启用高级查询功能</lable></div></div></div></div>");
+	var destContainer = $("#advQuery");
+
+	if (utility.isDemoUser()) {
+		destContainer.append("<div style=''></div>");
+		return;
+	}
+
+	var html = [];
+	html.push("<table class='gridtb'>\
+<tr>\
+<th>日期</th>\
+<th>车次</th>\
+<th>始发站</th>\
+<th>到达站</th>\
+<th>发时</th>\
+<th>到时</th>\
+<th>历时</th>\
+<th>商务</th>\
+<th>特等</th>\
+<th>一等</th>\
+<th>二等</th>\
+<th>高软</th>\
+<th>软卧</th>\
+<th>硬卧</th>\
+<th>软座</th>\
+<th>硬座</th>\
+<th>无座</th>\
+<th>其它</th>\
+<th class='last'>操作</th>\
+</tr>\
+</table>");
+
+	destContainer.append(html.join(""));
+}
+
+//#endregion
+
+
 //#region 更新专用检测代码
 
 if (location.pathname == "/otsweb/" || location.pathname == "/otsweb/main.jsp") {
@@ -4169,3 +4203,4 @@ function compareVersion(v1, v2) {
 }
 
 //#endregion
+

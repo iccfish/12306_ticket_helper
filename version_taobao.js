@@ -1,7 +1,7 @@
-var version_12306_helper = "4.6.3";
+var version_12306_helper = "4.6.4";
 var version_updater = [
-	"修改余票显示为实际张数",
-	"修复在个别浏览器上功能的异常"
+	"修正部分情况下余票数显示不正常",
+	"其它细节修改"
 ];
 var fishlee12306_msgid=17;
 var fishlee12306_msgver="4.6.2";
