@@ -325,6 +325,10 @@ namespace TicketPackageSyncTool
 			var chromePath = System.IO.Path.Combine(System.Environment.GetEnvironmentVariable(is64bit ? "programfiles(x86)" : "programfiles"), @"Google\Chrome\Application\chrome.exe");
 			if (!System.IO.File.Exists(chromePath))
 			{
+				chromePath = Environment.ExpandEnvironmentVariables(@"%LocalAppData%\Google\Chrome\Application\chrome.exe");
+			}
+			if (!System.IO.File.Exists(chromePath))
+			{
 				chromePath = System.Configuration.ConfigurationManager.AppSettings["chromepath"];
 			}
 			if (string.IsNullOrEmpty(chromePath) || !System.IO.File.Exists(chromePath))
