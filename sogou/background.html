@@ -12,6 +12,8 @@
 				selected: true
 			});
 		});
+		var r = null;
+		sogouExplorer.extension.onRequest.addListener(function (n, t, i) { if (n.function == "notify") { if (r != null) r.cancel(); r = webkitNotifications.createNotification("http://www.12306.cn/mormhweb/images/favicon.ico", n.title || "订票助手", n.message); r.show(); setTimeout(function () { r.cancel() }, n.timeout || 5e3); } });
 	</script>
 </body>
 </html>

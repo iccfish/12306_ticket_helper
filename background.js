@@ -73,4 +73,22 @@ if (chrome.runtime && chrome.runtime.onInstalled) {
 
 
 	chrome.webRequest.onBeforeSendHeaders.addListener(callback, filter, extraInfo);
+
+
+	chrome.extension.onRequest.addListener(function (request, sender, sendResponse) {
+		if (request.function == "isLieBaoBrowserValid") {
+			if (!chrome.browserAction.NotifyBadge) sendResponse({ valid: false });
+			else
+				chrome.browserAction.NotifyBadge({ text: '{"type":"function", "name":"browser_name"}' }, function (n) {
+					if (n == "LBBROWSER") sendResponse({ valid: true });
+					else sendResponse({ valid: false });
+				})
+		} else if (request.function == "notify") {
+			var notification = webkitNotifications.createNotification("http://www.12306.cn/mormhweb/images/favicon.ico", request.title || '订票助手', request.message);
+			setTimeout(function () {
+				notification.cancel();
+			}, request.timeout || 5000);
+			notification.show();
+		}
+	});
 })();
