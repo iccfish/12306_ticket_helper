@@ -12,7 +12,7 @@
 // @require			http://lib.sinaapp.com/js/jquery/1.8.3/jquery.min.js
 // @icon			http://www.12306.cn/mormhweb/images/favicon.ico
 // @run-at			document-idle
-// @version 		4.9.0
+// @version 		4.9.3
 // @updateURL		http://static.fishlee.net/_softdownload/12306_ticket_helper.user.js
 // @supportURL		http://www.fishlee.net/soft/44/
 // @homepage		http://www.fishlee.net/soft/44/
@@ -22,10 +22,11 @@
 
 //=======START=======
 
-var version = "4.9.0";
+var version = "4.9.3";
 var updates = [
-	"+ 增加基于客户端的增强版时间段过滤功能",
-	"+ 订单查询页面增加显示乘客身份证号的功能",
+	"+ 增加自动展开查询列表的功能",
+	"* 修正查询结果中始发站终点站标记不显示问题",
+	"* 优化主页面框架高度自动调整方案",
 	"* 其它细节改进"
 ];
 
@@ -1311,6 +1312,20 @@ function entryPoint() {
 			}, timeout || 5000);
 			notification.show();
 		});
+	} else {
+		unsafeInvoke(function () {
+			var bodyEle = $("div.enter_w");
+			var main = parent.$("#main");
+			var lastHeight = 0;
+			setInterval(function () {
+				var h = bodyEle.height();
+				if (h != lastHeight) {
+					lastHeight = h;
+					main.css("height", (lastHeight + 10) + "px");
+					parent.window.setHeight(parent.window);
+				}
+			}, 500);
+		});
 	}
 }
 
@@ -2080,9 +2095,6 @@ function initAutoCommitOrder() {
 	})();
 
 	//#endregion
-
-	parent.$("#main").css("height", ($(document).height() + 10) + "px");
-	parent.window.setHeight(parent.window);
 }
 
 function autoCommitOrderInSandbox() {
@@ -2129,7 +2141,6 @@ function initTicketQuery() {
 	<li><label title='勾选此选项后，假定查询的结果中没有符合你要求的车次，那么助手将会自动进行重新查询'><input checked='checked' type='checkbox' id='autoRequery' style='padding:0;' />自动重查，每隔</label><input style='width:40px;text-align:center;' type='number' min='5' value='5' size='4' id='refereshInterval' style='text-align:center;' />秒</li>\
 	<li><label title='勾选的话，当有票可定时，助手会放歌骚扰你'><input type='checkbox' checked='checked' id='chkAudioOn'>声音提示</label></li>\
 	<li><label title='设置有票时放的歌是不是放到天荒地老至死不渝'><input type='checkbox' checked='checked' id='chkAudioLoop'>声音循环</label></li>\
-	<li><input type='button' id='chkSeatOnly' value='仅座票' class='lineButton' title='快速设置席别过滤按钮，点击后可快速勾选所有的座票，包括硬座软座一等座等等' /><input type='button' id='chkSleepOnly' value='仅卧铺' title='快速设置席别过滤按钮，点击后可快速勾选所有的卧铺，包括硬卧软卧什么的' class='lineButton' /><input type='button' id='chkAllSeat' value='全部席别' class='lineButton' title='快速勾选所有的席别' /></li>\
 </ul><ul id='retryOpt' style='border-top:none;border-bottom:none;' class='fish_opt'>\
 	<li style='font-weight:bold;color:#0f7edb;' title='点击预定按钮时，有时候等待一会儿系统会提示服务器忙；勾选此选项后，如果出现这种情况，助手将会进行自动重新预定'><label><input type='checkbox' id='chkAutoResumitOrder' checked='checked' />预定失败时自动重试</label></li>\
 	<li style='font-weight:bold;color:#0f7edb;' title='有时候系统忙，查询会提示查询失败；勾选此选项后，如果出现这种情况，助手将会进行自动刷新查询'><label><input type='checkbox' id='chkAutoRequery' checked='checked' />查询失败时自动重试</label></li>\
@@ -2143,6 +2154,7 @@ function initTicketQuery() {
 <tr class='append_row'><td colspan='9' id='opFunctionRow' style=''><input type='button' class='fish_button' disabled='disabled' value='停止声音' id='btnStopSound' /><input type='button' class='fish_button' disabled='disabled'  value='停止刷新' id='btnStopRefresh' /><input  type='button' class='fish_button' type='button' value='设置' id='configLink' /> <input type='button' class='fish_button' id='resetSettings' value='清空助手设置' /> <input type='button' class='fish_button configLink' value='IE登录' /> 【设置完毕后记得戳『查询』开始运行哈。<a href='http://www.fishlee.net/soft/44/tour.html' style='color:#0abaff;font-weight:bold;' target='_blank'>戳这里看教程哦</a>。】</td></tr>\
 <tr class='append_row'><td colspan='9' id='' style=''><span id='refreshinfo' style='text-shadow:1px 1px 1px #fff,0px 0px 2px rgba(0,0,0,0.2);'>已刷新 0 次，最后查询：--</span> <span id='refreshtimer'></span> <span style='margin-left:20px;color:purple;font-weight:bold;' id='serverMsg'></span></td></tr>"
 	);
+	$(".in_fromr").css({ "margin-right": "0px", "width": "auto" }).find("ul li:first").before("<li><input type='button' id='chkSeatOnly' value='仅座票' class='lineButton' title='快速设置席别过滤按钮，点击后可快速勾选所有的座票，包括硬座软座一等座等等' /><input type='button' id='chkSleepOnly' value='仅卧铺' title='快速设置席别过滤按钮，点击后可快速勾选所有的卧铺，包括硬卧软卧什么的' class='lineButton' /><input type='button' id='chkAllSeat' value='全部席别' class='lineButton' title='快速勾选所有的席别' /></li>");
 
 	if (!window.Audio) {
 		$("#chkAudioOn, #chkAudioLoop, #btnStopSound").remove();
@@ -2263,7 +2275,7 @@ function initTicketQuery() {
 <a href='http://www.fishlee.net/soft/44/' style='color:blue;' target='_blank'>助手主页</a> | <a href='http://t.qq.com/ccfish/' title='此乃腾讯微博！或者在新浪微博上 @imcfish？可惜偶不怎么用新浪微博……' style='color:blue;' target='_blank'>微博关注</a> | <a href='http://bbs.fishlee.net/' target='_blank' style='color:red;'>助手论坛</a> | <a href='http://www.fishlee.net/soft/44/announcement.html' style='color:#0f7edb;' target='_blank'>免责声明</a> | <a href='" + utility.getUpdateUrl() + "' target='_blank'>下载新版</a> | <a style='font-weight:bold;color:red;' href='http://www.fishlee.net/soft/44/donate.html' target='_blank'>捐助作者</a> | 许可于 <strong>" + utility.regInfo.name + "，类型 - " + utility.regInfo.typeDesc + "</strong> 【<a href='javascript:;' class='reSignHelper'>重新注册</a>】</td></tr>\
 		</table></div></div>");
 
-	$("body").append(extrahtml.join(""));
+	$("div.enter_w").append(extrahtml.join(""));
 	$("a.murl").live("click", function () {
 		$("#txtMusicUrl").val(this.getAttribute("url")).change();
 	});
@@ -2942,53 +2954,57 @@ function initTicketQuery() {
 
 
 		//加载乘客
-		utility.getAllPassengers(function (list) {
-			var h = [];
-			var check = (localStorage.getItem("preSelectPassenger") || "").split('|');
-			var index = 0;
-			$.each(list, function () {
-				var value = this.passenger_name + this.passenger_id_type_code + this.passenger_id_no;
-				this.index = index++;
-				h.push("<label style='margin-right:10px;'><input type='checkbox' id='preSelectPassenger" + this.index + "' name='preSelectPassenger'" + ($.inArray(value, check) > -1 ? " checked='checked'" : "") + " value='" + value + "' />" + this.passenger_name + "</label>");
-			});
+		if (utility.isfeatureDisabled("pasload")) {
+			$("#passengerList").html("<strong>警告</strong>：介个联系人加载功能已被自动禁用，为了保证您的安全……如果要重新启用，请清空助手设置后再试。");
+		} else {
+			utility.getAllPassengers(function (list) {
+				var h = [];
+				var check = (localStorage.getItem("preSelectPassenger") || "").split('|');
+				var index = 0;
+				$.each(list, function () {
+					var value = this.passenger_name + this.passenger_id_type_code + this.passenger_id_no;
+					this.index = index++;
+					h.push("<label style='margin-right:10px;'><input type='checkbox' id='preSelectPassenger" + this.index + "' name='preSelectPassenger'" + ($.inArray(value, check) > -1 ? " checked='checked'" : "") + " value='" + value + "' />" + this.passenger_name + "</label>");
+				});
 
-			$("#passengerList").html(h.join("")).find("input").change(function () {
-				var self = $(this).closest("label");
-				if (this.checked) {
-					var selected = $("#passengerList1 :checkbox");
-					if (selected.length >= 5) {
-						alert("选择的乘客不能多于五位喔~~");
-						this.checked = false;
-						return;
+				$("#passengerList").html(h.join("")).find("input").change(function () {
+					var self = $(this).closest("label");
+					if (this.checked) {
+						var selected = $("#passengerList1 :checkbox");
+						if (selected.length >= 5) {
+							alert("选择的乘客不能多于五位喔~~");
+							this.checked = false;
+							return;
+						}
+
+						$("#passengerList1").append(self);
+					} else {
+						$("#passengerList").append(self);
 					}
+					selected = $("#passengerList1 :checkbox");
+					var user = $.map(selected, function (e) { return e.value; });
+					$("#ticketLimition").val(selected.length);
+					localStorage.setItem("preSelectPassenger", user.join("|"));
+					refreshPasRowStyle(user);
+				});
+				$.each(check, function () {
+					$("#passengerList :checkbox[value=" + this + ']').change();
+				});
+				$.each(list, function () {
+					$("#preSelectPassenger" + this.index).data('pasinfo', this);
+				});
+				$("#ticketLimition").val($("#passengerList1 :checkbox").length);
 
-					$("#passengerList1").append(self);
-				} else {
-					$("#passengerList").append(self);
+				function refreshPasRowStyle(selected) {
+					if (!document.getElementById("autoorder").checked) return;
+
+					var row = $("#selectPasRow");
+					row.removeClass("steps stepsok");
+					row.addClass(selected.length ? "stepsok" : "steps");
 				}
-				selected = $("#passengerList1 :checkbox");
-				var user = $.map(selected, function (e) { return e.value; });
-				$("#ticketLimition").val(selected.length);
-				localStorage.setItem("preSelectPassenger", user.join("|"));
-				refreshPasRowStyle(user);
+				$("#autoorder").click(function () { refreshPasRowStyle($("#passengerList1 :checkbox")); });
 			});
-			$.each(check, function () {
-				$("#passengerList :checkbox[value=" + this + ']').change();
-			});
-			$.each(list, function () {
-				$("#preSelectPassenger" + this.index).data('pasinfo', this);
-			});
-			$("#ticketLimition").val($("#passengerList1 :checkbox").length);
-
-			function refreshPasRowStyle(selected) {
-				if (!document.getElementById("autoorder").checked) return;
-
-				var row = $("#selectPasRow");
-				row.removeClass("steps stepsok");
-				row.addClass(selected.length ? "stepsok" : "steps");
-			}
-			$("#autoorder").click(function () { refreshPasRowStyle($("#passengerList1 :checkbox")); });
-		});
+		}
 	})();
 
 
@@ -3572,7 +3588,11 @@ function dgFilterQuery() {
 	//格式化文字
 	$("table.obj tr").live("checkTicketRow", function (evt) {
 		var td = evt.row.find("td:eq(1), td:eq(2)");
-		td.each(function () { var cell = $(this); cell.html($.trim(cell.text()).split(/\s+/).join("<br />")); });
+		td.each(function () {
+			var cell = $(this);
+			var flag = (/<img[^>]+>(\s|&nbsp;)?/i.exec(cell.html()) || [])[0] || "";
+			cell.html(flag + $.trim(cell.text()).split(/\s+/).join("<br />"));
+		});
 	});
 	//修正列宽
 	mygrid.setColWidth(0, 60);
@@ -3580,9 +3600,25 @@ function dgFilterQuery() {
 	mygrid.setColWidth(2, 70);
 	for (var i = 4; i < 15; i++) mygrid.setColWidth(i, 50);
 
+	//不滚动。
+	(function () {
+		var html = "<tr class='fish_sep' id='autoExpandResultRow'><td class='name'>自动展开查询结果</td><td colspan='3'><label><input type='checkbox' id='autoExpandResult' name='autoExpandResult' /> 如果查询结果列表过长，那么自动展开查询结果列表</label></td></tr>";
+		$("#autoFill").before(html);
+		utility.reloadPrefs($("#autoExpandResultRow"));
+		$("#gridbox").css("height", "auto");
 
-	parent.$("#main").css("height", ($(document).height() + 10) + "px");
-	parent.window.setHeight(parent.window);
+		var main = $("div.objbox");
+		var table = main.find(">div");
+		var ckb = document.getElementById("autoExpandResult");
+		$(document).bind("checkedTicket", function (evt) {
+			if (!ckb.checked) {
+				main.css("height", "300px");
+			} else {
+				main.css("height", (Math.max(table.height(), 300) + 10) + "px");
+			}
+		});
+
+	})();
 }
 
 //#endregion

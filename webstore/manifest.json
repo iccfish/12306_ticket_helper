@@ -16,7 +16,7 @@
 	},
 	"description": "\u5e2e\u60a8\u8ba2\u7968\u7684\u5c0f\u52a9\u624b by \u6728\u9c7c :-)",
 	"name": "12306 \u8ba2\u7968\u52a9\u624b for Chrome",
-	"version": "4.9.0",
+	"version": "4.9.3",
 	"manifest_version": 2,
 	"icons": {
 		"16": "icons/icon_16.png",
