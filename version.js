@@ -1,9 +1,6 @@
-var version_12306_helper = "4.9.3";
+var version_12306_helper = "4.9.4";
 var version_updater = [
-	"+ 增加自动展开查询列表的功能",
-	"* 修正查询结果中始发站终点站标记不显示问题",
-	"* 优化主页面框架高度自动调整方案",
-	"* 其它细节改进"
+	"* 修正常用联系人等页面出现显示不出界面的BUG"
 ];
 var fishlee12306_msgid=17;
 var fishlee12306_msgver="4.6.2";

@@ -12,7 +12,7 @@
 // @require			http://lib.sinaapp.com/js/jquery/1.8.3/jquery.min.js
 // @icon			http://www.12306.cn/mormhweb/images/favicon.ico
 // @run-at			document-idle
-// @version 		4.9.3
+// @version 		4.9.4
 // @updateURL		http://static.fishlee.net/_softdownload/12306_ticket_helper.user.js
 // @supportURL		http://www.fishlee.net/soft/44/
 // @homepage		http://www.fishlee.net/soft/44/
@@ -22,12 +22,9 @@
 
 //=======START=======
 
-var version = "4.9.3";
+var version = "4.9.4";
 var updates = [
-	"+ 增加自动展开查询列表的功能",
-	"* 修正查询结果中始发站终点站标记不显示问题",
-	"* 优化主页面框架高度自动调整方案",
-	"* 其它细节改进"
+	"* 修正常用联系人等页面出现显示不出界面的BUG"
 ];
 
 var faqUrl = "http://www.fishlee.net/soft/44/faq.html";
@@ -1314,7 +1311,9 @@ function entryPoint() {
 		});
 	} else {
 		unsafeInvoke(function () {
-			var bodyEle = $("div.enter_w");
+			var bodyEle = $("div.enter_w, div.conWrap");
+			if (bodyEle.length != 1) return;
+			
 			var main = parent.$("#main");
 			var lastHeight = 0;
 			setInterval(function () {
