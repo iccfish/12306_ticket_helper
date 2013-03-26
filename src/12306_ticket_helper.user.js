@@ -9,10 +9,9 @@
 // @match			http://dynamic.12306.cn/otsweb/*
 // @match			https://dynamic.12306.cn/otsweb/*
 // @match			https://www.12306.cn/otsweb/*
-// @require			http://lib.sinaapp.com/js/jquery/1.8.3/jquery.min.js
 // @icon			http://www.12306.cn/mormhweb/images/favicon.ico
 // @run-at			document-idle
-// @version 		4.9.4
+// @version 		4.9.5
 // @updateURL		http://static.fishlee.net/_softdownload/12306_ticket_helper.user.js
 // @supportURL		http://www.fishlee.net/soft/44/
 // @homepage		http://www.fishlee.net/soft/44/
@@ -22,9 +21,10 @@
 
 //=======START=======
 
-var version = "4.9.4";
+var version = "4.9.5";
 var updates = [
-	"* 修正常用联系人等页面出现显示不出界面的BUG"
+	"* 修正常用联系人等页面出现显示不出界面的BUG",
+	"* 为出发时间和到达时间添加选项开关"
 ];
 
 var faqUrl = "http://www.fishlee.net/soft/44/faq.html";
@@ -1311,9 +1311,9 @@ function entryPoint() {
 		});
 	} else {
 		unsafeInvoke(function () {
-			var bodyEle = $("div.enter_w, div.conWrap");
+			var bodyEle = $("div.conWrap");
 			if (bodyEle.length != 1) return;
-			
+
 			var main = parent.$("#main");
 			var lastHeight = 0;
 			setInterval(function () {
@@ -2737,10 +2737,8 @@ function initTicketQuery() {
 	}
 
 	(function () {
-		var html = "<tr class='fish_sep caption'><td><label><input type='checkbox' id='swWhiteList' name='swWhiteList' data-target='whiteListRow' checked='checked' /> 车次白名单</label></td><td style='font-weight:normal;' colspan='2'>加入白名单的车次，将不会被过滤(仅为搭配黑名单)</td><td style='text-align:rigth;'><button class='fish_button' id='btnAddWhite'>添加</button><button class='fish_button' id='btnClearWhite'>清空</button></td></tr>\
-<tr class='fish_sep' id='whiteListRow'><td colspan='4' id='whiteListTd'></td></tr>\
-<tr class='fish_sep caption'><td><label><input type='checkbox' id='swBlackList' checked='checked' data-target='blacklistRow' name='swBlackList' />车次黑名单</label></td><td style='font-weight:normal;' colspan='2'>加入黑名单的车次，除非在白名单中，否则会被直接过滤而不会显示</td><td style='text-align:rigth;'><button class='fish_button' id='btnAddBlack'>添加</button><button class='fish_button' id='btnClearBlack'>清空</button></td></tr>\
-<tr class='fish_sep' id='blacklistRow'><td colspan='4' id='blackListTd'></td></tr>";
+		var html = "<tr class='fish_sep caption'><td><label title='加入白名单的车次，将不会被过滤(仅为搭配黑名单)'><input type='checkbox' id='swWhiteList' name='swWhiteList' checked='checked' /> 车次白名单</label></td><td style='text-align:rigth;'><button class='fish_button' id='btnAddWhite'>添加</button><button class='fish_button' id='btnClearWhite'>清空</button></td><td><label title='加入黑名单的车次，除非在白名单中，否则会被直接过滤而不会显示'><input type='checkbox' id='swBlackList' checked='checked' name='swBlackList' />车次黑名单</label></td><td style='text-align:rigth;'><button class='fish_button' id='btnAddBlack'>添加</button><button class='fish_button' id='btnClearBlack'>清空</button></td></tr>\
+<tr class='fish_sep'><td colspan='2' id='whiteListTd'></td><td colspan='2' id='blackListTd'></td></tr>";
 		$("#viewFilter").after(html);
 
 		html = "\
@@ -2769,7 +2767,6 @@ function initTicketQuery() {
 <p style='font-size:16px; font-weight:bold;color:blue;'>一定要仔细看说明啊！切记多个浏览器准备不要老想着一棵树上吊死啊！千万不要因为自动提交订单导致你订不到票啊！！这样老衲会内疚的啊！！！！</p>\
 </td></tr>";
 		$("#autoFill").after(html);
-		utility.associateSwitch.apply($("#swWhiteList, #swBlackList"));
 
 		//刷新联系人列表
 		$("#btnRefreshPas").click(function () {
@@ -3558,11 +3555,13 @@ function dgFilterQuery() {
 	});
 
 	//出行时间过滤
-	$("#viewFilter").nextUntil(".fish_area").last().after('<tr class="fish_sep" id="timeFilter"><td class="name">出发时间</td><td><select id="timeFilterFrom1"></select> 至 <select id="timeFilterFrom2"></select></td><td class="name">到达时间</td><td><select id="timeFilterTo1"></select> 至 <select id="timeFilterTo2"></select></td></tr>');
+	$("#viewFilter").nextUntil(".fish_area").last().after('<tr class="fish_sep" id="timeFilter"><td class="name"><label><input type="checkbox" id="swEnableFromFilter" checked="checked"/>出发时间</label</td><td><select id="timeFilterFrom1"></select> 至 <select id="timeFilterFrom2"></select></td><td class="name"><label><input type="checkbox" id="swEnableToFilter" checked="checked"/>到达时间</label></td><td><select id="timeFilterTo1"></select> 至 <select id="timeFilterTo2"></select></td></tr>');
 	var tff = document.getElementById("timeFilterFrom1");
 	var tft = document.getElementById("timeFilterFrom2");
 	var ttf = document.getElementById("timeFilterTo1");
 	var ttt = document.getElementById("timeFilterTo2");
+	var swf = document.getElementById("swEnableFromFilter");
+	var swt = document.getElementById("swEnableToFilter");
 
 	for (var i = 0; i < 25; i++) {
 		var txt = (i < 10 ? "0" : "") + i + ":00";
@@ -3577,7 +3576,7 @@ function dgFilterQuery() {
 		var fromTime = parseInt(evt.fromTime.split(":")[0]);
 		var toTime = parseInt(evt.toTime.split(":")[0]);
 
-		if (fromTime < tff.selectedIndex || fromTime >= tft.selectedIndex || toTime < ttf.selectedIndex || toTime >= ttt.selectedIndex) {
+		if ((swf.checked && (fromTime < tff.selectedIndex || fromTime >= tft.selectedIndex)) || (swt.checked && (toTime < ttf.selectedIndex || toTime >= ttt.selectedIndex))) {
 			evt.row.hide();
 			evt.result = 0;
 			return 0;
