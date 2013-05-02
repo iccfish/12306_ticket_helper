@@ -9,10 +9,9 @@
 // @match			http://dynamic.12306.cn/otsweb/*
 // @match			https://dynamic.12306.cn/otsweb/*
 // @match			https://www.12306.cn/otsweb/*
-// @require			http://lib.sinaapp.com/js/jquery/1.8.3/jquery.min.js
 // @icon			http://www.12306.cn/mormhweb/images/favicon.ico
 // @run-at			document-idle
-// @version 		4.9.3
+// @version 		4.9.5.1
 // @updateURL		http://static.fishlee.net/_softdownload/12306_ticket_helper.user.js
 // @supportURL		http://www.fishlee.net/soft/44/
 // @homepage		http://www.fishlee.net/soft/44/
@@ -22,18 +21,21 @@
 
 //=======START=======
 
-var version = "4.9.3";
+var version = "4.9.5.1";
 var updates = [
-	"+ 增加自动展开查询列表的功能",
-	"* 修正查询结果中始发站终点站标记不显示问题",
-	"* 优化主页面框架高度自动调整方案",
-	"* 其它细节改进"
+	"* 修正高铁或动车之一过滤的时候依然提示有票的BUG",
+	"* 增加N首提示音乐(从手机铃声网站上扒拉下来的乱七八糟的..)",
+	"* 修正在不启用自动变换车次类型的情况下依然会自动取消勾选『全部』的BUG",
+	"* 修正自动预定可能存在的问题",
+	"* 修正其它一些涉及席别的地方存在的可能隐藏BUG",
+	"* 修正兼容性版本标记",
+	"+ 增加全新的界面提示功能"
 ];
 
 var faqUrl = "http://www.fishlee.net/soft/44/faq.html";
 //标记
 var utility_emabed = false;
-var compVersion = "5.72";
+var compVersion = "5.75";
 
 
 //#region -----------------UI界面--------------------------
@@ -109,9 +111,18 @@ span.leftTicketStatusSpan{color:green; font-weight:bold;}\
 .gridtb { width:100%!important; }\
 .gridtb th {text-align:center;padding: 5px; border-right: 1px solid #ccc; font-weight:bold;-webkit-transition:all linear 0.2s;-moz-transition:all linear 0.2s;background:-webkit-linear-gradient(#fafafa,#f0f0f0 90%);background:-moz-linear-gradient(#fafafa,#f0f0f0 90%);background-color:#fafafa;}\
 .gridtb .last {border-right:none;}\
+.gridtb td {border-right: 1px dotted #ccc; border-bottom: 1px solid #ccc; padding:5px; text-align: center;}\
+.gridtb div {text-align:center;}\
+#footRow {border-bottom:none; text-align: left;}\
+.gridtb a{display:block; text-align:center;}\
 .fish_opt {width:98%;padding:5px;margin:0;overflow:hidden;box-shadow:1px 1px 3px #ccc;border:1px solid #ddd;background-color:#fff;}\
 .fish_opt li{width:175px; float:left;}\
-";
+.fishDialog {border-radius: 10px;  box-shadow: #7E9BCB 5px 5px 10px; width: 500px; display: none;}\
+.fishDialogTitle { font-size:130%; line-height: 40px; text-align: center;font-weight: bold;color: #fff;background: -webkit-linear-gradient(#7292C6, #40649F);background: -moz-linear-gradient(#7292C6, #40649F); border-radius: 10px 10px 0 0;}\
+.fishDialogContent { background-color: #fff; padding: 15px; }\
+.fishDialogControls { padding: 5px;background-color: #f0f0f0;line-height: 30px;text-align: right; border-radius: 0 0 10px 10px; }\
+.fishDialogMask{position:fixed;left:0;top:0;background-color:#4e7896;opacity:.5;z-index:9999;width:100%;display:block;-moz-background-size:40px 40px;-o-background-size:40px 40px;-webkit-background-size:40px 40px;background-size:40px 40px;background-image:-webkit-linear-gradient(45deg,rgba(255,255,255,.1) 25%,transparent 25%,transparent 50%,rgba(255,255,255,.1) 50%,rgba(255,255,255,.1) 75%,transparent 75%,transparent);background-image:-moz-linear-gradient(45deg,rgba(255,255,255,.1) 25%,transparent 25%,transparent 50%,rgba(255,255,255,.1) 50%,rgba(255,255,255,.1) 75%,transparent 75%,transparent);}\
+	";
 
 	document.head.appendChild(s);
 }
@@ -162,7 +173,7 @@ function injectDom() {
 	html.push('<p> 12306 订票助手是一款用于订票的助手软件，嗯……看到这里相信你已经知道它支持神马浏览器了 =。=<strong>完全免费，无需付费使用，仅接受捐助。</strong> </p>');
 	html.push('<p style="color: red;"> <strong style="font-size:16px;">啊嘞……看这里！本助手完全免费啊诸位大人！</strong>任何在第三方网站上出售的软件全他喵的是侵权出售啊！！看到的时候请亲务必记得退款退货打差评向青天大老爷举报啊！！</p>');
 	html.push('<p style="color:purple;"> 回家是一个单纯而简单的心愿，希望我们不会变得太复杂……</p>');
-	html.push('<p> 有很多朋友资助作者，正在严重返潮的南方发霉的作者感激涕零 ≥ω≤。<a href="http://www.fishlee.net/soft/44/donate.html" target="_blank">戳这里了解捐助详情</a>。 </p>');
+	html.push('<p> 有很多朋友资助作者，小的感激涕零 ≥ω≤。<a href="http://www.fishlee.net/soft/44/donate.html" target="_blank">戳这里了解捐助详情</a>。 </p>');
 	html.push('<p style="font-weight:bold;">当前版本更新内容</p>');
 	html.push('<ol >');
 	$.each(utility.getPref("updates").split('\t'), function (i, n) {
@@ -193,7 +204,7 @@ function injectDom() {
 	//获取登录到IE的代码 Add By XPHelper
 	html.push('<div class="tabLoginIE tabContent"><div><strong>先在IE中打开 https://dynamic.12306.cn/otsweb，</strong>再将以下代码复制到IE浏览器的地址栏。确认地址栏最前面有“javascript:”字样，没有请手动加上（IE10会自动删除这样的代码），然后敲回车，等待页面刷新后，即可自动登录。</div><textarea id="LoginIECode" style="width:100%;height:200px;"></textarea></div>');
 	html.push('<div class="control">');
-	html.push('<input type="button" class="close_button" value="关闭" />');
+	html.push('<input type="button" class=" fish_button close_button" value="关闭" />');
 	html.push('</div>');
 	html.push('</div>');
 	html.push('</div>');
@@ -411,6 +422,165 @@ var utility = {
 					if (result) return false;
 				});
 				return result;
+			},
+			prompt: function (options) {
+				options = $.extend({
+					buttons: [],
+					title: "10306订票助手",
+					ele: null,
+					content: null,
+					onCancel: function () { },
+					closeOnClick: true,
+					to: null
+				}, options);
+
+				return (function (opt) {
+					this.options = opt;
+					var self = this;
+
+					var ele = $("#fishPromptDlg");
+					if (!ele.length) {
+						$("body").append('<div id="fishPromptDlg" class="fishDialog"><div class="fishDialogTitle"></div><div class="fishDialogContent"></div><div class="fishDialogControls"><button class="close_button fish_button">关闭</button></div></div>');
+						ele = $("#fishPromptDlg");
+					}
+
+					//按钮
+					var controlbar = ele.find(".fishDialogControls");
+					controlbar.find(":not(.close_button)").remove();
+					$.each(this.options.buttons, function () {
+						var button = $("<button class=\"fish_button " + this.cssClass + "\">" + this.text + "</button>");
+						var handler = this.handler;
+						if (handler) {
+							button.click(function () {
+								if (self.options.closeOnClick) self.close();
+								handler.call(self, this);
+							});
+						}
+						controlbar.prepend(button);
+					});
+
+					//标题
+					ele.find(".fishDialogTitle").html(this.options.title);
+
+					//内容
+					var container = ele.find(".fishDialogContent");
+					if (this.options.content) {
+						container.html(this.options.content);
+						ele.width(500);
+					} else {
+						ele.css("width", "auto");
+						var prevContent = container.children();
+						$("body").append(prevContent.hide());
+
+						container.width(this.options.ele.innerWidth());
+						container.append(this.options.ele);
+						this.options.ele.show();
+					}
+
+					this.dialog = ele.fishDialog({ to: self.options.to });
+					this.close = function () {
+						self.dialog.closeDialog();
+						if (self.options.onClose) {
+							self.options.onClose.call(self);
+						}
+					};
+
+				})(options);
+			}
+		});
+		$.fn.extend({
+			fishDialog: function (optx) {
+				/// <summary>显示对话框。其中带有 close_button 样式的控件会自动作为关闭按钮</summary>
+				var dataKey = "fs_dlg_opt";
+				var object = this;
+
+				return object.data(dataKey) ? object.data(dataKey) : (function (opt) {
+					var e = this;
+
+					e.options = $.extend({ maskOpacity: 0.5, bindControl: null, removeDialog: this.attr("autoCreate") == "1", onClose: null, animationMove: 20, speed: "fast", fx: "linear", show: "fadeInDown", hide: "fadeOutUp", onShow: null, timeOut: 0, to: null, mask: true }, opt);
+					var top = "50%";
+					var left = "50%";
+					var thisWidth = e.width();
+					var thisHeight = e.height();
+					var marginLeft = -thisWidth / 2;
+					var marginTop = -thisHeight / 2 - e.options.animationMove;
+					var $body = $("body");
+					var viewAreaWidth = document.body.scrollLeft + document.documentElement.clientWidth;
+					var viewAreaHeight = document.body.scrollTop + document.documentElement.clientHeight;
+
+					if (e.options.to) {
+						var pos = e.options.to.position();
+						top = pos.top;
+						left = pos.left;
+
+						if (top + thisHeight >= viewAreaHeight) top = viewAreaHeight - thisHeight - 1;
+						if (left + thisWidth >= viewAreaWidth) left = viewAreaWidth - thisWidth - 1;
+
+						left += "px";
+						top += "px";
+						marginLeft = 0;
+						marginTop = -e.options.animationMove;
+					}
+					if (e.options.mask) {
+						var mark = document.getElementById("fishDialogMask");
+						if (!mark) {
+							$("body").append("<div id='fishDialogMask' class='fishDialogMask'></div>");
+							mark = document.getElementById("fishDialogMask");
+						}
+						$(mark).css({ "height": viewAreaHeight + "px", "opacity": 0 }).show().animate({ opacity: e.options.maskOpacity }, "fast", "linear");
+					}
+
+					e.css({
+						"position": e.options.parent || e.options.to ? "absolute" : "fixed",
+						"left": left,
+						"top": top,
+						"margin-left": marginLeft + "px",
+						"margin-top": (marginTop - e.options.animationMove) + "px",
+						"z-index": "10000"
+					});
+					e.changeLoadingIcon = function (icon) {
+						/// <summary>更改加载对话框的图标</summary>
+						e.removeClass().addClass("loadingDialog loadicon_" + (icon || "tip"));
+						return e;
+					};
+					e.autoCloseDialog = function (timeout) {
+						/// <summary>设置当前对话框在指定时间后自动关闭</summary>
+						setTimeout(function () { e.closeDialog(); }, timeout || 2500);
+						return e;
+					};
+					e.setLoadingMessage = function (msgHtml) {
+						e.find("div").html(msgHtml);
+						return e;
+					};
+					e.closeDialog = function () {
+						/// <summary>关闭对话框</summary>
+						$('.close_button', e).unbind("click", e.closeDialog);
+						e.removeData(dataKey);
+						e.animate({ "marginTop": (marginTop + e.options.animationMove) + "px", "opacity": "hide" }, e.options.speed, e.options.fx, function () {
+							if (e.options.bindControl) e.options.bindControl.enable();
+							if (e.options.onClose) e.options.onClose.call(e);
+							if (e.options.removeDialog) e.options.remove();
+						})
+						$("#fishDialogMask").animate({ opacity: "hide" }, "fast", "linear");
+
+						return e;
+					};
+					$('.close_button', e).click(e.closeDialog);
+					//auto close
+					if (e.options.timeOut > 0) {
+						var handler = e.options.onShow;
+						e.options.onShow = function () {
+							setTimeout(function () { e.closeDialog(); }, e.options.timeOut);
+							if (handler != null) handler.call(e);
+						};
+					}
+					//show it
+					if (e.options.bindControl) e.options.bindControl.disable();
+					e.animate({ "marginTop": marginTop + "px", "opacity": "show" }, e.options.speed, e.options.fx, function () { e.options.onShow && e.options.onShow.call(e); });
+					e.data(dataKey, e);
+
+					return this;
+				}).call(object, optx);
 			}
 		});
 
@@ -470,13 +640,8 @@ var utility = {
 	notify: function (msg, title, timeout) {
 		var tw = utility.getTopWindow();
 		if (tw == self) {
-			document.body.setAttribute("msg", msg);
-			document.body.setAttribute("title", title || "");
-			document.body.setAttribute("timeout", timeout || "");
-
-			var evt = document.createEvent("HTMLEvents");
-			evt.initEvent("notify", true, true);
-			document.body.dispatchEvent(evt);
+			var e = new CustomEvent("notify", { detail: { msg: msg, title: title || "", timeout: timeout || "" } });
+			document.body.dispatchEvent(e);
 		} else {
 			tw.utility.notify(msg, title, timeout);
 		}
@@ -715,71 +880,6 @@ var utility = {
 			refer: utility.getFullUrl(refer)
 		});
 	},
-	showDialog: function (object, optx) {
-		/// <summary>显示对话框。其中带有 close_button 样式的控件会自动作为关闭按钮</summary>
-		return (function (opt) {
-			var dataKey = "fs_dlg_opt";
-			if (this.data(dataKey)) {
-				//this.data(dataKey).closeDialog();
-				return;
-			}
-
-			opt = $.extend({ bindControl: null, removeDialog: this.attr("autoCreate") == "1", onClose: null, animationMove: 20, speed: "fast", fx: "linear", show: "fadeInDown", hide: "fadeOutUp", onShow: null, timeOut: 0 }, opt);
-			this.data("fs_dlg_opt", opt);
-			var top = "0px";
-			var left = "50%";
-
-			this.css({
-				"position": opt.parent ? "absolute" : "fixed",
-				"left": left,
-				"top": top,
-				"margin-left": "-" + (this.width() / 2) + "px",
-				"margin-top": "0px",
-				"z-index": "9999"
-			});
-			var obj = this;
-			this.changeLoadingIcon = function (icon) {
-				/// <summary>更改加载对话框的图标</summary>
-				obj.removeClass().addClass("loadingDialog loadicon_" + (icon || "tip"));
-				return obj;
-			};
-			this.autoCloseDialog = function (timeout) {
-				/// <summary>设置当前对话框在指定时间后自动关闭</summary>
-				setTimeout(function () { obj.closeDialog(); }, timeout || 2500);
-				return obj;
-			};
-			this.setLoadingMessage = function (msgHtml) {
-				obj.find("div").html(msgHtml);
-				return obj;
-			};
-			this.closeDialog = function () {
-				/// <summary>关闭对话框</summary>
-				obj.removeData(dataKey);
-				obj.animate({ "marginTop": "+=" + opt.animationMove + "px", "opacity": "hide" }, opt.speed, opt.fx, function () {
-					if (opt.bindControl) opt.bindControl.enable();
-					if (opt.onClose) opt.onClose.call(obj);
-					if (opt.removeDialog) obj.remove();
-				})
-
-				return obj;
-			};
-			$('.close_button', this).unbind("click").click(obj.closeDialog);
-			//auto close
-			if (opt.timeOut > 0) {
-				var handler = opt.onShow;
-				opt.onShow = function () {
-					setTimeout(function () { $(obj).closeDialog(); }, opt.timeOut);
-					if (handler != null) handler.call(this);
-				};
-			}
-			//show it
-			if (opt.bindControl) opt.bindControl.disable();
-			this.animate({ "marginTop": "+=" + opt.animationMove + "px", "opacity": "show" }, opt.speed, opt.fx, function () { opt.onShow && opt.onShow.call(obj); })
-			this.data(dataKey, this);
-
-			return this;
-		}).call(object, optx);
-	},
 	fishTab: function (obj, opt) {
 		return (function (opt) {
 			var self = this;
@@ -808,7 +908,7 @@ var utility = {
 	},
 	showOptionDialog: function (tab) {
 		if (tab) utility.configTab.showTab(tab);
-		utility.showDialog($("#fishOption"));
+		$("#fishOption").fishDialog();
 	},
 	addCookie: function (name, value, expDays) {
 		var cook = name + "=" + value + "; path=/; domain=.12306.cn";
@@ -1119,8 +1219,7 @@ var utility = {
 
 			var target = $("#" + this.dataset.target);
 			if (!target) return;
-			if (this.checked) target.show();
-			else target.hide();
+			(this.checked && target.show()) || target.hide();
 		}).change();
 
 		return this;
@@ -1132,6 +1231,8 @@ function unsafeInvoke(callback) {
 	var cb = document.createElement("script");
 	cb.type = "text/javascript";
 	cb.textContent = buildCallback(callback);
+	console.log(cb.textContent);
+
 	document.head.appendChild(cb);
 }
 
@@ -1282,15 +1383,13 @@ function entryPoint() {
 	if (path == "/otsweb/main.jsp" || path == "/otsweb/") {
 		//主框架
 		unsafeInvoke(injectMainPageFunction);
-	}
-	if (self == utility.getTopWindow()) {
+
 		document.body.addEventListener("notify", function (evt) {
-			var target = evt.target;
+			var detail = evt.detail;
 
-			var msg = target.getAttribute("msg");
-			var title = target.getAttribute("title");
-			var timeout = target.getAttribute("timeout");
-
+			var msg = detail.msg;
+			var title = detail.title;
+			var timeout = detail.timeout;
 			if (typeof (GM_notification) != 'undefined') {
 				GM_notification(msg);
 				return;
@@ -1313,15 +1412,20 @@ function entryPoint() {
 			notification.show();
 		});
 	} else {
+		console.log("[INFO] 初始化框架高度自动调整");
 		unsafeInvoke(function () {
-			var bodyEle = $("div.enter_w");
+			var bodyEle = $("div.conWrap");
+			if (bodyEle.length != 1) {
+				return;
+			}
+
 			var main = parent.$("#main");
 			var lastHeight = 0;
 			setInterval(function () {
 				var h = bodyEle.height();
 				if (h != lastHeight) {
 					lastHeight = h;
-					main.css("height", (lastHeight + 10) + "px");
+					main.height(lastHeight + 10);
 					parent.window.setHeight(parent.window);
 				}
 			}, 500);
@@ -1335,6 +1439,7 @@ function injectQueryScripts() {
 	unsafeInvoke(initAdvancedTicketQuery);
 	unsafeInvoke(initDirectSubmitOrder);
 	unsafeInvoke(dgFilterQuery);
+	unsafeInvoke(initQueryGuide);
 }
 
 //#endregion
@@ -2121,7 +2226,6 @@ function initTicketQuery() {
 	utility.enableLog();
 
 	var initialized = false;
-	//var seatLevelOrder = null;
 	var de = $(document);
 	var grid = $('#gridbox');
 
@@ -2260,25 +2364,67 @@ function initTicketQuery() {
 <tr class='fish_sep fish_area' id='viewHelper'><td colspan='4'>查询辅助功能</span></tr>\
 <tr class='fish_sep fish_area' id='autoFill'><td colspan='4'>自动选择功能</span></tr>\
 <tr class='fish_sep fish_area' id='queryUtility'><td colspan='4'>其它辅助功能</span></tr>\
-<tr class='fish_sep musicFunc' id='helperbox_bottom'><td class='name'>自定义音乐地址</td><td colspan='3'><input type='text' id='txtMusicUrl' value='" + utility.getAudioUrl() + "' onfocus='this.select();' style='width:420px;' /> <input class='fish_button' type='button' onclick='new Audio(document.getElementById(\"txtMusicUrl\").value).play();' value='测试'/><input class='fish_button' type='button' onclick='utility.resetAudioUrl(); document.getElementById(\"txtMusicUrl\").value=utility.getAudioUrl();' value='恢复默认'/> (地址第一次使用可能会需要等待一会儿)</td></tr>\
-<tr class='fish_sep musicFunc'><td class='name'>可用音乐地址</td><td colspan='3'>");
-
-	var host1 = "http://static.fishlee.net/resources/audio/";
-	//var host2 = "https://github.com/iccfish/12306_ticket_helper/raw/master/res/";
-	var musics = [["music1.ogg", "超级玛丽"], ["music2.ogg", "蓝精灵"]];
-	$.each(musics, function () {
-		extrahtml.push("<a href='javascript:;' url='" + host1 + this[0] + "' class='murl'>" + this[1] + "</a>&nbsp;&nbsp;&nbsp;&nbsp;");
-		//extrahtml.push("<a href='javascript:;' url='" + host2 + this[0] + "' class='murl'>" + this[1] + "</a>(HTTPS)&nbsp;&nbsp;&nbsp;&nbsp;");
-	});
+<tr class='fish_sep musicFunc' id='helperbox_bottom'><td class='name'>自定义音乐地址</td><td colspan='3'><input type='text' id='txtMusicUrl' value='" + utility.getAudioUrl() + "' onfocus='this.select();' style='width:370px;' /> <button class='fish_button' id='btnSelectPresetAudio'>选择</button> <input class='fish_button' type='button' id='btnTestAudio' value='测试'/><input class='fish_button' type='button' onclick='utility.resetAudioUrl(); document.getElementById(\"txtMusicUrl\").value=utility.getAudioUrl();' value='默认'/> (地址第一次使用可能会需要等待一会儿)</td></tr>\
+");
 
 	extrahtml.push("</td></tr><tr class='fish_sep'><td class='tfooter' colspan='4'><a href='http://www.fishlee.net/soft/44/' target='_blank'>12306订票助手 @iFish</a> | <a href='http://weibo.com/Acathur' target='_blank'>美工设计 @Acathur</a> | 版本 v" + window.helperVersion + "<br />\
 <a href='http://www.fishlee.net/soft/44/' style='color:blue;' target='_blank'>助手主页</a> | <a href='http://t.qq.com/ccfish/' title='此乃腾讯微博！或者在新浪微博上 @imcfish？可惜偶不怎么用新浪微博……' style='color:blue;' target='_blank'>微博关注</a> | <a href='http://bbs.fishlee.net/' target='_blank' style='color:red;'>助手论坛</a> | <a href='http://www.fishlee.net/soft/44/announcement.html' style='color:#0f7edb;' target='_blank'>免责声明</a> | <a href='" + utility.getUpdateUrl() + "' target='_blank'>下载新版</a> | <a style='font-weight:bold;color:red;' href='http://www.fishlee.net/soft/44/donate.html' target='_blank'>捐助作者</a> | 许可于 <strong>" + utility.regInfo.name + "，类型 - " + utility.regInfo.typeDesc + "</strong> 【<a href='javascript:;' class='reSignHelper'>重新注册</a>】</td></tr>\
 		</table></div></div>");
-
 	$("div.enter_w").append(extrahtml.join(""));
-	$("a.murl").live("click", function () {
-		$("#txtMusicUrl").val(this.getAttribute("url")).change();
-	});
+
+	!function () {
+		var musics = {
+			"音乐": [["music1", "超级玛丽"], ["music2", "蓝精灵"], ["song7", "未知铃声(柔)"], ["song15", "卡农"]],
+			"歌曲": [["song3", "the day you went away"], ["song5", "Zo Verliefd"], ["song10", "红模仿"], ["song13", "简单爱"], ["song16", "Tell me"], ["song18", "庆祝"], ["song19", "哇啦哇啦"], ["song20", "蓝色雨"], ["song21", "相见恨晚"], ["song23", "有没有那么一首歌会让你想起我"], ["song24", "水手"], ["song6", "笔记"], ["song8", "放开你的心"]],
+			"歌曲(翻唱)": [["song14", "今天我要向你告白韩语版"], ["song12", "加油"], ["song17", "情非得已"]],
+			"怀旧": [["song11", "葫芦兄弟"], ["song22", "学习雷锋"]],
+			"搞笑": [["song9", "搞笑鸡鸣"], ["song25", "猪八戒背媳妇"]],
+			"警告提示": [["song2", "奔腾四广告"], ["song4", "警笛"]],
+			"其它": [["song1", "未知"]]
+		};
+		var musicHtml = [];
+		var host1 = "http://static.fishlee.net/resources/audio/";
+
+		musicHtml.push("<div id='tbSelectMusic' class='box' style='width:500px; display:none;'><table style='width:100%;'>");
+		$.each(musics, function (k, v) {
+			musicHtml.push("<tr><td class='name' style='width:70px;'>" + k + "</td><td>");
+			$.each(v, function () {
+				musicHtml.push("<a href='javascript:;' url='" + host1 + this[0] + ".ogg' class='murl'>" + this[1] + "</a>&nbsp;&nbsp;&nbsp;&nbsp;");
+			});
+			musicHtml.push("</td></tr>");
+		});
+		musicHtml.push("</table></div>");
+		$("body").append(musicHtml.join(""));
+
+
+		//自定义音乐和测试自定义音乐
+		var audio = null;
+		var testAudio = function () {
+			var url = document.getElementById("txtMusicUrl").value;
+			if (audio) {
+				audio.pause();
+				audio.src = url;
+				audio.play();
+			} else {
+				audio = new Audio(url);
+				audio.play();
+			}
+		};
+
+		$("a.murl").click(function () {
+			$("#txtMusicUrl").val(this.getAttribute("url")).change();
+			testAudio();
+		});
+
+		$("#btnTestAudio").click(testAudio);
+		$("#btnSelectPresetAudio").click(function () {
+			$.prompt({
+				title: "选择内置音乐",
+				ele: $("#tbSelectMusic"),
+				to: $(this)
+			});
+		});
+	}();
 	$("#stopBut").before("<div class='jmp_cd' style='text-align:center;'><button class='fish_button' id='btnFilter'>加入黑名单</button><button class='fish_button' id='btnAutoBook'>自动预定本车次</button></div>");
 	$("#txtMusicUrl").change(function () { window.localStorage["audioUrl"] = this.value; });
 	$("form[name=querySingleForm]").attr("id", "querySingleForm");
@@ -2421,10 +2567,10 @@ function initTicketQuery() {
 	//检查是否可以订票
 	function getTrainNo(row) {
 		/// <summary>获得行的车次号</summary>
-		return $.trim($("td:eq(0)", row).text());
+		return row.attr("trainCode") || $.trim($("td:eq(0)", row).text());
 	}
 	//默认的单元格检测函数
-	$("table.obj tr td").live("checkingTicketSeat", function (e) {
+	$("table.obj tr td, #advQueryContainer td").live("checkingTicketSeat", function (e) {
 		if (!ticketType[e.i - 1]) {
 			e.result = 0;
 		} else {
@@ -2441,7 +2587,7 @@ function initTicketQuery() {
 		return e.result;
 	});
 	//默认的行检测函数
-	$("table.obj tr").live("checkTicketRow", function (evt) {
+	$("table.obj tr, #advQueryContainer tr:gt(0):not(:first)").live("checkTicketRow", function (evt) {
 		var trainNo = evt.trainCode;
 		var tr = evt.row;
 
@@ -2738,10 +2884,8 @@ function initTicketQuery() {
 	}
 
 	(function () {
-		var html = "<tr class='fish_sep caption'><td><label><input type='checkbox' id='swWhiteList' name='swWhiteList' data-target='whiteListRow' checked='checked' /> 车次白名单</label></td><td style='font-weight:normal;' colspan='2'>加入白名单的车次，将不会被过滤(仅为搭配黑名单)</td><td style='text-align:rigth;'><button class='fish_button' id='btnAddWhite'>添加</button><button class='fish_button' id='btnClearWhite'>清空</button></td></tr>\
-<tr class='fish_sep' id='whiteListRow'><td colspan='4' id='whiteListTd'></td></tr>\
-<tr class='fish_sep caption'><td><label><input type='checkbox' id='swBlackList' checked='checked' data-target='blacklistRow' name='swBlackList' />车次黑名单</label></td><td style='font-weight:normal;' colspan='2'>加入黑名单的车次，除非在白名单中，否则会被直接过滤而不会显示</td><td style='text-align:rigth;'><button class='fish_button' id='btnAddBlack'>添加</button><button class='fish_button' id='btnClearBlack'>清空</button></td></tr>\
-<tr class='fish_sep' id='blacklistRow'><td colspan='4' id='blackListTd'></td></tr>";
+		var html = "<tr class='fish_sep caption'><td><label title='加入白名单的车次，将不会被过滤(仅为搭配黑名单)'><input type='checkbox' id='swWhiteList' name='swWhiteList' checked='checked' /> 车次白名单</label></td><td style='text-align:rigth;'><button class='fish_button' id='btnAddWhite'>添加</button><button class='fish_button' id='btnClearWhite'>清空</button></td><td><label title='加入黑名单的车次，除非在白名单中，否则会被直接过滤而不会显示'><input type='checkbox' id='swBlackList' checked='checked' name='swBlackList' />车次黑名单</label></td><td style='text-align:rigth;'><button class='fish_button' id='btnAddBlack'>添加</button><button class='fish_button' id='btnClearBlack'>清空</button></td></tr>\
+<tr class='fish_sep'><td colspan='2' id='whiteListTd'></td><td colspan='2' id='blackListTd'></td></tr>";
 		$("#viewFilter").after(html);
 
 		html = "\
@@ -2770,7 +2914,6 @@ function initTicketQuery() {
 <p style='font-size:16px; font-weight:bold;color:blue;'>一定要仔细看说明啊！切记多个浏览器准备不要老想着一棵树上吊死啊！千万不要因为自动提交订单导致你订不到票啊！！这样老衲会内疚的啊！！！！</p>\
 </td></tr>";
 		$("#autoFill").after(html);
-		utility.associateSwitch.apply($("#swWhiteList, #swBlackList"));
 
 		//刷新联系人列表
 		$("#btnRefreshPas").click(function () {
@@ -2868,10 +3011,10 @@ function initTicketQuery() {
 		function refreshSeatTypeOrder() {
 			var list = $("#preseatlist input");
 			if (initialized) $(":checkbox[name=seatoption]").attr("checked", false).change();
-			seatLevelOrder = [];
+			window.seatLevelOrder = [];
 			list.each(function () {
 				var code = $(this).attr("code");
-				seatLevelOrder.push(code);
+				window.seatLevelOrder.push(code);
 				if (initialized) $("#seatoption_" + code).attr("checked", true).change();
 			});
 			if (!list.length) {
@@ -2880,14 +3023,14 @@ function initTicketQuery() {
 				window.localStorage.setItem("autoSelect_preSelectSeatType", "");
 			} else {
 				$("#preseatlist_empty").hide();
-				window.localStorage.setItem("autoSelect_preSelectSeatType", seatLevelOrder[0]);
+				window.localStorage.setItem("autoSelect_preSelectSeatType", window.seatLevelOrder[0]);
 			}
 			if (initialized) utility.notify("已经根据您选择的席别自动切换了席别过滤选项，请注意，并作出需要的调整。");
-			window.localStorage.setItem("preSelectSeatType", seatLevelOrder.join('|'));
+			window.localStorage.setItem("preSelectSeatType", window.seatLevelOrder.join('|'));
 
 			if (document.getElementById("autoorder").checked) {
 				seatLevelRow.removeClass("stepsok steps");
-				seatLevelRow.addClass(seatLevelOrder.length ? "stepsok" : "steps");
+				seatLevelRow.addClass(window.seatLevelOrder.length ? "stepsok" : "steps");
 			}
 		}
 		//选中后添加到列表中
@@ -3249,7 +3392,7 @@ function initTicketQuery() {
 			pro.blackListEnabled = document.getElementById("swBlackList").checked;
 			pro.whiteListEnabled = document.getElementById("swWhiteList").checked;
 			pro.autoBookListEnabled = document.getElementById("swAutoBook").checked;
-			pro.seatOrder = seatLevelOrder;
+			pro.seatOrder = window.seatLevelOrder;
 			pro.prePassenger = $.map($("#passengerList1 :checkbox"), function (e) {
 				var data = $(e).data("pasinfo");
 				return { type: data.passenger_type, idtype: data.passenger_id_type_code, id: data.passenger_id_no };
@@ -3392,9 +3535,9 @@ function initTicketQuery() {
 		var checksClone = $("#trAutoChangeClass :checkbox[name=unwantClass]");
 
 		de.bind("checkedTicket", function () {
-			checks[0].checked = false;
-
 			if (!document.getElementById("autoChangeTrainClass").checked) return;
+
+			checks[0].checked = false;
 
 			for (var i = 0; i < checksClone.length; i++) {
 				var obj = checksClone[i];
@@ -3416,7 +3559,7 @@ function initTicketQuery() {
 
 function initAutoPreSubmitOrder() {
 	$(document).bind("validTicketsFound", function (e) {
-		if (typeof (seatLevelOrder) == "undefined" || (e.result != null && !e.result) || !(document.getElementById("swAutoBook").checked || document.getElementById("swOnlyValid").checked)) return;
+		if (typeof (window.seatLevelOrder) == "undefined" || (e.result != null && !e.result) || !(document.getElementById("swAutoBook").checked || document.getElementById("swOnlyValid").checked)) return;
 
 		console.log("[INFO] 正在按照预定的席别和车次优选");
 		if (document.getElementById("swOnlyValid").checked)
@@ -3438,7 +3581,7 @@ function initAutoPreSubmitOrder() {
 			}
 		}
 
-		if (!seatLevelOrder || !seatLevelOrder.length) {
+		if (!window.seatLevelOrder || !window.seatLevelOrder.length) {
 			//没有席别优先级，那选第一个
 			for (var idx in list_autoorder.datalist) {
 				var code = list_autoorder.datalist[idx];
@@ -3471,7 +3614,7 @@ function initAutoPreSubmitOrder() {
 				}
 			}
 			if (document.getElementById("autoorder_method").selectedIndex == 0) {
-				$.each(seatLevelOrder, function () {
+				$.each(window.seatLevelOrder, function () {
 					var scode = this;
 					for (var i in trainfiltered) {
 						var t = trainfiltered[i];
@@ -3491,8 +3634,8 @@ function initAutoPreSubmitOrder() {
 				//车次优先
 				$.each(trainfiltered, function () {
 					var t = this;
-					for (var i in seatLevelOrder) {
-						var scode = seatLevelOrder[i];
+					for (var i in window.seatLevelOrder) {
+						var scode = window.seatLevelOrder[i];
 						if (t.find("td[scode=" + scode + "][result=2]").length) {
 							ticketValid = true;
 							var tcode = scode == "empty" ? "1" : scode;
@@ -3554,16 +3697,19 @@ function dgFilterQuery() {
 
 		if ((!filter_d.checked && evt.trainCode[0] == 'D') || (!filter_g.checked && evt.trainCode[0] == 'G')) {
 			evt.row.hide();
+			evt.result = 0;
 			return 0;
 		}
 	});
 
 	//出行时间过滤
-	$("#viewFilter").nextUntil(".fish_area").last().after('<tr class="fish_sep" id="timeFilter"><td class="name">出发时间</td><td><select id="timeFilterFrom1"></select> 至 <select id="timeFilterFrom2"></select></td><td class="name">到达时间</td><td><select id="timeFilterTo1"></select> 至 <select id="timeFilterTo2"></select></td></tr>');
+	$("#viewFilter").nextUntil(".fish_area").last().after('<tr class="fish_sep" id="timeFilter"><td class="name"><label><input type="checkbox" id="swEnableFromFilter" checked="checked"/>出发时间</label</td><td><select id="timeFilterFrom1"></select> 至 <select id="timeFilterFrom2"></select></td><td class="name"><label><input type="checkbox" id="swEnableToFilter" checked="checked"/>到达时间</label></td><td><select id="timeFilterTo1"></select> 至 <select id="timeFilterTo2"></select></td></tr>');
 	var tff = document.getElementById("timeFilterFrom1");
 	var tft = document.getElementById("timeFilterFrom2");
 	var ttf = document.getElementById("timeFilterTo1");
 	var ttt = document.getElementById("timeFilterTo2");
+	var swf = document.getElementById("swEnableFromFilter");
+	var swt = document.getElementById("swEnableToFilter");
 
 	for (var i = 0; i < 25; i++) {
 		var txt = (i < 10 ? "0" : "") + i + ":00";
@@ -3578,7 +3724,7 @@ function dgFilterQuery() {
 		var fromTime = parseInt(evt.fromTime.split(":")[0]);
 		var toTime = parseInt(evt.toTime.split(":")[0]);
 
-		if (fromTime < tff.selectedIndex || fromTime >= tft.selectedIndex || toTime < ttf.selectedIndex || toTime >= ttt.selectedIndex) {
+		if ((swf.checked && (fromTime < tff.selectedIndex || fromTime >= tft.selectedIndex)) || (swt.checked && (toTime < ttf.selectedIndex || toTime >= ttt.selectedIndex))) {
 			evt.row.hide();
 			evt.result = 0;
 			return 0;
@@ -4296,16 +4442,24 @@ function initPayOrder() {
 
 function initAdvancedTicketQuery() {
 	return;
-	$("div.cx_title_w").before("<div class='outerbox' style='width:99%;'><div class='box' id='advQuery'><div class='title'><big>12306订票助手 高级查询</big><div class='time-comp'><label><input type='checkbox' name='' id='' value='1' /> 启用高级查询功能</lable></div></div></div></div>");
+	$("div.cx_title_w").before("\
+<div class='outerbox' style='width:99%;'>\
+	<div class='box' id='advQuery'>\
+		<div class='title'>\
+			<big>12306订票助手 高级查询</big>\
+			<div class='time-comp'><label><input type='checkbox' name='enableAdvQuery' id='enableAdvQuery' value='1' data-target='advQueryContainer' /> 启用高级查询功能</lable></div>\
+		</div>\
+	</div>\
+</div>");
 	var destContainer = $("#advQuery");
 
 	if (utility.isDemoUser()) {
-		destContainer.append("<div style=''></div>");
+		destContainer.append("<div id='advQueryContainer' style='margin:10px;'>很抱歉，<strong>基本版</strong> 不支持高级查询。请<a href='javascript:;' onclick=\"utility.showOptionDialog('tabReg');\">点击这里注册为正式版或更高版本</a>。如果您还木有序列号，请<a href='http://www.fishlee.net/Apps/Cn12306/GetNormalRegKey' target='_blank'>点击这里<strong>免费</strong>申请</a>。</div>");
 		return;
 	}
 
 	var html = [];
-	html.push("<table class='gridtb'>\
+	html.push("<table id='advQueryContainer' class='gridtb'>\
 <tr>\
 <th>日期</th>\
 <th>车次</th>\
@@ -4327,12 +4481,94 @@ function initAdvancedTicketQuery() {
 <th>其它</th>\
 <th class='last'>操作</th>\
 </tr>\
+<tr id='footRow'><td colspan='17'>\
+<strong>操作提示：</strong><br />\
+1. 想添加车次到列表咩？可以通过查询后鼠标移动到列表的车次编号上打开车次停靠站列表，并点击『<strong>加入高级查询</strong>』将指定的车次加入到高级查询列表哦。<br />\
+2. 嗯……助手默认会每隔5秒钟轮询表格中的所有车次列。在轮询时，请尽量避免同时进行系统本身的查询操作哦。\
+</td></tr>\
 </table>");
 
 	destContainer.append(html.join(""));
+	var queryTable = $("#advQueryContainer");
+	var queryTableLastRow = $("#footRow");
+	$("#stopBut").prev().append('<button class="fish_button" id="btnAddToAdvQuery">加入高级查询</button>');
+	//重载配置
+	utility.associateSwitch.apply($("#enableAdvQuery"));
+	utility.reloadPrefs(destContainer);
 
 
+	//操作函数
+	function addTrainToList(data) {
+		var buf = [];
+		buf.push("<tr trainCode='" + data.trainNo + "'><td>" + data.date + "</td><td>" + data.trainNo + "</td><td><div>" + data.fromName + "</div><div>" + data.fromTime + "</div></td><td><div>" + data.toName + "</div><div>" + data.toTime + "</div></td><td>" + data.elapseTime + "</td>");
+		//各票务信息
+		for (var ti = 0; ti < 11; ti++) buf.push("<td></td>");
+		buf.push("<td><a href='javascript:;' class='book'>预定</a><a href='javascript:;' class='delete'>删除</a></td>");
+		buf.push("</tr>");
+
+		var tr = $(buf.join(""));
+		queryTableLastRow.before(tr);
+		tr.data("train", data);
+	}
+
+
+	//events binding
+	$("#btnAddToAdvQuery").click(function () {
+		var code = $("#stopDiv").attr("info");
+
+		var tr = $("table.obj tr[tcode=" + code + "]");
+		var headerSpan = tr.find("span:eq(0)");
+		var action = /'([^#]+)#([^#]+)#([^#]+)'/i.exec(headerSpan[0].onmouseover + '');
+
+		var data = { trainNo: code, trainCode: action[1], from: action[1], to: action[2], date: $("#startdatepicker").val() };
+
+		//站点和时间信息
+		var sinfo = tr.find("td:eq(1)").html();
+		var matchRule = /&nbsp;([^<]+)<br>\s*([\d:]+)/i;
+		var sbuffer = matchRule.exec("&nbsp;" + sinfo);
+		data.fromName = sbuffer[1];
+		data.fromTime = sbuffer[2];
+
+		sinfo = tr.find("td:eq(2)").html();
+		sbuffer = matchRule.exec("&nbsp;" + sinfo);
+		data.toName = sbuffer[1];
+		data.toTime = sbuffer[2];
+
+		data.elapseTime = $.trim(tr.find("td:eq(3)").text());
+
+		addTrainToList(data);
+		saveQueryList();
+	});
+	function saveQueryList() {
+		var rows = queryTableLastRow.prevAll("tr").filter(":not(:last)");
+		var data = $.map(rows, function (e) { return $(e).data("train"); });
+		utility.setPref("advQueryTrainList", utility.toJSON(data));
+	}
+	function reloadQueryList() {
+		queryTableLastRow.prevAll("tr").filter(":not(:last)").remove();
+		var data = JSON.parse(utility.getPref("advQueryTrainList") || "[]");
+
+		$.each(data, function () { addTrainToList(this); });
+	}
+
+	//重新加载列表
+	reloadQueryList();
 }
+
+//#endregion
+
+//#region 查询页向导
+
+function initQueryGuide() {
+	var html = '\
+<div id="pageGuide"></div>\
+\
+';
+
+	$(document).append(html);
+	var guidContainer = $("#pageGuide");
+}
+
 
 //#endregion
 
