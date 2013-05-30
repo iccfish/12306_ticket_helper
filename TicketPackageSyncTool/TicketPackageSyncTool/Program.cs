@@ -156,8 +156,15 @@ namespace TicketPackageSyncTool
 		static void FixUpdateJsVersion(string version)
 		{
 			var xmls = System.IO.Directory.GetFiles(_root, "version*.js");
+			var isbeta = version.Count(s => s == '.') == 3;
 			foreach (var f in xmls)
 			{
+				var fn = System.IO.Path.GetFileName(f);
+				if (isbeta ^ fn.IndexOf("_beta", StringComparison.OrdinalIgnoreCase) == 0)
+				{
+					continue;
+				}
+
 				Console.WriteLine("[INFO] 修正 " + System.IO.Path.GetFileName(f) + " 中的版本号....");
 				ModifyVersionJs(f, version);
 			}
@@ -502,7 +509,18 @@ namespace TicketPackageSyncTool
 		static void ModifyVersionJs(string filepath, string version)
 		{
 			var result = new List<string>();
-			result.Add("var version_12306_helper = \"" + version + "\";");
+
+			if (version.Count(s => s == '.') == 3)
+			{
+				result.Add("var version_12306_helper = \"" + version.Substring(0, version.LastIndexOf(".")) + "\";");
+				result.Add("var version_12306_helper_beta = \"" + version + "\";");
+			}
+			else
+			{
+				result.Add("var version_12306_helper = \"" + version + "\";");
+				result.Add("var version_12306_helper_beta = \"" + version + "\";");
+			}
+
 			result.Add("var version_updater = [");
 			result.AddRange(_updates);
 			result.Add("];");

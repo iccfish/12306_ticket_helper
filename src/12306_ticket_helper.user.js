@@ -11,7 +11,7 @@
 // @match			https://www.12306.cn/otsweb/*
 // @icon			http://www.12306.cn/mormhweb/images/favicon.ico
 // @run-at			document-idle
-// @version 		4.9.5.1
+// @version 		4.9.6
 // @updateURL		http://static.fishlee.net/_softdownload/12306_ticket_helper.user.js
 // @supportURL		http://www.fishlee.net/soft/44/
 // @homepage		http://www.fishlee.net/soft/44/
@@ -21,7 +21,7 @@
 
 //=======START=======
 
-var version = "4.9.5.1";
+var version = "4.9.6";
 var updates = [
 	"* 修正高铁或动车之一过滤的时候依然提示有票的BUG",
 	"* 增加N首提示音乐(从手机铃声网站上扒拉下来的乱七八糟的..)",
@@ -29,13 +29,17 @@ var updates = [
 	"* 修正自动预定可能存在的问题",
 	"* 修正其它一些涉及席别的地方存在的可能隐藏BUG",
 	"* 修正兼容性版本标记",
-	"+ 增加全新的界面提示功能"
+	"+ 增加全新的界面提示功能",
+	"* 登录界面微调",
+	"* 修改联系人加载策略",
+	"* 增加重新启用已禁用功能开关",
+	"* 修正出行模式保存后如果没有选择席别优选时出错的BUG"
 ];
 
 var faqUrl = "http://www.fishlee.net/soft/44/faq.html";
 //标记
 var utility_emabed = false;
-var compVersion = "5.75";
+var compVersion = "5.77";
 
 
 //#region -----------------UI界面--------------------------
@@ -157,7 +161,7 @@ function injectDom() {
 	html.push('<p style="color: red;"> <strong style="font-size:16px;">啊嘞……看这里！本助手完全免费啊诸位大人！</strong>任何在第三方网站上出售的软件全他喵的是侵权出售啊！！看到的时候请亲务必记得退款退货打差评向青天大老爷举报啊！！</p>');
 	html.push('<p style="color:purple;"> 回家是一个单纯而简单的心愿，希望我们不会变得太复杂……</p>');
 	html.push('<p>任何版本之间，功能上没有任何区别，So……不要问作者万一资助的话会有神马新功能，木有的说…… (=￣ω￣=) </p>');
-	html.push('<p class="registered" style="display:none;">很高兴认识你，，<strong>fishcn@foxmail.com</strong>，谢谢你的出现~~~~已注册版本：<strong>正式版</strong>【<a href="javascript:;" id="unReg">重新注册</a>】</p>');
+	html.push('<p class="registered" style="display:none;">很高兴认识你，<strong>fishcn@foxmail.com</strong>，谢谢你的出现~~~~已注册版本：<strong>正式版</strong>【<a href="javascript:;" id="unReg">重新注册</a>】</p>');
 	html.push('<table class="regTable" style="display:none;width:98%;">');
 	html.push('<tr>');
 	html.push('<td>请粘贴注册码 【<a href="http://www.fishlee.net/Apps/Cn12306/GetNormalRegKey?v=1" target="_blank" style="color:blue;font-weight:bold;text-decoration:underline;">戳我直接申请注册码啊！为什么你们舍不得戳我啊 ╮(╯▽╰)╭</a>】</td>');
@@ -230,7 +234,7 @@ function injectDom() {
 		}
 	});
 	$("#unReg, a.reSignHelper").live("click", function () {
-		if (utility.regInfo.result == 0 && utility.regInfo.type != 'DEMO') {
+		if (utility.regInfo.partner != 1 && utility.regInfo.result == 0 && utility.regInfo.type != 'DEMO') {
 			if (!confirm("确定要重新注册吗?")) return;
 
 			utility.setSnInfo("", "");
@@ -301,13 +305,25 @@ function injectDom() {
 		}
 	}
 
+	//撤销禁用功能
+	$(".resetFuncFlag").live("click", function () {
+		var fun = this.dataset.function;
+		var idx = $.inArray(fun, utility.disabledFeatures());
+		if (idx == -1) return;
+
+		utility.disabledFeaturesCache.splice(idx, 1);
+		utility.disableFeature();
+		utility.getTopWindow().location.reload();
+	});
+
 	//注册
 	var result = utility.verifySn(true);
 	if (result.result == 0 && result.type != 'DEMO') {
 		var info = opt.find(".registered").show().find("strong");
 		info.eq(0).html(result.name);
 		info.eq(1).html(result.typeDesc);
-	} else {
+	}
+	if (result.partner == 1 || result.result != 0 || result.type == "DEMO") {
 		opt.find(".regTable").show();
 
 		if (result.result != 0) {
@@ -357,7 +373,7 @@ var utility = {
 		return $.inArray(flag, utility.disabledFeatures()) != -1;
 	},
 	disableFeature: function (flag) {
-		utility.disabledFeaturesCache.push(flag);
+		if (flag) utility.disabledFeaturesCache.push(flag);
 		utility.setPref("disabled", utility.disabledFeaturesCache.join('|'));
 	},
 	clearFeatrueDisabled: function () {
@@ -1231,7 +1247,6 @@ function unsafeInvoke(callback) {
 	var cb = document.createElement("script");
 	cb.type = "text/javascript";
 	cb.textContent = buildCallback(callback);
-	console.log(cb.textContent);
 
 	document.head.appendChild(cb);
 }
@@ -2249,13 +2264,13 @@ function initTicketQuery() {
 	<li style='font-weight:bold;color:#0f7edb;' title='点击预定按钮时，有时候等待一会儿系统会提示服务器忙；勾选此选项后，如果出现这种情况，助手将会进行自动重新预定'><label><input type='checkbox' id='chkAutoResumitOrder' checked='checked' />预定失败时自动重试</label></li>\
 	<li style='font-weight:bold;color:#0f7edb;' title='有时候系统忙，查询会提示查询失败；勾选此选项后，如果出现这种情况，助手将会进行自动刷新查询'><label><input type='checkbox' id='chkAutoRequery' checked='checked' />查询失败时自动重试</label></li>\
 	<li style='font-weight:bold;color:#ff2020;' title='以服务器时间为准，未获得服务器时间之前，此选项不可用。启用智能加速模式时，在非正点附近时（大于0小于59分）按照正常速度刷新；当在正点附近时（大于等于59分时），暂停刷新并等到正点即刻刷新。'><label><input disabled='disabled' type='checkbox' id='chkSmartSpeed' />智能正点刷新模式</label></li>\
-	<li style='font-weight:bold;color:purple;' title='以服务器时间为准，未获得服务器时间之前，此选项不可用。此模式用于正点买票，启用后，在正点之前，助手不刷新，等到整点过5秒时，助手将会开始刷新。推荐您需要正点抢票的时候使用，此模式可以较好地避免频繁刷新带来的缓存问题……'><label><input disabled='disabled' type='checkbox' id='chkWaitMode' class='needServerTime' />等待整点刷新</label><select id='waitHour'></select></li>\
+	<li style='font-weight:bold;color:purple;' title='以服务器时间为准，未获得服务器时间之前，此选项不可用。此模式用于正点买票，启用后，在正点之前，助手不刷新，等到整点过5秒时，助手将会开始刷新。推荐您需要正点抢票的时候使用，此模式可以较好地避免频繁刷新带来的缓存问题……'><label><input disabled='disabled' type='checkbox' id='chkWaitMode' class='needServerTime' />等待整点刷新</label> <select id='waitHour'></select></li>\
 </ul><ul id='filterFunctionRow' style='border-top:none;border-radius:0px 0px 5px 5px;' class='fish_opt'>\
 	<li style='font-weight:bold;color:#ff2020;'><label title='不可以预定的车次过滤掉的选项（隐藏起来不显示，无票的车次）'><input type='checkbox' id='chkFilterNonBookable' />过滤不可预订的车次</label></li>\
 	<li style='font-weight:bold;color:#ff2020;'><label title='有时候虽然整趟车可以预定，但是有票的席别都是你不要的，如果勾选此选项，也将会过滤掉'><input type='checkbox' id='chkFilterNonNeeded' />过滤不需要的席别</label></li>\
 	<li style='font-weight:bold;color:blue;display: none;'><label><input disabled='disabled' type='checkbox' id='chkFilterByTrain' />开启按车次过滤</label></li>\
 </ul></tr>\
-<tr class='append_row'><td colspan='9' id='opFunctionRow' style=''><input type='button' class='fish_button' disabled='disabled' value='停止声音' id='btnStopSound' /><input type='button' class='fish_button' disabled='disabled'  value='停止刷新' id='btnStopRefresh' /><input  type='button' class='fish_button' type='button' value='设置' id='configLink' /> <input type='button' class='fish_button' id='resetSettings' value='清空助手设置' /> <input type='button' class='fish_button configLink' value='IE登录' /> 【设置完毕后记得戳『查询』开始运行哈。<a href='http://www.fishlee.net/soft/44/tour.html' style='color:#0abaff;font-weight:bold;' target='_blank'>戳这里看教程哦</a>。】</td></tr>\
+<tr class='append_row'><td colspan='9' id='opFunctionRow' style=''><input type='button' class='fish_button' disabled='disabled' value='停止声音' id='btnStopSound' /><input type='button' class='fish_button' disabled='disabled'  value='停止刷新' id='btnStopRefresh' /><input  type='button' class='fish_button' type='button' value='设置' id='configLink' /> <input type='button' class='fish_button' id='resetSettings' value='清空助手设置' /> <input type='button' tab='tabLoginIE' class='fish_button configLink' value='IE登录' /> 【设置完毕后记得戳『查询』开始运行哈。<a href='http://www.fishlee.net/soft/44/tour.html' style='color:#0abaff;font-weight:bold;' target='_blank'>戳这里看教程哦</a>。】</td></tr>\
 <tr class='append_row'><td colspan='9' id='' style=''><span id='refreshinfo' style='text-shadow:1px 1px 1px #fff,0px 0px 2px rgba(0,0,0,0.2);'>已刷新 0 次，最后查询：--</span> <span id='refreshtimer'></span> <span style='margin-left:20px;color:purple;font-weight:bold;' id='serverMsg'></span></td></tr>"
 	);
 	$(".in_fromr").css({ "margin-right": "0px", "width": "auto" }).find("ul li:first").before("<li><input type='button' id='chkSeatOnly' value='仅座票' class='lineButton' title='快速设置席别过滤按钮，点击后可快速勾选所有的座票，包括硬座软座一等座等等' /><input type='button' id='chkSleepOnly' value='仅卧铺' title='快速设置席别过滤按钮，点击后可快速勾选所有的卧铺，包括硬卧软卧什么的' class='lineButton' /><input type='button' id='chkAllSeat' value='全部席别' class='lineButton' title='快速勾选所有的席别' /></li>");
@@ -2364,7 +2379,7 @@ function initTicketQuery() {
 <tr class='fish_sep fish_area' id='viewHelper'><td colspan='4'>查询辅助功能</span></tr>\
 <tr class='fish_sep fish_area' id='autoFill'><td colspan='4'>自动选择功能</span></tr>\
 <tr class='fish_sep fish_area' id='queryUtility'><td colspan='4'>其它辅助功能</span></tr>\
-<tr class='fish_sep musicFunc' id='helperbox_bottom'><td class='name'>自定义音乐地址</td><td colspan='3'><input type='text' id='txtMusicUrl' value='" + utility.getAudioUrl() + "' onfocus='this.select();' style='width:370px;' /> <button class='fish_button' id='btnSelectPresetAudio'>选择</button> <input class='fish_button' type='button' id='btnTestAudio' value='测试'/><input class='fish_button' type='button' onclick='utility.resetAudioUrl(); document.getElementById(\"txtMusicUrl\").value=utility.getAudioUrl();' value='默认'/> (地址第一次使用可能会需要等待一会儿)</td></tr>\
+<tr class='fish_sep musicFunc' id='helperbox_bottom'><td class='name'>自定义音乐地址</td><td colspan='3'><input type='text' id='txtMusicUrl' value='" + utility.getAudioUrl() + "' onfocus='this.select();' style='width:370px;' /> <button class='fish_button' id='btnSelectPresetAudio'>选择</button> <button class='fish_button' id='btnTestAudio'>测试</button> <button class='fish_button' onclick='utility.resetAudioUrl(); document.getElementById(\"txtMusicUrl\").value=utility.getAudioUrl();'>恢复默认</button> (地址第一次使用可能会需要等待一会儿)</td></tr>\
 ");
 
 	extrahtml.push("</td></tr><tr class='fish_sep'><td class='tfooter' colspan='4'><a href='http://www.fishlee.net/soft/44/' target='_blank'>12306订票助手 @iFish</a> | <a href='http://weibo.com/Acathur' target='_blank'>美工设计 @Acathur</a> | 版本 v" + window.helperVersion + "<br />\
@@ -2898,11 +2913,15 @@ function initTicketQuery() {
 <tr class='fish_sep autoorder_steps caption'><td colspan='2'><label><span class='hide indicator'>③</span> 自动为我选择车次和席别</label></td><td style='font-weight:normal;'><select id='autoorder_method'><option value='0'>席别优先</option><option value='1'>车次优先</option></select></td><td style='text-align:rigth;'><button id='btnAddAutoBook' class='fish_button'>添加</button><button id='btnClearAutoBook' class='fish_button'>清空</button></td></tr>\
 <tr class='fish_sep'><td colspan='4' id='autobookListTd'></td></tr>\
 <tr class='fish_sep'><td colspan='4'>\
-<div><label><input type='checkbox' id='swOnlyValid' name='swOnlyValid' /> 仅当找到符合要求的车次时，才提示我有票</label></div>\
-<div><label><input type='checkbox' id='swAutoBook' checked='checked' name='swAutoBook' /> <span class='hide indicator'>④</span> 当找到符合要求的车次和席别时，自动转到预定界面</label></div>\
+<div><label title='在通常情况下，排除黑名单和不需要的席别后，只要可以订车次了，助手就会提示你有票。\
+如果你开启此选项，那么只有当按照你预定的自动选择车次和席别设置可以找到车次时，才会提示你有票。\
+\
+此模式适合于你只需要部分车次或指定车次，但是你依然想看到其它车次或席别的余票情况。'><input type='checkbox' id='swOnlyValid' name='swOnlyValid' /> 仅当找到符合要求的车次时，才提示我有票</label></div>\
+<div><label title='如果开启此选项，当按照你选择的车次和席别找到指定的可定票时，助手会自动跳转到订票界面。'><input type='checkbox' id='swAutoBook' checked='checked' name='swAutoBook' /> <span class='hide indicator'>④</span> 当找到符合要求的车次和席别时，自动转到预定界面</label></div>\
 <div><label><input type='checkbox' id='autoBookTip' name='autoBookTip' checked='checked' /> 如果自动预定成功，进入预定页面后播放提示音乐并弹窗提示</label></div>\
 </td></tr>\
-<tr class='fish_sep autoordertip' style='display:none;'><td class='name'>自动回滚</td><td><label><input type='checkbox' id='autoorder_autocancel' /> 自动提交失败时，自动取消自动提交并再次预定</label></td></tr>\
+<tr class='fish_sep autoordertip' style='display:none;'><td class='name'>自动回滚</td><td><label title='当系统繁忙时，提交订单的请求可能会出错（如超时等），此时会需要你重新查询并重新预定。\
+开启此选项时，一旦页面出错，助手将会自动为您重新提交预定，省去重新查询的过程。'><input type='checkbox' id='autoorder_autocancel' /> 自动提交失败时，自动取消自动提交并再次预定</label></td></tr>\
 <tr class='caption autoorder_steps fish_sep highlightrow'><td class='name autoordertd'><label style='display:none;color:red;'><input type='checkbox' id='autoorder'/>自动提交订单</label></td><td class='autoordertd' colspan='3'><p style='display:none;'><img id='randCode' src='/otsweb/passCodeAction.do?rand=randp' /> <input size='4' maxlength='4' type='text' id='randCodeTxt' /> (验证码可在放票前填写，临近放票时建议点击图片刷新并重新填写，以策安全。请务必控制好阁下的眼神……)</p></td></tr>\
 <tr style='display:none;' class='autoordertip fish_sep'><td class='name' style='color:red;'>警告</td><td colspan='3' style='color:darkblue;'>\
 <p style='font-weight:bold; color:purple;'>自动提交订单使用流程：勾选要订票的联系人 -&gt; 设置需要的席别 -&gt; 将你需要订票的车次按优先级别加入自动预定列表 -&gt; 勾选自动提交订单 -&gt; 输入验证码 -&gt; 开始查票。信息填写不完整将会导致助手忽略自动提交订单，请务必注意。进入自动订票模式后，席别选择和自动预定都将被锁定而无法手动切换。如果查询的是学生票，那么提交的将会是学生票订单。<u style='color:red;'>一切都设置完成后，请点击查询开始查票。一旦有票将会自动提交。</u></p>\
@@ -3098,55 +3117,57 @@ function initTicketQuery() {
 
 		//加载乘客
 		if (utility.isfeatureDisabled("pasload")) {
-			$("#passengerList").html("<strong>警告</strong>：介个联系人加载功能已被自动禁用，为了保证您的安全……如果要重新启用，请清空助手设置后再试。");
+			$("#passengerList").html("<strong>警告</strong>：介个联系人加载功能已被自动禁用，为了保证您的安全……如果要重新启用，请 <button class='fish_button resetFuncFlag' data-function='pasload'>尝试重新启用联系人加载</button>。");
 		} else {
-			utility.getAllPassengers(function (list) {
-				var h = [];
-				var check = (localStorage.getItem("preSelectPassenger") || "").split('|');
-				var index = 0;
-				$.each(list, function () {
-					var value = this.passenger_name + this.passenger_id_type_code + this.passenger_id_no;
-					this.index = index++;
-					h.push("<label style='margin-right:10px;'><input type='checkbox' id='preSelectPassenger" + this.index + "' name='preSelectPassenger'" + ($.inArray(value, check) > -1 ? " checked='checked'" : "") + " value='" + value + "' />" + this.passenger_name + "</label>");
-				});
+			setTimeout(function () {
+				utility.getAllPassengers(function (list) {
+					var h = [];
+					var check = (localStorage.getItem("preSelectPassenger") || "").split('|');
+					var index = 0;
+					$.each(list, function () {
+						var value = this.passenger_name + this.passenger_id_type_code + this.passenger_id_no;
+						this.index = index++;
+						h.push("<label style='margin-right:10px;'><input type='checkbox' id='preSelectPassenger" + this.index + "' name='preSelectPassenger'" + ($.inArray(value, check) > -1 ? " checked='checked'" : "") + " value='" + value + "' />" + this.passenger_name + "</label>");
+					});
 
-				$("#passengerList").html(h.join("")).find("input").change(function () {
-					var self = $(this).closest("label");
-					if (this.checked) {
-						var selected = $("#passengerList1 :checkbox");
-						if (selected.length >= 5) {
-							alert("选择的乘客不能多于五位喔~~");
-							this.checked = false;
-							return;
+					$("#passengerList").html(h.join("")).find("input").change(function () {
+						var self = $(this).closest("label");
+						if (this.checked) {
+							var selected = $("#passengerList1 :checkbox");
+							if (selected.length >= 5) {
+								alert("选择的乘客不能多于五位喔~~");
+								this.checked = false;
+								return;
+							}
+
+							$("#passengerList1").append(self);
+						} else {
+							$("#passengerList").append(self);
 						}
+						selected = $("#passengerList1 :checkbox");
+						var user = $.map(selected, function (e) { return e.value; });
+						$("#ticketLimition").val(selected.length);
+						localStorage.setItem("preSelectPassenger", user.join("|"));
+						refreshPasRowStyle(user);
+					});
+					$.each(check, function () {
+						$("#passengerList :checkbox[value=" + this + ']').change();
+					});
+					$.each(list, function () {
+						$("#preSelectPassenger" + this.index).data('pasinfo', this);
+					});
+					$("#ticketLimition").val($("#passengerList1 :checkbox").length);
 
-						$("#passengerList1").append(self);
-					} else {
-						$("#passengerList").append(self);
+					function refreshPasRowStyle(selected) {
+						if (!document.getElementById("autoorder").checked) return;
+
+						var row = $("#selectPasRow");
+						row.removeClass("steps stepsok");
+						row.addClass(selected.length ? "stepsok" : "steps");
 					}
-					selected = $("#passengerList1 :checkbox");
-					var user = $.map(selected, function (e) { return e.value; });
-					$("#ticketLimition").val(selected.length);
-					localStorage.setItem("preSelectPassenger", user.join("|"));
-					refreshPasRowStyle(user);
+					$("#autoorder").click(function () { refreshPasRowStyle($("#passengerList1 :checkbox")); });
 				});
-				$.each(check, function () {
-					$("#passengerList :checkbox[value=" + this + ']').change();
-				});
-				$.each(list, function () {
-					$("#preSelectPassenger" + this.index).data('pasinfo', this);
-				});
-				$("#ticketLimition").val($("#passengerList1 :checkbox").length);
-
-				function refreshPasRowStyle(selected) {
-					if (!document.getElementById("autoorder").checked) return;
-
-					var row = $("#selectPasRow");
-					row.removeClass("steps stepsok");
-					row.addClass(selected.length ? "stepsok" : "steps");
-				}
-				$("#autoorder").click(function () { refreshPasRowStyle($("#passengerList1 :checkbox")); });
-			});
+			}, 1000);
 		}
 	})();
 
@@ -3392,7 +3413,7 @@ function initTicketQuery() {
 			pro.blackListEnabled = document.getElementById("swBlackList").checked;
 			pro.whiteListEnabled = document.getElementById("swWhiteList").checked;
 			pro.autoBookListEnabled = document.getElementById("swAutoBook").checked;
-			pro.seatOrder = window.seatLevelOrder;
+			pro.seatOrder = window.seatLevelOrder || [];
 			pro.prePassenger = $.map($("#passengerList1 :checkbox"), function (e) {
 				var data = $(e).data("pasinfo");
 				return { type: data.passenger_type, idtype: data.passenger_id_type_code, id: data.passenger_id_no };
@@ -3413,9 +3434,10 @@ function initTicketQuery() {
 			//清除席别优选
 			$("#preseatlist input").click();
 			var seatList = $("#preSelectSeatList");
-			$.each(pro.seatOrder, function () {
-				seatList.val(this + '').change();
-			});
+			if (pro.seatOrder)
+				$.each(pro.seatOrder, function () {
+					seatList.val(this + '').change();
+				});
 			//黑名单白名单神马的。
 			list_whitelist.emptyList();
 			$.each(pro.whiteList, function () { list_whitelist.add(this + ''); });
@@ -4155,7 +4177,7 @@ function initLogin() {
 
 	var html = [];
 	html.push("<div class='outerbox' style='margin:20px 0;'><div class='box' style='margin:0;width:auto;'><div class='title'>12306订票助手 - 小提示</div><div style='padding:10px;'>");
-	html.push("<table><tr><td style='width:33%;font-weight:bold;background-color:#f5f5f5;'><strong>您还可以通过以下网址访问订票网站：</strong></td><td style='width:33%;font-weight:bold;background-color:#f5f5f5;'>助手运行常见问题</td><td style='font-weight:bold;background-color:#f5f5f5;'>版本信息</td></tr>");
+	html.push("<table id='helperTipTable'><tr><td style='width:33%;font-weight:bold;background-color:#f5f5f5;'><strong>您还可以通过以下网址访问订票网站：</strong></td><td style='width:33%;font-weight:bold;background-color:#f5f5f5;'>助手运行常见问题</td><td style='font-weight:bold;background-color:#f5f5f5;'>版本信息</td></tr>");
 	html.push("<tr><td><ul><li style='list-style:disc inside;'><a href='https://www.12306.cn/otsweb/' target='blank'>https://www.12306.cn/otsweb/</a></li>");
 	html.push("<li style='list-style:disc inside;'><a href='https://dynamic.12306.cn/otsweb/' target='blank'>https://dynamic.12306.cn/otsweb/</a></li><li style='list-style:disc inside;'><a href='http://dynamic.12306.cn/otsweb/' target='blank'>http://dynamic.12306.cn/otsweb/</a></li>");
 	html.push("</ul></td><td><ol>");
@@ -4371,13 +4393,13 @@ function initLogin() {
 
 	var curDate = new Date();
 
-	var html = ["<li style='font-weight:bold; color:blue;'><u>助手提示</u>：网上和电话订票提前20天，本日起售【<u>"];
+	var html = ["<tr><td colspan='3' style='font-weight:bold;background-color:#f5f5f5;'>预售期提示</td></tr><tr><td colspan='3'>网上和电话订票提前20天，本日起售【<u>"];
 	html.push(utility.formatDate(addDays.call(curDate, 19)));
-	html.push("</u>】日车票；代售点和车站提前18天，本日起售【<u>");
+	html.push("</u>】日车票。代售点和车站提前18天，本日起售【<u>");
 	html.push(utility.formatDate(addDays.call(curDate, 17)));
-	html.push("</u>】日车票。<br />【<a href='javascript:;' id='querySaleDate'>根据乘车日期推算起售日期</a>】【<a href='http://www.12306.cn/mormhweb/zxdt/tlxw_tdbtz56.html' target='_blank'>以相关公告、车站公告为准</a>】");
+	html.push("</u>】日车票。<br />【<a href='javascript:;' id='querySaleDate'>根据乘车日期推算起售日期</a>】【<a href='http://www.12306.cn/mormhweb/zxdt/tlxw_tdbtz56.html' target='_blank'>以相关公告、车站公告为准</a>】</p></td></tr>");
 
-	$("div.enter_from ul").append(html.join(""));
+	$("#helperTipTable").prepend(html.join(""));
 
 	$("#querySaleDate").click(function () {
 		var date = prompt("请输入您要乘车的日期，如：2013-02-01");
