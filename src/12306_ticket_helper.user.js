@@ -11,7 +11,7 @@
 // @match			https://www.12306.cn/otsweb/*
 // @icon			http://www.12306.cn/mormhweb/images/favicon.ico
 // @run-at			document-idle
-// @version 		4.9.6
+// @version 		5.0.0
 // @updateURL		http://static.fishlee.net/_softdownload/12306_ticket_helper.user.js
 // @supportURL		http://www.fishlee.net/soft/44/
 // @homepage		http://www.fishlee.net/soft/44/
@@ -21,25 +21,15 @@
 
 //=======START=======
 
-var version = "4.9.6";
+var version = "5.0.1";
 var updates = [
-	"* 修正高铁或动车之一过滤的时候依然提示有票的BUG",
-	"* 增加N首提示音乐(从手机铃声网站上扒拉下来的乱七八糟的..)",
-	"* 修正在不启用自动变换车次类型的情况下依然会自动取消勾选『全部』的BUG",
-	"* 修正自动预定可能存在的问题",
-	"* 修正其它一些涉及席别的地方存在的可能隐藏BUG",
-	"* 修正兼容性版本标记",
-	"+ 增加全新的界面提示功能",
-	"* 登录界面微调",
-	"* 修改联系人加载策略",
-	"* 增加重新启用已禁用功能开关",
-	"* 修正出行模式保存后如果没有选择席别优选时出错的BUG"
+	"* 修正余票查询的时候部分的余票数不显示"
 ];
 
 var faqUrl = "http://www.fishlee.net/soft/44/faq.html";
 //标记
 var utility_emabed = false;
-var compVersion = "5.77";
+var compVersion = "5.80";
 
 
 //#region -----------------UI界面--------------------------
@@ -1220,7 +1210,12 @@ var utility = {
 		for (var i in match) {
 			var cls = match[i][0];
 			var ct = parseInt(/\*0*(\d+)/.exec(match[i])[1]);
-			if (ct < 3000) { data[cls] = ct; }
+			if (ct < 3000) {
+				data[cls] = ct;
+				//一等软座 7， 二等软座 8
+				if (cls == "7") data['M'] = ct;
+				else if (cls == "8") data['O'] = ct;
+			}
 			else {
 				data['empty'] = ct - 3000;
 			}
@@ -1620,7 +1615,7 @@ function initAutoCommitOrder() {
 	var breakFlag = 0;
 	var randCode = "";
 	var submitFlag = false;
-	var tourFlag = /'(dc|fc|wc|gc)'/.exec($("div.tj_btn :button:eq(2)")[0].onclick + '')[1] || "dc";
+	var tourFlag = /'(dc|fc|wc|gc)'/.exec($("div.tj_btn :button:eq(1)")[0].onclick + '')[1] || "dc";
 	var randEl = $("#rand");
 	var autoSubmitFlag = "autocommitorder";
 	var entryTime = new Date();
@@ -1692,7 +1687,7 @@ function initAutoCommitOrder() {
 			breakFlag = 0;
 			return;
 		}
-		$("#btnCancelAuto").show().removeClass().addClass("long_button_u_down")[0].disabled = false; //阻止被禁用
+		$("#btnCancelAuto").show().removeClass().addClass("long_button_u")[0].disabled = false; //阻止被禁用
 		breakFlag = 0;
 		waitTimeTooLong_alert = false;
 
@@ -1874,7 +1869,7 @@ function initAutoCommitOrder() {
 	}
 
 	if (isAutoSubmitEnabled) {
-		$("div.tj_btn").append("<button class='long_button_u_down' type='button' id='btnAutoSubmit'>自动提交</button> <button class='long_button_u_down' type='button' id='btnCancelAuto' style='display:none;'>取消自动</button>");
+		$("div.tj_btn").append("&nbsp;&nbsp;<button class='long_button_u' type='button' id='btnAutoSubmit'>自动提交</button> <button class='long_button_u' type='button' id='btnCancelAuto' style='display:none;'>取消自动</button>");
 		$("#btnAutoSubmit").click(function () {
 			count = 0;
 			breakFlag = 0;
@@ -2123,7 +2118,7 @@ function initAutoCommitOrder() {
 			var tr = $(this);
 			var id = tr.attr("id");
 
-			tr.find("td:eq(2)").append("<select id='" + id + "_seat_detail' name='" + id + "_seat_detail'><option value='0'>随机</option><option value='2'>上铺</option><option value='2'>中铺</option><option value='1'>下铺</option></select>");
+			tr.find("td:eq(2)").append("<select id='" + id + "_seat_detail' name='" + id + "_seat_detail'><option value='0'>随机</option><option value='3'>上铺</option><option value='2'>中铺</option><option value='1'>下铺</option></select>");
 		});
 
 		var seatSelector = $("select[name$=_seat]");
@@ -3682,15 +3677,17 @@ function dgFilterQuery() {
 	var dCheck = $("input:checkbox[name=trainClassArr][value=D]");
 	var qbCheck = $("input:checkbox[name=trainClassArr][value=QB]");
 	var otCheck = $("input:checkbox[name=trainClassArr][value!=QB][value!=D]");
-	dCheck.closest("li").hide().after("<li><label title='助手添加的动车过滤框，不包含高铁~'><input checked='checked' type='checkbox' name='advDgFilter' id='advDgFilterD' /> 动车(D)</label></li><li><label title='助手添加的动车过滤框，不包含动车~'><input type='checkbox' checked='checked' name='advDgFilter' id='advDgFilterG' /> 高铁(G)</label></li>");
+	dCheck.closest("li").hide().after("<li><label title='助手添加的动车过滤框，不包含高铁~'><input checked='checked' type='checkbox' name='advDgFilter' id='advDgFilterD' />动车(D)</label></li><li><label title='助手添加的动车过滤框，不包含动车~'><input type='checkbox' checked='checked' name='advDgFilter' id='advDgFilterG' />高铁(G)</label></li><li><label title='助手添加的城铁过滤框'><input checked='checked' type='checkbox' name='advDgFilter' id='advDgFilterC' />城铁(C)</label></li>")
+	.closest("div").css("width", "50%");
 
 	var filter_d = document.getElementById("advDgFilterD");
 	var filter_g = document.getElementById("advDgFilterG");
+	var filter_c = document.getElementById("advDgFilterC");
 	var advFilterCb = $("input:checkbox[name=advDgFilter]");
 
 	$("input:checkbox[name=trainClassArr]").unbind("click");
 	otCheck.add(dCheck).change(function () {
-		var isAllSelected = filter_d.checked && filter_g.checked && otCheck.filter(":not(:checked)").length == 0;
+		var isAllSelected = filter_c.checked && filter_d.checked && filter_g.checked && otCheck.filter(":not(:checked)").length == 0;
 		if (isAllSelected == qbCheck[0].checked) return;
 
 		qbCheck[0].checked = isAllSelected;
@@ -3703,21 +3700,19 @@ function dgFilterQuery() {
 			otCheck.add(advFilterCb).filter(":checked").attr("checked", false).change();
 		}
 	});
-	utility.reloadPrefs($("#advDgFilterD, #advDgFilterG").change(function () {
-		dCheck[0].checked = filter_d.checked || filter_g.checked;
+	utility.reloadPrefs($("#advDgFilterD, #advDgFilterG, #advDgFilterC").change(function () {
+		dCheck[0].checked = filter_d.checked || filter_g.checked || filter_c.checked;
 		dCheck.change();
 	}).parent());
 
 
 	//全部的取消和勾选
 	qbCheck.click(function () {
-		filter_d.checked = filter_g.checked = this.checked;
+		filter_d.checked = filter_g.checked = filter_c.checked = this.checked;
 	});
 
 	$("table.obj tr").live("checkTicketRow", function (evt) {
-		if (!(filter_d.checked ^ filter_g.checked)) return;
-
-		if ((!filter_d.checked && evt.trainCode[0] == 'D') || (!filter_g.checked && evt.trainCode[0] == 'G')) {
+		if ((!filter_d.checked && evt.trainCode[0] == 'D') || (!filter_g.checked && evt.trainCode[0] == 'G') || (!filter_c.checked && evt.trainCode[0] == 'C')) {
 			evt.row.hide();
 			evt.result = 0;
 			return 0;
@@ -4208,14 +4203,14 @@ function initLogin() {
 	//插入登录标记
 	var form = $("#loginForm");
 	var trs = form.find("tr");
-	trs.eq(1).find("td:last").html('<label><input type="checkbox" id="keepInfo" /> 记录密码</label>');
+	trs.eq(1).find("td:last").html('<label><input type="checkbox" id="keepInfo" ' + (utility.getPref("__up") ? "checked='checked'" : "") + ' /> 记录密码</label>');
 	$("#loginForm td:last").html('<label><input type="checkbox" checked="checked" id="autoLogin" name="autoLogin" /> 自动登录</label>');
 	utility.reloadPrefs($("#loginForm td:last"));
 	$("#keepInfo").change(function () {
 		if (!this.checked) {
 			if (localStorage.getItem("__up") != null) {
 				localStorage.removeItem("__up");
-				alert("保存的密码！");
+				alert("保存的密码已经被删除！");
 			}
 		}
 		if (this.checked) {
