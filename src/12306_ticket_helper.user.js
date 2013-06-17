@@ -11,7 +11,7 @@
 // @match			https://www.12306.cn/otsweb/*
 // @icon			http://www.12306.cn/mormhweb/images/favicon.ico
 // @run-at			document-idle
-// @version 		5.0.0
+// @version 		5.0.1
 // @updateURL		http://static.fishlee.net/_softdownload/12306_ticket_helper.user.js
 // @supportURL		http://www.fishlee.net/soft/44/
 // @homepage		http://www.fishlee.net/soft/44/
@@ -23,13 +23,16 @@
 
 var version = "5.0.1";
 var updates = [
-	"* 修正余票查询的时候部分的余票数不显示"
+	"* 修正余票查询的时候部分的余票数不显示",
+	"* 修正兼容性版本标记，添加允许隐藏不兼容提示的设置",
+	"* 精简界面选项，将部分功能作为内置功能不再提供功能开关『记住信息』、『自从重新预定』、『查询失败时自动重试』",
+	"* 修正当用户名输入错误时，助手仍反复重试的BUG"
 ];
 
 var faqUrl = "http://www.fishlee.net/soft/44/faq.html";
 //标记
 var utility_emabed = false;
-var compVersion = "5.80";
+var compVersion = "5.81";
 
 
 //#region -----------------UI界面--------------------------
@@ -377,7 +380,7 @@ var utility = {
 	},
 	checkCompatible: function () {
 		var sv = utility.getScriptVersion();
-		if (sv != window.compVersion) {
+		if (sv != window.compVersion && utility.getPref("dismissVersionWarning") != sv) {
 			if (utility.getPref("compWarning") != sv) {
 				utility.setPref("compWarning", sv);
 				alert("警告：检测到12306已改版，助手功能可能会部分失效。请在正式购票前做好测试，以免耽误您的购票。\n出现任何异常时，请暂时手动或改用IE购票，并留意助手升级。");
@@ -391,7 +394,12 @@ var utility = {
 				istop = true;
 			}
 			if (!istop) {
-				$("body").prepend("<div style='opacity:0.9;z-index:999; position:fixed; left:-350px; top:0px; width: 700px;margin-left:50%; color:#8A0023;border:1px solid #8A0023;line-height: 20px;background: -webkit-linear-gradient(#FFE4EA, #FFC3D1);background: -moz-linear-gradient(#FFE4EA, #FFC3D1);padding: 5px;'>亲，<strong>老衲用旁光发现网站改版鸟</strong>！由于还木有测试当前助手的兼容性，请务必在正式购票前做好测试哈！必要时请先用IE顶着喔。</div>");
+				$("body").prepend("<div style='opacity:0.9;z-index:999; position:fixed; left:-350px; top:0px; width: 700px;margin-left:50%; color:#8A0023;border:1px solid #8A0023;line-height: 20px;background: -webkit-linear-gradient(#FFE4EA, #FFC3D1);background: -moz-linear-gradient(#FFE4EA, #FFC3D1);padding: 5px;'>亲，<strong>老衲瞥见网站改版鸟</strong>！还木有测试助手的兼容性，请务必在正式购票前做好测试哈！必要时请先用IE顶着喔。<button id='dismissVersionWarning' class='fish_button'>不再提示</button></div>");
+				$("#dismissVersionWarning").click(function () {
+					alert("助手将不会再显示此版本网站的不兼容提示咯，您老记好哈~~\n\n网站再改版后，助手会再告诉你嘀。");
+					utility.setPref("dismissVersionWarning", sv);
+					$(this).parent().remove();
+				});
 			}
 		} else {
 			$(".versionWarning").hide();
@@ -2251,13 +2259,9 @@ function initTicketQuery() {
 	var form = $("form[name=querySingleForm] .cx_from:first");
 	form.find("tr:last").after("<tr class='append_row'><td colspan='9' id='queryFunctionRow'>\
 <ul id='queryOpt' style='margin-top:20px;border-radius:5px 5px 0px 0px;border-bottom:none;' class='fish_opt'>\
-	<li><label title='勾选此选项的话，每次你查询后，助手会帮你把始发站、到达站、日期等进行记录，下次进入查询页面后，将会帮您自动填写好'><input type='checkbox' id='keepinfo' checked='checked' />记住信息</label></li>\
 	<li><label title='勾选此选项后，假定查询的结果中没有符合你要求的车次，那么助手将会自动进行重新查询'><input checked='checked' type='checkbox' id='autoRequery' style='padding:0;' />自动重查，每隔</label><input style='width:40px;text-align:center;' type='number' min='5' value='5' size='4' id='refereshInterval' style='text-align:center;' />秒</li>\
 	<li><label title='勾选的话，当有票可定时，助手会放歌骚扰你'><input type='checkbox' checked='checked' id='chkAudioOn'>声音提示</label></li>\
 	<li><label title='设置有票时放的歌是不是放到天荒地老至死不渝'><input type='checkbox' checked='checked' id='chkAudioLoop'>声音循环</label></li>\
-</ul><ul id='retryOpt' style='border-top:none;border-bottom:none;' class='fish_opt'>\
-	<li style='font-weight:bold;color:#0f7edb;' title='点击预定按钮时，有时候等待一会儿系统会提示服务器忙；勾选此选项后，如果出现这种情况，助手将会进行自动重新预定'><label><input type='checkbox' id='chkAutoResumitOrder' checked='checked' />预定失败时自动重试</label></li>\
-	<li style='font-weight:bold;color:#0f7edb;' title='有时候系统忙，查询会提示查询失败；勾选此选项后，如果出现这种情况，助手将会进行自动刷新查询'><label><input type='checkbox' id='chkAutoRequery' checked='checked' />查询失败时自动重试</label></li>\
 	<li style='font-weight:bold;color:#ff2020;' title='以服务器时间为准，未获得服务器时间之前，此选项不可用。启用智能加速模式时，在非正点附近时（大于0小于59分）按照正常速度刷新；当在正点附近时（大于等于59分时），暂停刷新并等到正点即刻刷新。'><label><input disabled='disabled' type='checkbox' id='chkSmartSpeed' />智能正点刷新模式</label></li>\
 	<li style='font-weight:bold;color:purple;' title='以服务器时间为准，未获得服务器时间之前，此选项不可用。此模式用于正点买票，启用后，在正点之前，助手不刷新，等到整点过5秒时，助手将会开始刷新。推荐您需要正点抢票的时候使用，此模式可以较好地避免频繁刷新带来的缓存问题……'><label><input disabled='disabled' type='checkbox' id='chkWaitMode' class='needServerTime' />等待整点刷新</label> <select id='waitHour'></select></li>\
 </ul><ul id='filterFunctionRow' style='border-top:none;border-radius:0px 0px 5px 5px;' class='fish_opt'>\
@@ -2717,15 +2721,12 @@ function initTicketQuery() {
 		}
 	});
 
-	//系统繁忙时自动重复查询 chkAutoResumitOrder
+	//系统繁忙时自动重复查询
 	$("#orderForm").submit(function () {
-		if ($("#chkAutoResumitOrder")[0].checked) {
-			parent.$("#orderForm").remove();
-			parent.$("body").append($("#orderForm").clone(false).attr("target", "main").attr("success", "0"));
-		}
+		parent.$("#orderForm").remove();
+		parent.$("body").append($("#orderForm").clone(false).attr("target", "main").attr("success", "0"));
 	});
 	$("body").ajaxComplete(function (e, r, s) {
-		if (!$("#chkAutoRequery")[0].checked) return;
 		if (s.url.indexOf("/otsweb/order/querySingleAction.do") != -1 && r.responseText == "-1") {
 			invalidQueryButton();
 			delayButton();
@@ -2736,7 +2737,6 @@ function initTicketQuery() {
 	});
 	$("body").ajaxError(function (e, r, s) {
 		if (s.url.indexOf("queryLeftTicket") == -1) return;
-		if (!$("#chkAutoRequery")[0].checked) return;
 		if (s.url.indexOf("/otsweb/order/querySingleAction.do") != -1) {
 			delayButton();
 			startTimer();
@@ -2758,7 +2758,7 @@ function initTicketQuery() {
 	//#region 配置加载、保存、权限检测
 	//保存信息
 	function saveStateInfo() {
-		if (!$("#keepinfo")[0].checked || $("#fromStationText")[0].disabled) return;
+		if ($("#fromStationText")[0].disabled) return;
 		utility.setPref("_from_station_text", $("#fromStationText").val());
 		utility.setPref("_from_station_telecode", $("#fromStation").val());
 		utility.setPref("_to_station_text", $("#toStationText").val());
@@ -4298,7 +4298,7 @@ function initLogin() {
 					setTipMessage("验证码不正确");
 					setCurOperationInfo(false, "请重新输入验证码。");
 					stopLogin();
-				} else if (msg.indexOf('密码') > -1) {
+				} else if (msg.indexOf('密码') > -1 || msg.indexOf("登录名") > -1) {
 					setTipMessage(msg);
 					setCurOperationInfo(false, "请重新输入。");
 					stopLogin();
