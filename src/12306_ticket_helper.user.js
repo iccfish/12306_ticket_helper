@@ -11,7 +11,7 @@
 // @match			https://www.12306.cn/otsweb/*
 // @icon			http://www.12306.cn/mormhweb/images/favicon.ico
 // @run-at			document-idle
-// @version 		5.0.1
+// @version 		5.0.2
 // @updateURL		http://static.fishlee.net/_softdownload/12306_ticket_helper.user.js
 // @supportURL		http://www.fishlee.net/soft/44/
 // @homepage		http://www.fishlee.net/soft/44/
@@ -21,18 +21,17 @@
 
 //=======START=======
 
-var version = "5.0.1";
+var version = "5.0.2";
 var updates = [
-	"* 修正余票查询的时候部分的余票数不显示",
-	"* 修正兼容性版本标记，添加允许隐藏不兼容提示的设置",
-	"* 精简界面选项，将部分功能作为内置功能不再提供功能开关『记住信息』、『自从重新预定』、『查询失败时自动重试』",
-	"* 修正当用户名输入错误时，助手仍反复重试的BUG"
+	"* 修正提交订单时不停止检查余票数的BUG",
+	"* 取消排队人数过多时自动重试，防止被强制退出登录",
+	"* 修正兼容性版本标记，添加允许隐藏不兼容提示的设置"
 ];
 
 var faqUrl = "http://www.fishlee.net/soft/44/faq.html";
 //标记
 var utility_emabed = false;
-var compVersion = "5.81";
+var compVersion = "5.83";
 
 
 //#region -----------------UI界面--------------------------
@@ -1681,7 +1680,7 @@ function initAutoCommitOrder() {
 		}
 
 		randEl[0].blur();
-		//$(document).trigger("stopcheckcount");
+		$(document).trigger("stopcheckcount");
 		if (!window.submit_form_check || !submit_form_check("confirmPassenger")) {
 			setCurOperationInfo(false, "您的表单没有填写完整!");
 			stop("请填写完整表单");
@@ -1733,13 +1732,12 @@ function initAutoCommitOrder() {
 			ticket: $("#left_ticket").val()
 		};
 		utility.get(getQueueCountUrl, queryLeftData, "json", function (data) {
-			console.log(data);
 			if (data.op_2) {
-				var errmsg = "系统说人多，不许买彩票了，看起来没办法了……等下再去看看服务器的心情 (据说人数=" + data.count + ")";
+				var errmsg = "系统说人多，不许买彩票了，看起来没办法了……重新输入验证码试试 (据说人数=" + data.count + ")";
 				setCurOperationInfo(true, errmsg);
 				stop(errmsg);
 
-				utility.delayInvoke(null, queryQueueCount, 1000);
+				reloadCode();
 				return;
 			}
 
@@ -2012,7 +2010,7 @@ function initAutoCommitOrder() {
 			beginCheck();
 		})();
 	} else {
-		$("span.leftTicketStatusSpan").html("(暂不支持查询)");
+		$("span.leftTicketStatusSpan").html("(暂不支持查询或已禁用，<button class='fish_button resetFuncFlag' data-function='ontimeleftticket'>重新启用</button>)");
 	}
 
 	if (!utility.isfeatureDisabled("ontimequeuecount")) {
