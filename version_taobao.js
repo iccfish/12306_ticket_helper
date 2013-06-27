@@ -1,9 +1,10 @@
-var version_12306_helper = "5.0.2";
-var version_12306_helper_beta = "5.0.2";
+var version_12306_helper = "5.0.3";
+var version_12306_helper_beta = "5.0.3";
 var version_updater = [
-	"* 修正提交订单时不停止检查余票数的BUG",
-	"* 取消排队人数过多时自动重试，防止被强制退出登录",
-	"* 修正兼容性版本标记，添加允许隐藏不兼容提示的设置"
+	"* 修正安全期修改时，低于5秒的修改不起效的BUG", ,
+	"* 修改版本号兼容标记",
+	"* 简化界面，去除保持在线的功能显示（功能依然存在）",
+	"* 其它细微调整"
 ];
 var fishlee12306_msgid=17;
 var fishlee12306_msgver="4.6.2";

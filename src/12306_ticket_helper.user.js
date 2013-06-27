@@ -11,7 +11,7 @@
 // @match			https://www.12306.cn/otsweb/*
 // @icon			http://www.12306.cn/mormhweb/images/favicon.ico
 // @run-at			document-idle
-// @version 		5.0.2
+// @version 		5.0.3
 // @updateURL		http://static.fishlee.net/_softdownload/12306_ticket_helper.user.js
 // @supportURL		http://www.fishlee.net/soft/44/
 // @homepage		http://www.fishlee.net/soft/44/
@@ -21,17 +21,18 @@
 
 //=======START=======
 
-var version = "5.0.2";
+var version = "5.0.3";
 var updates = [
-	"* 修正提交订单时不停止检查余票数的BUG",
-	"* 取消排队人数过多时自动重试，防止被强制退出登录",
-	"* 修正兼容性版本标记，添加允许隐藏不兼容提示的设置"
+	"* 修正安全期修改时，低于5秒的修改不起效的BUG", ,
+	"* 修改版本号兼容标记",
+	"* 简化界面，去除保持在线的功能（功能依然存在）",
+	"* 其它细微调整"
 ];
 
 var faqUrl = "http://www.fishlee.net/soft/44/faq.html";
 //标记
 var utility_emabed = false;
-var compVersion = "5.83";
+var compVersion = "5.85";
 
 
 //#region -----------------UI界面--------------------------
@@ -327,6 +328,28 @@ function injectDom() {
 		}
 	}
 	utility.regInfo = result;
+
+	//隐藏提示
+	$(".dismiss_button").live("click", function () {
+		var btn = $(this);
+		var key = "msg_" + btn.attr("data-target");
+
+		if (!confirm("确定要隐藏此提示咩？如果隐藏，直到下次版本升级前，都是不会再显示的喔。")) return;
+
+		utility.setPref(key, window.helperVersion);
+		$("#" + btn.attr("data-target")).hide();
+	});
+}
+
+function finishUi() {
+    $(".dismiss_button").each(function () {
+        var btn = $(this);
+        var key = "msg_" + btn.attr("data-target");
+
+        if (utility.getPref(key) == window.helperVersion) {
+            $("#" + btn.attr("data-target")).hide();
+        }
+    });
 }
 
 //#endregion
@@ -1448,6 +1471,8 @@ function entryPoint() {
 			}, 500);
 		});
 	}
+
+	unsafeInvoke(finishUi);
 }
 
 function injectQueryScripts() {
@@ -2156,7 +2181,7 @@ function initAutoCommitOrder() {
 		var saveModeTimeInfo = safeModeTip.find("span:eq(1)");
 		var funSw = document.getElementById("autoDelayInvoke");
 		var defaultWaitTime = 5;
-		var waitTime = Math.max(5, (utility.getPref("safeModeWaitTime")) || defaultWaitTime);
+		var waitTime = parseInt(utility.getPref("safeModeWaitTime")) || defaultWaitTime;
 
 		$("span.defaultSafeModeTime").html(defaultWaitTime);
 		$("#safeModeTime").val(waitTime).change(function () {
@@ -2369,8 +2394,8 @@ function initTicketQuery() {
 
 	//#region 显示额外的功能区
 	var extrahtml = [];
-	extrahtml.push("<div class='outerbox' id='helperbox'><div class='box'><div class='title' style='position:relative;'><big>12306订票助手 - 辅助工具</big> [<a href='#querySingleForm'>返回订票列表</a>] <div class='time-comp' title='时间依赖于本地时间保持在线刷新时间即时计算。受限于您的网速，并不十分准确（需要扣除网速的影响）' id='servertime'>服务器时间：<strong>----</strong>，本地时间：<strong>----</strong>，服务器比本地 <strong>----</strong></div></div>\
-<div style='color:#8A0023;line-height: 20px;background: -webkit-linear-gradient(#FFE4EA, #FFC3D1);background: -moz-linear-gradient(#FFE4EA, #FFC3D1);padding: 5px;'>亲，订单提交可能需要延迟很多很多秒喔，所以强烈建议你先随便找个虾米车进去订订看会不会出现验证码错误哈，必要时自己掐表喔……反正那个页面有计时嘛！<br /><strong>严重提醒！请务必多个浏览器一起刷票啊！因为无言地……每个浏览器出现票的结果都是不一样的啊！！！！</strong></div>\
+	extrahtml.push("<div class='outerbox' id='helperbox'><div class='box'><div class='title' style='position:relative;'><big>12306订票助手 - 辅助工具</big> [<a href='#querySingleForm'>返回订票列表</a>] <div class='time-comp' title='时间依赖于服务器时间即时计算。受限于您的网速，并不十分准确（需要扣除网速的影响）' id='servertime'>服务器时间：<strong>----</strong>，本地时间：<strong>----</strong>，服务器比本地 <strong>----</strong></div></div>\
+<div style='color:#8A0023;line-height: 20px;background: -webkit-linear-gradient(#FFE4EA, #FFC3D1);background: -moz-linear-gradient(#FFE4EA, #FFC3D1);padding: 5px;' id='tickettip'>亲，买票要耐心哈。如果是提前20天买票嘀话，请使用自动预定功能，并将要买的车次加入预定列表再设置好席别~务必查好起售时间，再用『等待整点刷新』~~~~如果亲是错过了买票时间想刷票出来的话，那就~~老实刷新吧。小声告诉你尽量多开几个浏览器刷新，尽量使用『更改车次类型』功能，能提高效率喔，刷票间隔不宜过短~~这几个小秘诀只告诉你，表告诉其他人喔 ♥。<strong>嗯，亲，如果木买到票，请不要焦急生气，天无绝人之路，事情总会解决的，不要太上火哈，对身体不好，祝你买票顺利 ♥</strong> <button class='lineButton dismiss_button' style='padding:1px;margin:0;' data-target='tickettip'>不要看你×</button></div>\
 <table id='helpertooltable' style='width:100%;'><colgroup><col style='width:110px;' /><col style='width:370px;' /><col style='width:110px;' /><col style='width:auto;' /></colgroup>\
 <tr class='fish_sep fish_area' id='viewFilter'><td colspan='4'>查询过滤功能</span></tr>\
 <tr class='fish_sep fish_area' id='viewHelper'><td colspan='4'>查询辅助功能</span></tr>\
@@ -2380,7 +2405,7 @@ function initTicketQuery() {
 ");
 
 	extrahtml.push("</td></tr><tr class='fish_sep'><td class='tfooter' colspan='4'><a href='http://www.fishlee.net/soft/44/' target='_blank'>12306订票助手 @iFish</a> | <a href='http://weibo.com/Acathur' target='_blank'>美工设计 @Acathur</a> | 版本 v" + window.helperVersion + "<br />\
-<a href='http://www.fishlee.net/soft/44/' style='color:blue;' target='_blank'>助手主页</a> | <a href='http://t.qq.com/ccfish/' title='此乃腾讯微博！或者在新浪微博上 @imcfish？可惜偶不怎么用新浪微博……' style='color:blue;' target='_blank'>微博关注</a> | <a href='http://bbs.fishlee.net/' target='_blank' style='color:red;'>助手论坛</a> | <a href='http://www.fishlee.net/soft/44/announcement.html' style='color:#0f7edb;' target='_blank'>免责声明</a> | <a href='" + utility.getUpdateUrl() + "' target='_blank'>下载新版</a> | <a style='font-weight:bold;color:red;' href='http://www.fishlee.net/soft/44/donate.html' target='_blank'>捐助作者</a> | 许可于 <strong>" + utility.regInfo.name + "，类型 - " + utility.regInfo.typeDesc + "</strong> 【<a href='javascript:;' class='reSignHelper'>重新注册</a>】</td></tr>\
+<a href='http://www.fishlee.net/soft/44/' style='color:blue;' target='_blank'>助手主页</a> | <a href='http://t.qq.com/ccfish/' style='color:blue;' target='_blank'>腾讯微博</a> | <a href='http://weibo.com/imcfish/' style='color:blue;' target='_blank'>新浪微博</a> | <a href='http://bbs.fishlee.net/' target='_blank' style='color:red;'>助手论坛</a> | <a href='http://www.fishlee.net/soft/44/announcement.html' style='color:#0f7edb;' target='_blank'>免责声明</a> | <a href='" + utility.getUpdateUrl() + "' target='_blank'>下载新版</a> | <a style='font-weight:bold;color:red;' href='http://www.fishlee.net/soft/44/donate.html' target='_blank'>捐助作者</a> | 许可于 <strong>" + utility.regInfo.name + "，类型 - " + utility.regInfo.typeDesc + "</strong> 【<a href='javascript:;' class='reSignHelper'>重新注册</a>】</td></tr>\
 		</table></div></div>");
 	$("div.enter_w").append(extrahtml.join(""));
 
@@ -2892,7 +2917,7 @@ function initTicketQuery() {
 	}
 
 	(function () {
-		var html = "<tr class='fish_sep caption'><td><label title='加入白名单的车次，将不会被过滤(仅为搭配黑名单)'><input type='checkbox' id='swWhiteList' name='swWhiteList' checked='checked' /> 车次白名单</label></td><td style='text-align:rigth;'><button class='fish_button' id='btnAddWhite'>添加</button><button class='fish_button' id='btnClearWhite'>清空</button></td><td><label title='加入黑名单的车次，除非在白名单中，否则会被直接过滤而不会显示'><input type='checkbox' id='swBlackList' checked='checked' name='swBlackList' />车次黑名单</label></td><td style='text-align:rigth;'><button class='fish_button' id='btnAddBlack'>添加</button><button class='fish_button' id='btnClearBlack'>清空</button></td></tr>\
+		var html = "<tr class='fish_sep caption' style='line-height:26px;'><td colspan='2'><label title='加入白名单的车次，将不会被过滤(仅为搭配黑名单)'><input type='checkbox' id='swWhiteList' name='swWhiteList' checked='checked' /> 一定要看到的车次</label><div style='float:right;'><button class='fish_button' id='btnAddWhite'>添加</button><button class='fish_button' id='btnClearWhite'>清空</button></div></td><td colspan='2'><label title='加入黑名单的车次，除非在白名单中，否则会被直接过滤而不会显示'><input type='checkbox' id='swBlackList' checked='checked' name='swBlackList' />打死你也不想看到的车次</label><div style='float:right;'><button class='fish_button' id='btnAddBlack'>添加</button><button class='fish_button' id='btnClearBlack'>清空</button></div></td></tr>\
 <tr class='fish_sep'><td colspan='2' id='whiteListTd'></td><td colspan='2' id='blackListTd'></td></tr>";
 		$("#viewFilter").after(html);
 
@@ -3290,16 +3315,11 @@ function initTicketQuery() {
 	var time_server = null;
 
 	(function () {
-		$("#queryUtility").after("<tr class='fish_sep'><td class='name'>保持在线</td><td colspan='3'>助手每隔十分钟会帮你刷新存在感防止挂机而掉线的啦。。。。。最后刷新时间：<strong id='lastonlinetime'>无</strong></td></tr>");
-		var label = $("#lastonlinetime");
-
 		function online() {
 			var serverTime = null;
 			utility.post("/otsweb/main.jsp", null, "text", function (data, status, xhr) {
 				serverTime = new Date(xhr.getResponseHeader("Date"));
 				time_offset = new Date() - serverTime;
-
-				label.html(utility.formatTime(serverTime));
 			});
 		}
 
@@ -3718,7 +3738,7 @@ function dgFilterQuery() {
 	});
 
 	//出行时间过滤
-	$("#viewFilter").nextUntil(".fish_area").last().after('<tr class="fish_sep" id="timeFilter"><td class="name"><label><input type="checkbox" id="swEnableFromFilter" checked="checked"/>出发时间</label</td><td><select id="timeFilterFrom1"></select> 至 <select id="timeFilterFrom2"></select></td><td class="name"><label><input type="checkbox" id="swEnableToFilter" checked="checked"/>到达时间</label></td><td><select id="timeFilterTo1"></select> 至 <select id="timeFilterTo2"></select></td></tr>');
+	$("#viewFilter").nextUntil(".fish_area").last().after('<tr class="fish_sep" id="timeFilter"><td class="name"><label><input type="checkbox" id="swEnableFromFilter" checked="checked"/>出发时间筛选</label</td><td><select id="timeFilterFrom1"></select> 至 <select id="timeFilterFrom2"></select></td><td class="name"><label><input type="checkbox" id="swEnableToFilter" checked="checked"/>到达时间筛选</label></td><td><select id="timeFilterTo1"></select> 至 <select id="timeFilterTo2"></select></td></tr>');
 	var tff = document.getElementById("timeFilterFrom1");
 	var tft = document.getElementById("timeFilterFrom2");
 	var ttf = document.getElementById("timeFilterTo1");
@@ -4162,7 +4182,7 @@ function initLogin() {
 		"<li class='fish_clock' id='countEle' style='font-weight:bold;'>等待操作</li>" +
 		"<li style='color:green;'><strong>操作信息</strong>：<span>休息中</span></li>" +
 		"<li style='color:green;'><strong>最后操作时间</strong>：<span>--</span></li>" +
-		"<li><a href='http://www.fishlee.net/soft/44/' style='color:blue;' target='_blank'>助手主页</a> | <a href='http://t.qq.com/ccfish/' title='此乃腾讯微博！或者在新浪微博上 @imcfish？可惜偶不怎么用新浪微博……' style='color:blue;' target='_blank'>微博关注</a> | <a href='http://bbs.fishlee.net/' target='_blank' style='color:red;'>助手论坛</a></li><li><a href='http://www.fishlee.net/soft/44/announcement.html' style='color:blue;' target='_blank'>免责声明</a> | <a href='" + utility.getUpdateUrl() + "' target='_blank' style='style='color:purple;''>下载新版</a> | <a style='font-weight:bold;color:red;' href='http://www.fishlee.net/soft/44/donate.html' target='_blank'>捐助作者</a></li>" +
+		"<li><a href='http://www.fishlee.net/soft/44/' style='color:blue;' target='_blank'>助手主页</a> | <a href='http://bbs.fishlee.net/' target='_blank' style='color:red;'>助手论坛</a> | <a href='http://www.fishlee.net/soft/44/announcement.html' style='color:blue;' target='_blank'>免责声明</a></li><li><a style='font-weight:bold;color:red;' href='http://www.fishlee.net/soft/44/donate.html' target='_blank'>捐助作者</a> | <a href='http://t.qq.com/ccfish/' style='color:blue;' target='_blank'>腾讯微博</a> | <a href='http://weibo.com/imcfish/' style='color:blue;' target='_blank'>新浪微博</a></li>" +
 		'<li style="padding-top:10px;line-height:normal;color:gray;">请<strong style="color: red;">最后输验证码</strong>，输入完成后系统将自动帮你提交。登录过程中，请勿离开当前页。如系统繁忙，会自动重新刷新验证码，请直接输入验证码，输入完成后助手将自动帮你提交。</li>' +
 		"</ul>" +
 		"</div>" +
